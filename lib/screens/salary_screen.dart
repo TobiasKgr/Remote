@@ -8,6 +8,7 @@ import '../providers/salary_slip_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/salary_slip_parser_service.dart';
 import '../utils/formatters.dart';
+import '../widgets/person_filter_bar.dart';
 import 'salary_slip_form_screen.dart';
 
 class SalaryScreen extends ConsumerStatefulWidget {
@@ -58,23 +59,30 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
         ],
       ),
       body: SafeArea(
-        child: _importing
-            ? const Center(child: CircularProgressIndicator())
-            : slips.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text('Keine Gehaltsabrechnungen für $year erfasst.', textAlign: TextAlign.center),
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _BreakdownChart(slips: slips),
-                      const SizedBox(height: 16),
-                      for (final slip in slips) _SalarySlipTile(slip: slip),
-                    ],
-                  ),
+        child: Column(
+          children: [
+            const PersonFilterBar(),
+            Expanded(
+              child: _importing
+                  ? const Center(child: CircularProgressIndicator())
+                  : slips.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text('Keine Gehaltsabrechnungen für $year erfasst.', textAlign: TextAlign.center),
+                          ),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            _BreakdownChart(slips: slips),
+                            const SizedBox(height: 16),
+                            for (final slip in slips) _SalarySlipTile(slip: slip),
+                          ],
+                        ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,

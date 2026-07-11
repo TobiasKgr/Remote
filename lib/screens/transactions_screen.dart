@@ -6,6 +6,7 @@ import '../providers/category_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../utils/formatters.dart';
 import '../widgets/month_selector.dart';
+import '../widgets/person_filter_bar.dart';
 import 'transaction_form_screen.dart';
 
 class TransactionsScreen extends ConsumerWidget {
@@ -23,6 +24,7 @@ class TransactionsScreen extends ConsumerWidget {
           children: [
             const SizedBox(height: 8),
             MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
+            const PersonFilterBar(),
             const Divider(height: 1),
             Expanded(
               child: transactions.isEmpty

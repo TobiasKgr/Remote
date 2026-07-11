@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/category.dart';
+import '../models/person.dart';
 import '../models/transaction.dart';
 import '../providers/category_providers.dart';
+import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
 import '../services/pdf_import_service.dart';
@@ -25,6 +27,7 @@ class _DraftRow {
   bool ambiguous;
   String? categoryId;
   String? subcategoryId;
+  String? personId;
 }
 
 class ImportScreen extends ConsumerStatefulWidget {
@@ -112,6 +115,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         categoryId: d.categoryId!,
         subcategoryId: d.subcategoryId,
         source: TransactionSource.pdfImport,
+        personId: d.personId,
       ));
     }
 
@@ -131,6 +135,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryNotifierProvider);
+    final persons = ref.watch(personNotifierProvider);
     final selectedCount = _drafts.where((d) => d.selected).length;
 
     return Scaffold(
@@ -152,7 +157,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 : ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: _drafts.length,
-                    itemBuilder: (context, index) => _buildDraftCard(context, _drafts[index], categories),
+                    itemBuilder: (context, index) => _buildDraftCard(context, _drafts[index], categories, persons),
                   ),
       ),
     );
@@ -195,7 +200,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     );
   }
 
-  Widget _buildDraftCard(BuildContext context, _DraftRow draft, List<Category> categories) {
+  Widget _buildDraftCard(BuildContext context, _DraftRow draft, List<Category> categories, List<Person> persons) {
     final relevantCategories = categories.where((c) => c.type == (draft.isIncome ? CategoryType.income : CategoryType.expense)).toList();
     final matchingCategory = relevantCategories.where((c) => c.id == draft.categoryId).toList();
     final subcategories = matchingCategory.isNotEmpty ? matchingCategory.first.subcategories : <Subcategory>[];
@@ -277,6 +282,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   ...subcategories.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
                 ],
                 onChanged: (v) => setState(() => draft.subcategoryId = v),
+              ),
+            if (persons.isNotEmpty)
+              DropdownButtonFormField<String>(
+                initialValue: persons.any((p) => p.id == draft.personId) ? draft.personId : null,
+                decoration: const InputDecoration(labelText: 'Person'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Gemeinsam')),
+                  ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+                ],
+                onChanged: (v) => setState(() => draft.personId = v),
               ),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/transaction.dart';
+import 'person_providers.dart';
 import 'repository_providers.dart';
 
 class TransactionNotifier extends Notifier<List<Transaction>> {
@@ -39,16 +40,20 @@ final selectedYearProvider = StateProvider<int>((ref) => DateTime.now().year);
 
 final transactionsForSelectedMonthProvider = Provider<List<Transaction>>((ref) {
   final month = ref.watch(selectedMonthProvider);
+  final personFilter = ref.watch(selectedPersonFilterProvider);
   final all = ref.watch(transactionNotifierProvider);
-  final filtered = all.where((t) => t.date.year == month.year && t.date.month == month.month).toList();
+  final byMonth = all.where((t) => t.date.year == month.year && t.date.month == month.month);
+  final filtered = filterByPerson(byMonth, personFilter, (t) => t.personId).toList();
   filtered.sort((a, b) => b.date.compareTo(a.date));
   return filtered;
 });
 
 final transactionsForSelectedYearProvider = Provider<List<Transaction>>((ref) {
   final year = ref.watch(selectedYearProvider);
+  final personFilter = ref.watch(selectedPersonFilterProvider);
   final all = ref.watch(transactionNotifierProvider);
-  final filtered = all.where((t) => t.date.year == year).toList();
+  final byYear = all.where((t) => t.date.year == year);
+  final filtered = filterByPerson(byYear, personFilter, (t) => t.personId).toList();
   filtered.sort((a, b) => a.date.compareTo(b.date));
   return filtered;
 });

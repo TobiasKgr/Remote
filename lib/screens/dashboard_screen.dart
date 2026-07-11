@@ -6,6 +6,7 @@ import '../providers/transaction_providers.dart';
 import '../models/category.dart';
 import '../widgets/category_breakdown_chart.dart';
 import '../widgets/month_selector.dart';
+import '../widgets/person_filter_bar.dart';
 import '../widgets/summary_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -36,6 +37,7 @@ class DashboardScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
+          const PersonFilterBar(),
           const SizedBox(height: 16),
           Row(
             children: [

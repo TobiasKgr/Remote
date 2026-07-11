@@ -6,6 +6,7 @@ import '../providers/category_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../utils/formatters.dart';
 import '../widgets/category_breakdown_chart.dart';
+import '../widgets/person_filter_bar.dart';
 import '../widgets/summary_card.dart';
 
 class YearlyOverviewScreen extends ConsumerWidget {
@@ -62,6 +63,7 @@ class YearlyOverviewScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            const PersonFilterBar(),
             Row(
               children: [
                 Expanded(child: SummaryCard(label: 'Einnahmen $year', amount: totalIncome, color: Colors.green)),

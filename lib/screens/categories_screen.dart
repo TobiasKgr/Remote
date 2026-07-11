@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/category.dart';
 import '../providers/category_providers.dart';
+import 'persons_screen.dart';
 
 const _availableColors = [
   Colors.red,
@@ -30,7 +31,16 @@ class CategoriesScreen extends ConsumerWidget {
     final expense = categories.where((c) => c.type == CategoryType.expense).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kategorien')),
+      appBar: AppBar(
+        title: const Text('Kategorien'),
+        actions: [
+          IconButton(
+            tooltip: 'Personen verwalten',
+            icon: const Icon(Icons.people_outline),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonsScreen())),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(12),

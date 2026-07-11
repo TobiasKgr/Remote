@@ -17,12 +17,14 @@ Umgesetzt:
 - Gehaltsnachweis-PDF-Import: eigener Parser für Brutto/Netto/Steuern/Sozialversicherung,
   Review-Formular, eigene "Gehalt"-Übersicht (Brutto-vs-Netto-Chart pro Jahr), optionale
   Verknüpfung mit einer Einnahme-Buchung
+- Zweite Person im Haushalt: Personen anlegen/verwalten (über "Kategorien" → Personen-Icon),
+  Buchungen und Gehaltsabrechnungen optional einer Person zuordnen (sonst "Gemeinsam"),
+  Filterleiste (Alle/Gemeinsam/pro Person) auf Dashboard, Buchungen, Jahresübersicht und Gehalt
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Noch offen (nächste Ausbaustufen, siehe unten):
 
 - Automatische Optimierungsvorschläge (z. B. "Abo X seit 3 Monaten ungenutzt")
-- Zweite Person im Haushalt (getrennte/gemeinsame Auswertung)
 - Firmenwagen-Modul (geldwerter Vorteil, Leasingrate, Kraftstoff getrennt auswerten)
 
 ## Architektur
@@ -35,14 +37,14 @@ Noch offen (nächste Ausbaustufen, siehe unten):
 
 ```
 lib/
-  models/         Category, Subcategory, Transaction, SalarySlip (+ Hive TypeAdapter)
+  models/         Category, Subcategory, Transaction, SalarySlip, Person (+ Hive TypeAdapter)
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
-  providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter
+  providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
                   (Kontoauszug), Gehaltsabrechnungs-Parser
-  screens/        Dashboard, Buchungen, Import, Gehalt, Kategorien, Jahresübersicht
-  widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, ...)
+  screens/        Dashboard, Buchungen, Import, Gehalt, Kategorien, Personen, Jahresübersicht
+  widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste, ...)
 ```
 
 ## Wichtiger Hinweis zum PDF-Import
@@ -95,6 +97,23 @@ Muster, muss der Regex/die Keyword-Liste in `SalarySlipParserService`
 erweitert werden – die Werte lassen sich aber jederzeit auch manuell im
 Formular eintragen oder korrigieren.
 
+## Zweite Person im Haushalt
+
+Über das Personen-Icon oben rechts im **Kategorien**-Tab lassen sich beliebig
+viele Haushaltsmitglieder anlegen (Name + Farbe). Danach:
+
+- Jede Buchung (manuell, PDF-Import) und jede Gehaltsabrechnung kann optional
+  einer Person zugeordnet werden. Ohne Zuordnung gilt ein Eintrag als
+  **"Gemeinsam"**.
+- Solange keine Person angelegt ist, ist die gesamte Personen-UI (Dropdown,
+  Filterleiste) unsichtbar – Ein-Personen-Haushalte sehen keine zusätzliche
+  Komplexität.
+- Auf Dashboard, Buchungen, Jahresübersicht und Gehalt erscheint dann eine
+  Filterleiste ("Alle" / "Gemeinsam" / je Person), mit der zwischen
+  gemeinsamer und getrennter Auswertung umgeschaltet werden kann.
+- Löscht man eine Person, bleiben ihre bisherigen Buchungen/Abrechnungen
+  erhalten, gelten danach aber als "Gemeinsam".
+
 ## Entwicklung
 
 ```bash
@@ -123,8 +142,6 @@ flutter build web          # Web (statische Dateien in build/web)
 1. **Optimierungsvorschläge**: Regelwerk, das z. B. mehrfach erkannte Abos,
    Ausgabenspitzen oder Kategorien mit starkem Anstieg gegenüber dem
    Vormonat/-jahr erkennt und als Hinweiskarte auf dem Dashboard anzeigt.
-2. **Zweite Person im Haushalt**: `Person`-Modell, Zuordnung von Buchungen zu
-   einer Person, gemeinsame und getrennte Auswertungssicht.
-3. **Firmenwagen**: eigenes Modul für geldwerten Vorteil, Leasingrate,
+2. **Firmenwagen**: eigenes Modul für geldwerten Vorteil, Leasingrate,
    Kraftstoffkosten getrennt von privaten KFZ-Kosten, inkl. Auswirkung auf die
    Gehalts-Gegenrechnung.

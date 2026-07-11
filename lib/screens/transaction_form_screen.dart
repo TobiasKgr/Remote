@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
 import '../providers/category_providers.dart';
+import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../utils/formatters.dart';
 
@@ -26,6 +27,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _isRecurring = false;
   String? _categoryId;
   String? _subcategoryId;
+  String? _personId;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     _isRecurring = existing?.isRecurring ?? false;
     _categoryId = existing?.categoryId;
     _subcategoryId = existing?.subcategoryId;
+    _personId = existing?.personId;
   }
 
   @override
@@ -50,6 +53,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryNotifierProvider);
+    final persons = ref.watch(personNotifierProvider);
     final relevantCategories = categories
         .where((c) => c.type == (_isIncome ? CategoryType.income : CategoryType.expense))
         .toList();
@@ -147,6 +151,18 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 onChanged: (v) => setState(() => _subcategoryId = v),
               ),
             ],
+            if (persons.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _personId,
+                decoration: const InputDecoration(labelText: 'Person'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Gemeinsam')),
+                  ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+                ],
+                onChanged: (v) => setState(() => _personId = v),
+              ),
+            ],
             const SizedBox(height: 12),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -179,6 +195,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       subcategoryId: _subcategoryId,
       source: widget.existing?.source ?? TransactionSource.manual,
       isRecurring: _isRecurring,
+      personId: _personId,
     );
 
     await ref.read(transactionNotifierProvider.notifier).upsert(transaction);

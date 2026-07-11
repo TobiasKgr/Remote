@@ -3,9 +3,11 @@ import 'package:hive/hive.dart';
 
 import '../data/hive_setup.dart';
 import '../models/category.dart';
+import '../models/person.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
 import '../repositories/category_repository.dart';
+import '../repositories/person_repository.dart';
 import '../repositories/salary_slip_repository.dart';
 import '../repositories/transaction_repository.dart';
 
@@ -17,6 +19,8 @@ final transactionBoxProvider = Provider<Box<Transaction>>((ref) => Hive.box<Tran
 
 final salarySlipBoxProvider = Provider<Box<SalarySlip>>((ref) => Hive.box<SalarySlip>(salarySlipBoxName));
 
+final personBoxProvider = Provider<Box<Person>>((ref) => Hive.box<Person>(personBoxName));
+
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository(ref.watch(categoryBoxProvider));
 });
@@ -27,4 +31,8 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
 
 final salarySlipRepositoryProvider = Provider<SalarySlipRepository>((ref) {
   return SalarySlipRepository(ref.watch(salarySlipBoxProvider));
+});
+
+final personRepositoryProvider = Provider<PersonRepository>((ref) {
+  return PersonRepository(ref.watch(personBoxProvider));
 });

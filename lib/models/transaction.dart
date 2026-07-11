@@ -25,6 +25,7 @@ class Transaction extends HiveObject {
     this.subcategoryId,
     this.source = TransactionSource.manual,
     this.isRecurring = false,
+    this.personId,
   });
 
   final String id;
@@ -35,6 +36,10 @@ class Transaction extends HiveObject {
   String? subcategoryId;
   TransactionSource source;
   bool isRecurring;
+
+  /// Household member this booking is attributed to. `null` means
+  /// "Gemeinsam" (shared, not attributed to one person).
+  String? personId;
 
   bool get isIncome => amount >= 0;
 }
@@ -55,6 +60,7 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       subcategoryId: map['subcategoryId'] as String?,
       source: TransactionSource.values[map['source'] as int],
       isRecurring: map['isRecurring'] as bool,
+      personId: map['personId'] as String?,
     );
   }
 
@@ -69,6 +75,7 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       'subcategoryId': obj.subcategoryId,
       'source': obj.source.index,
       'isRecurring': obj.isRecurring,
+      'personId': obj.personId,
     });
   }
 }

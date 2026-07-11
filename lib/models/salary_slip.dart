@@ -18,6 +18,7 @@ class SalarySlip extends HiveObject {
     this.otherDeductions = 0,
     this.employer,
     this.linkedTransactionId,
+    this.personId,
   });
 
   final String id;
@@ -42,6 +43,9 @@ class SalarySlip extends HiveObject {
 
   /// Id of the [Transaction] created from this slip's net amount, if any.
   String? linkedTransactionId;
+
+  /// Household member this payslip belongs to. `null` means "Gemeinsam".
+  String? personId;
 }
 
 class SalarySlipAdapter extends TypeAdapter<SalarySlip> {
@@ -61,6 +65,7 @@ class SalarySlipAdapter extends TypeAdapter<SalarySlip> {
       otherDeductions: map['otherDeductions'] as double,
       employer: map['employer'] as String?,
       linkedTransactionId: map['linkedTransactionId'] as String?,
+      personId: map['personId'] as String?,
     );
   }
 
@@ -76,6 +81,7 @@ class SalarySlipAdapter extends TypeAdapter<SalarySlip> {
       'otherDeductions': obj.otherDeductions,
       'employer': obj.employer,
       'linkedTransactionId': obj.linkedTransactionId,
+      'personId': obj.personId,
     });
   }
 }

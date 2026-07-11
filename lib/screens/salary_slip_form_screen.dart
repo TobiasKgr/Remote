@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
 import '../providers/category_providers.dart';
+import '../providers/person_providers.dart';
 import '../providers/salary_slip_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
@@ -32,6 +33,7 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
   late TextEditingController _socialSecurityController;
   late TextEditingController _employerController;
   bool _createTransaction = true;
+  String? _personId;
 
   @override
   void initState() {
@@ -47,6 +49,7 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
     _socialSecurityController = TextEditingController(text: _fmt(existing?.socialSecurity ?? prefill?.socialSecurity));
     _employerController = TextEditingController(text: existing?.employer ?? '');
     _createTransaction = existing == null || existing.linkedTransactionId != null;
+    _personId = existing?.personId;
   }
 
   String _fmt(double? value) => value == null || value == 0 ? '' : value.toStringAsFixed(2);
@@ -65,6 +68,7 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final persons = ref.watch(personNotifierProvider);
     final gross = _parse(_grossController);
     final net = _parse(_netController);
     final incomeTax = _parse(_incomeTaxController);
@@ -122,6 +126,18 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
               controller: _employerController,
               decoration: const InputDecoration(labelText: 'Arbeitgeber (optional)'),
             ),
+            if (persons.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _personId,
+                decoration: const InputDecoration(labelText: 'Person'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Gemeinsam')),
+                  ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+                ],
+                onChanged: (v) => setState(() => _personId = v),
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _grossController,
@@ -194,6 +210,7 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
       otherDeductions: otherDeductions,
       employer: _employerController.text.trim().isEmpty ? null : _employerController.text.trim(),
       linkedTransactionId: widget.existing?.linkedTransactionId,
+      personId: _personId,
     );
 
     final txNotifier = ref.read(transactionNotifierProvider.notifier);
@@ -212,6 +229,7 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
         categoryId: categoryId,
         subcategoryId: subcategoryId,
         source: TransactionSource.manual,
+        personId: slip.personId,
       );
       await txNotifier.upsert(transaction);
       slip.linkedTransactionId = transaction.id;

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/salary_slip.dart';
+import 'person_providers.dart';
 import 'repository_providers.dart';
 import 'transaction_providers.dart';
 
@@ -25,6 +26,8 @@ final salarySlipNotifierProvider = NotifierProvider<SalarySlipNotifier, List<Sal
 
 final salarySlipsForSelectedYearProvider = Provider<List<SalarySlip>>((ref) {
   final year = ref.watch(selectedYearProvider);
+  final personFilter = ref.watch(selectedPersonFilterProvider);
   final all = ref.watch(salarySlipNotifierProvider);
-  return all.where((s) => s.period.year == year).toList(growable: false);
+  final byYear = all.where((s) => s.period.year == year);
+  return filterByPerson(byYear, personFilter, (s) => s.personId).toList(growable: false);
 });
