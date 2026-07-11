@@ -3,8 +3,10 @@ import 'package:hive/hive.dart';
 
 import '../data/hive_setup.dart';
 import '../models/category.dart';
+import '../models/salary_slip.dart';
 import '../models/transaction.dart';
 import '../repositories/category_repository.dart';
+import '../repositories/salary_slip_repository.dart';
 import '../repositories/transaction_repository.dart';
 
 /// Boxes are opened once in `main()` before `runApp`, so accessing them here
@@ -13,10 +15,16 @@ final categoryBoxProvider = Provider<Box<Category>>((ref) => Hive.box<Category>(
 
 final transactionBoxProvider = Provider<Box<Transaction>>((ref) => Hive.box<Transaction>(transactionBoxName));
 
+final salarySlipBoxProvider = Provider<Box<SalarySlip>>((ref) => Hive.box<SalarySlip>(salarySlipBoxName));
+
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository(ref.watch(categoryBoxProvider));
 });
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   return TransactionRepository(ref.watch(transactionBoxProvider));
+});
+
+final salarySlipRepositoryProvider = Provider<SalarySlipRepository>((ref) {
+  return SalarySlipRepository(ref.watch(salarySlipBoxProvider));
 });

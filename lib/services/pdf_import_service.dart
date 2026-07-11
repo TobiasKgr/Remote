@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'pdf_text_extractor.dart';
 
 /// One line item parsed out of a bank statement PDF, still awaiting user
 /// confirmation before it becomes a real [Transaction].
@@ -34,14 +34,7 @@ class PdfImportService {
   static final _dateRegex = RegExp(r'^(\d{2}\.\d{2}\.\d{4})\b');
   static final _amountRegex = RegExp(r'([+-]?\d{1,3}(?:\.\d{3})*,\d{2})\s*(S|H)?\s*$');
 
-  Future<String> extractText(Uint8List bytes) async {
-    final document = PdfDocument(inputBytes: bytes);
-    try {
-      return PdfTextExtractor(document).extractText();
-    } finally {
-      document.dispose();
-    }
-  }
+  Future<String> extractText(Uint8List bytes) => extractPdfText(bytes);
 
   List<ParsedTransaction> parse(String text) {
     final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();

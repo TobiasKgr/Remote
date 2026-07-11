@@ -14,11 +14,13 @@ Umgesetzt:
   Review-Screen vor dem Speichern
 - Monatsübersicht (Einnahmen/Ausgaben/Saldo, Ausgaben nach Kategorie als Kreisdiagramm)
 - Jahresübersicht (Einnahmen/Ausgaben pro Monat als Balkendiagramm, Jahres-Kategorieauswertung)
+- Gehaltsnachweis-PDF-Import: eigener Parser für Brutto/Netto/Steuern/Sozialversicherung,
+  Review-Formular, eigene "Gehalt"-Übersicht (Brutto-vs-Netto-Chart pro Jahr), optionale
+  Verknüpfung mit einer Einnahme-Buchung
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Noch offen (nächste Ausbaustufen, siehe unten):
 
-- Gehaltsnachweis-PDF speziell auswerten (Netto/Brutto-Aufschlüsselung)
 - Automatische Optimierungsvorschläge (z. B. "Abo X seit 3 Monaten ungenutzt")
 - Zweite Person im Haushalt (getrennte/gemeinsame Auswertung)
 - Firmenwagen-Modul (geldwerter Vorteil, Leasingrate, Kraftstoff getrennt auswerten)
@@ -33,12 +35,13 @@ Noch offen (nächste Ausbaustufen, siehe unten):
 
 ```
 lib/
-  models/         Category, Subcategory, Transaction (+ Hive TypeAdapter)
+  models/         Category, Subcategory, Transaction, SalarySlip (+ Hive TypeAdapter)
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
   providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
-  screens/        Dashboard, Buchungen, Import, Kategorien, Jahresübersicht
+                  (Kontoauszug), Gehaltsabrechnungs-Parser
+  screens/        Dashboard, Buchungen, Import, Gehalt, Kategorien, Jahresübersicht
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, ...)
 ```
 
@@ -66,6 +69,32 @@ Community License nutzbar (u. a. für Einzelpersonen und kleine Unternehmen mit
 < 1 Mio. USD Jahresumsatz). Für eine geplante kommerzielle Veröffentlichung
 sollte das vor Release geprüft werden (https://www.syncfusion.com/sales/communitylicense).
 
+## Gehaltsnachweis-Import
+
+Analog zum Kontoauszug-Import gibt es im Tab **Gehalt** einen eigenen,
+ebenfalls heuristischen Parser (`lib/services/salary_slip_parser_service.dart`)
+für Lohn-/Gehaltsabrechnungen:
+
+- Sucht nach bekannten deutschen Lohnabrechnungs-Begriffen
+  ("Gesamt-Brutto", "Auszahlungsbetrag", "Lohnsteuer", "Kirchensteuer",
+  "Solidaritätszuschlag", "Kranken-/Renten-/Arbeitslosen-/Pflegeversicherung")
+  und nimmt den am Zeilenende stehenden Betrag.
+- Erkennt den Abrechnungsmonat entweder aus einem deutschen Monatsnamen
+  ("Juli 2026") oder dem Format `MM/JJJJ`.
+- Alle erkannten Werte landen in einem Review-Formular; "Sonstige Abzüge"
+  wird automatisch als Brutto − Netto − Steuern − Sozialversicherung berechnet.
+- Eine Gehaltsabrechnung ist ein reiner Detail-/Aufschlüsselungsdatensatz
+  (`SalarySlip`) und zählt **nicht automatisch** zu den Einnahmen im
+  Dashboard. Über den Schalter "Auch als Einnahme in Buchungen erfassen"
+  wird optional eine verknüpfte Netto-Buchung angelegt/aktualisiert – so wird
+  vermieden, dass ein bereits aus dem Kontoauszug importierter Gehaltseingang
+  doppelt gezählt wird.
+
+Passt das PDF-Layout eines Arbeitgebers/einer Lohnsoftware nicht auf dieses
+Muster, muss der Regex/die Keyword-Liste in `SalarySlipParserService`
+erweitert werden – die Werte lassen sich aber jederzeit auch manuell im
+Formular eintragen oder korrigieren.
+
 ## Entwicklung
 
 ```bash
@@ -91,13 +120,11 @@ flutter build web          # Web (statische Dateien in build/web)
 
 ## Roadmap / nächste Schritte
 
-1. **Gehaltsnachweis-PDF-Import**: eigener Parser für Lohn-/Gehaltsabrechnungen
-   (Brutto, Netto, Abzüge) als Ergänzung zum Kontoauszug-Import.
-2. **Optimierungsvorschläge**: Regelwerk, das z. B. mehrfach erkannte Abos,
+1. **Optimierungsvorschläge**: Regelwerk, das z. B. mehrfach erkannte Abos,
    Ausgabenspitzen oder Kategorien mit starkem Anstieg gegenüber dem
    Vormonat/-jahr erkennt und als Hinweiskarte auf dem Dashboard anzeigt.
-3. **Zweite Person im Haushalt**: `Person`-Modell, Zuordnung von Buchungen zu
+2. **Zweite Person im Haushalt**: `Person`-Modell, Zuordnung von Buchungen zu
    einer Person, gemeinsame und getrennte Auswertungssicht.
-4. **Firmenwagen**: eigenes Modul für geldwerten Vorteil, Leasingrate,
+3. **Firmenwagen**: eigenes Modul für geldwerten Vorteil, Leasingrate,
    Kraftstoffkosten getrennt von privaten KFZ-Kosten, inkl. Auswirkung auf die
    Gehalts-Gegenrechnung.

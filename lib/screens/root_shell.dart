@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'categories_screen.dart';
 import 'dashboard_screen.dart';
 import 'import_screen.dart';
+import 'salary_screen.dart';
 import 'transactions_screen.dart';
 import 'yearly_overview_screen.dart';
 
@@ -20,6 +21,7 @@ class _RootShellState extends State<RootShell> {
     NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Übersicht'),
     NavigationDestination(icon: Icon(Icons.list_alt_outlined), selectedIcon: Icon(Icons.list_alt), label: 'Buchungen'),
     NavigationDestination(icon: Icon(Icons.upload_file_outlined), selectedIcon: Icon(Icons.upload_file), label: 'Import'),
+    NavigationDestination(icon: Icon(Icons.payments_outlined), selectedIcon: Icon(Icons.payments), label: 'Gehalt'),
     NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Jahr'),
     NavigationDestination(icon: Icon(Icons.category_outlined), selectedIcon: Icon(Icons.category), label: 'Kategorien'),
   ];
@@ -28,6 +30,7 @@ class _RootShellState extends State<RootShell> {
     DashboardScreen(),
     TransactionsScreen(),
     ImportScreen(),
+    SalaryScreen(),
     YearlyOverviewScreen(),
     CategoriesScreen(),
   ];
