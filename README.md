@@ -72,6 +72,17 @@ Passt das PDF-Layout einer bestimmten Bank nicht auf dieses Muster, muss der
 Regex in `PdfImportService` erweitert werden (z. B. um weitere Datums- oder
 Betragsformate).
 
+Die Kategorie-Vorschläge dabei kommen aus `CategorizationService`
+(`lib/services/categorization_service.dart`), die zwei Heuristiken kombiniert:
+
+1. **Gelernte Historie**: Wurde eine Buchung mit (nach Entfernen von Ziffern)
+   nahezu identischer Beschreibung bereits einmal einer Kategorie zugeordnet
+   (manuell oder bei einem früheren Import), wird diese Zuordnung
+   wiederverwendet – das hat Vorrang vor den generischen Schlüsselwörtern.
+2. **Schlüsselwort-Matching**: Fallback über die in den Unterkategorien
+   hinterlegten Suchbegriffe. Bei mehreren Treffern gewinnt der **längste**
+   (spezifischste) Begriff, z. B. "amazon prime" statt nur "amazon".
+
 **Lizenzhinweis**: `syncfusion_flutter_pdf` ist über die kostenlose Syncfusion
 Community License nutzbar (u. a. für Einzelpersonen und kleine Unternehmen mit
 < 1 Mio. USD Jahresumsatz). Für eine geplante kommerzielle Veröffentlichung
@@ -189,4 +200,3 @@ flutter build web          # Web (statische Dateien in build/web)
   anderen Gerät, da aktuell alles nur lokal in Hive gespeichert wird.
 - Budget-/Sparziele pro Kategorie mit Fortschrittsanzeige.
 - Push-/Erinnerungsbenachrichtigungen (z. B. bei erkannten Ausgabenspitzen).
-- Weitere Auto-Kategorisierungs-Regeln über reines Keyword-Matching hinaus.

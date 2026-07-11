@@ -70,7 +70,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final bytes = result.files.single.bytes!;
       final parsed = await _pdfImportService.importFromBytes(bytes);
       final categories = ref.read(categoryNotifierProvider);
-      final categorizer = CategorizationService(categories);
+      final history = ref.read(transactionNotifierProvider);
+      final categorizer = CategorizationService(categories, history: history);
 
       final drafts = <_DraftRow>[];
       for (final p in parsed) {
