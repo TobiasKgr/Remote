@@ -3,10 +3,12 @@ import 'package:hive/hive.dart';
 
 import '../data/hive_setup.dart';
 import '../models/category.dart';
+import '../models/company_car.dart';
 import '../models/person.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
 import '../repositories/category_repository.dart';
+import '../repositories/company_car_repository.dart';
 import '../repositories/person_repository.dart';
 import '../repositories/salary_slip_repository.dart';
 import '../repositories/transaction_repository.dart';
@@ -20,6 +22,8 @@ final transactionBoxProvider = Provider<Box<Transaction>>((ref) => Hive.box<Tran
 final salarySlipBoxProvider = Provider<Box<SalarySlip>>((ref) => Hive.box<SalarySlip>(salarySlipBoxName));
 
 final personBoxProvider = Provider<Box<Person>>((ref) => Hive.box<Person>(personBoxName));
+
+final companyCarBoxProvider = Provider<Box<CompanyCar>>((ref) => Hive.box<CompanyCar>(companyCarBoxName));
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository(ref.watch(categoryBoxProvider));
@@ -35,4 +39,8 @@ final salarySlipRepositoryProvider = Provider<SalarySlipRepository>((ref) {
 
 final personRepositoryProvider = Provider<PersonRepository>((ref) {
   return PersonRepository(ref.watch(personBoxProvider));
+});
+
+final companyCarRepositoryProvider = Provider<CompanyCarRepository>((ref) {
+  return CompanyCarRepository(ref.watch(companyCarBoxProvider));
 });

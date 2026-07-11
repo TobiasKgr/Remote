@@ -20,12 +20,14 @@ Umgesetzt:
 - Zweite Person im Haushalt: Personen anlegen/verwalten (über "Kategorien" → Personen-Icon),
   Buchungen und Gehaltsabrechnungen optional einer Person zuordnen (sonst "Gemeinsam"),
   Filterleiste (Alle/Gemeinsam/pro Person) auf Dashboard, Buchungen, Jahresübersicht und Gehalt
+- Firmenwagen-Modul: Fahrzeuge mit geldwertem Vorteil (informativ) und Eigenanteil verwalten
+  (über "Gehalt" → Fahrzeug-Icon), Eigenanteil per Klick als Buchung erfassen, Monats-/
+  Jahresauswertung der tatsächlichen Firmenwagen-Kosten
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
-Noch offen (nächste Ausbaustufen, siehe unten):
+Noch offen (nächste Ausbaustufe, siehe unten):
 
 - Automatische Optimierungsvorschläge (z. B. "Abo X seit 3 Monaten ungenutzt")
-- Firmenwagen-Modul (geldwerter Vorteil, Leasingrate, Kraftstoff getrennt auswerten)
 
 ## Architektur
 
@@ -37,13 +39,13 @@ Noch offen (nächste Ausbaustufen, siehe unten):
 
 ```
 lib/
-  models/         Category, Subcategory, Transaction, SalarySlip, Person (+ Hive TypeAdapter)
+  models/         Category, Subcategory, Transaction, SalarySlip, Person, CompanyCar (+ Hive TypeAdapter)
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
   providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
                   (Kontoauszug), Gehaltsabrechnungs-Parser
-  screens/        Dashboard, Buchungen, Import, Gehalt, Kategorien, Personen, Jahresübersicht
+  screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien, Personen, Jahresübersicht
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste, ...)
 ```
 
@@ -114,6 +116,24 @@ viele Haushaltsmitglieder anlegen (Name + Farbe). Danach:
 - Löscht man eine Person, bleiben ihre bisherigen Buchungen/Abrechnungen
   erhalten, gelten danach aber als "Gemeinsam".
 
+## Firmenwagen-Modul
+
+Über das Fahrzeug-Icon oben rechts im **Gehalt**-Tab gelangt man zur
+Firmenwagen-Verwaltung:
+
+- Pro Fahrzeug werden **geldwerter Vorteil** (1%-Regel o. ä.) und
+  **Eigenanteil** je Monat erfasst, optional einer Person zugeordnet.
+- Der geldwerte Vorteil ist bewusst **rein informativ**: Er ist in der Regel
+  bereits als Sachbezug in der Gehaltsabrechnung enthalten und wird dort
+  wieder gegengerechnet, daher fließt er nirgends automatisch in
+  Einnahmen-Summen ein (keine Doppelzählung).
+- Der Eigenanteil ist eine echte Ausgabe – über den Button "Eigenanteil
+  erfassen" wird er als Buchung in der Kategorie **Mobilität → Firmenwagen**
+  angelegt und taucht damit ganz normal in Dashboard/Jahresübersicht auf.
+- Die Firmenwagen-Seite selbst zeigt zusätzlich die Summe aller Buchungen
+  dieser Unterkategorie (Eigenanteil, Kraftstoff, Versicherung, Werkstatt, ...)
+  für Monat und Jahr.
+
 ## Entwicklung
 
 ```bash
@@ -142,6 +162,3 @@ flutter build web          # Web (statische Dateien in build/web)
 1. **Optimierungsvorschläge**: Regelwerk, das z. B. mehrfach erkannte Abos,
    Ausgabenspitzen oder Kategorien mit starkem Anstieg gegenüber dem
    Vormonat/-jahr erkennt und als Hinweiskarte auf dem Dashboard anzeigt.
-2. **Firmenwagen**: eigenes Modul für geldwerten Vorteil, Leasingrate,
-   Kraftstoffkosten getrennt von privaten KFZ-Kosten, inkl. Auswirkung auf die
-   Gehalts-Gegenrechnung.

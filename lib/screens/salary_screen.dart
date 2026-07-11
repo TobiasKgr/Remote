@@ -9,6 +9,7 @@ import '../providers/transaction_providers.dart';
 import '../services/salary_slip_parser_service.dart';
 import '../utils/formatters.dart';
 import '../widgets/person_filter_bar.dart';
+import 'company_car_screen.dart';
 import 'salary_slip_form_screen.dart';
 
 class SalaryScreen extends ConsumerStatefulWidget {
@@ -53,6 +54,11 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
       appBar: AppBar(
         title: const Text('Gehalt'),
         actions: [
+          IconButton(
+            tooltip: 'Firmenwagen verwalten',
+            icon: const Icon(Icons.directions_car_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompanyCarScreen())),
+          ),
           IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => ref.read(selectedYearProvider.notifier).state = year - 1),
           Center(child: Text('$year', style: Theme.of(context).textTheme.titleMedium)),
           IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => ref.read(selectedYearProvider.notifier).state = year + 1),
