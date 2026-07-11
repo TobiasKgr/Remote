@@ -2,9 +2,10 @@
 
 Cross-platform Finanz-App (Flutter): Windows-exe, Android, iOS und Web aus einer
 Codebasis. Kontoauszüge und Gehaltsnachweise als PDF einlesen, Buchungen
-kategorisieren (inkl. Abos), Gehalt gegenrechnen, Monats- und Jahresübersicht.
+kategorisieren (inkl. Abos), Gehalt gegenrechnen, Monats- und Jahresübersicht,
+Optimierungspotenzial erkennen.
 
-## Stand: MVP
+## Stand
 
 Umgesetzt:
 
@@ -23,11 +24,13 @@ Umgesetzt:
 - Firmenwagen-Modul: Fahrzeuge mit geldwertem Vorteil (informativ) und Eigenanteil verwalten
   (über "Gehalt" → Fahrzeug-Icon), Eigenanteil per Klick als Buchung erfassen, Monats-/
   Jahresauswertung der tatsächlichen Firmenwagen-Kosten
+- Optimierungsvorschläge: regelbasiertes "Optimierungspotenzial" auf dem Dashboard
+  (mehrere Abos in derselben Unterkategorie, Ausgabenspitzen ggü. dem 3-Monats-Schnitt,
+  seit mehreren Monaten unverändert laufende Abos, Summe wiederkehrender Kosten)
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
-Noch offen (nächste Ausbaustufe, siehe unten):
-
-- Automatische Optimierungsvorschläge (z. B. "Abo X seit 3 Monaten ungenutzt")
+Damit ist die ursprünglich geplante Feature-Liste vollständig umgesetzt. Weitere
+Ideen für zukünftige Erweiterungen siehe Abschnitt "Mögliche Erweiterungen" unten.
 
 ## Architektur
 
@@ -42,11 +45,12 @@ lib/
   models/         Category, Subcategory, Transaction, SalarySlip, Person, CompanyCar (+ Hive TypeAdapter)
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
-  providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter
+  providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter, Insights
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
-                  (Kontoauszug), Gehaltsabrechnungs-Parser
+                  (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk
   screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien, Personen, Jahresübersicht
-  widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste, ...)
+  widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
+                  Optimierungspotenzial-Karten, ...)
 ```
 
 ## Wichtiger Hinweis zum PDF-Import
@@ -134,6 +138,26 @@ Firmenwagen-Verwaltung:
   dieser Unterkategorie (Eigenanteil, Kraftstoff, Versicherung, Werkstatt, ...)
   für Monat und Jahr.
 
+## Optimierungsvorschläge
+
+Auf dem **Dashboard** erscheint unterhalb der Kategorie-Auswertung ein
+Abschnitt "Optimierungspotenzial", sobald das Regelwerk
+(`lib/services/optimization_service.dart`) für den gewählten Monat etwas
+findet. Es handelt sich bewusst um **Beobachtungen aus den vorhandenen
+Buchungsdaten**, keine Vermutungen über tatsächliche Nutzung:
+
+- **Mehrere Abos in derselben Unterkategorie** (z. B. zwei wiederkehrende
+  Buchungen in "Streaming-Abos") – mit Namen und Summe.
+- **Ausgabenspitze**: eine Kategorie liegt diesen Monat ≥ 30 % (und mind. 20 €)
+  über dem Schnitt der letzten drei Monate.
+- **Seit N Monaten unverändert laufendes Abo**: eine wiederkehrende Buchung
+  mit gleicher Beschreibung ist seit mindestens 3 aufeinanderfolgenden
+  Monaten (bis zum aktuellen) vorhanden.
+- **Summe wiederkehrender Kosten** des Monats, als Übersicht.
+
+Die Hinweise respektieren den Personen-Filter und werden pro Regel als
+eigene Karte angezeigt; ohne Treffer erscheint der Abschnitt gar nicht.
+
 ## Entwicklung
 
 ```bash
@@ -157,8 +181,12 @@ flutter build windows      # Windows .exe
 flutter build web          # Web (statische Dateien in build/web)
 ```
 
-## Roadmap / nächste Schritte
+## Mögliche Erweiterungen
 
-1. **Optimierungsvorschläge**: Regelwerk, das z. B. mehrfach erkannte Abos,
-   Ausgabenspitzen oder Kategorien mit starkem Anstieg gegenüber dem
-   Vormonat/-jahr erkennt und als Hinweiskarte auf dem Dashboard anzeigt.
+Über die ursprünglich geplante Feature-Liste hinaus, z. B.:
+
+- Export/Backup der lokalen Daten (z. B. als JSON) und Import auf einem
+  anderen Gerät, da aktuell alles nur lokal in Hive gespeichert wird.
+- Budget-/Sparziele pro Kategorie mit Fortschrittsanzeige.
+- Push-/Erinnerungsbenachrichtigungen (z. B. bei erkannten Ausgabenspitzen).
+- Weitere Auto-Kategorisierungs-Regeln über reines Keyword-Matching hinaus.

@@ -5,6 +5,7 @@ import '../providers/category_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../models/category.dart';
 import '../widgets/category_breakdown_chart.dart';
+import '../widgets/insights_section.dart';
 import '../widgets/month_selector.dart';
 import '../widgets/person_filter_bar.dart';
 import '../widgets/summary_card.dart';
@@ -62,6 +63,8 @@ class DashboardScreen extends ConsumerWidget {
               child: CategoryBreakdownChart(totals: breakdown),
             ),
           ),
+          const SizedBox(height: 24),
+          const InsightsSection(),
         ],
       ),
     );
