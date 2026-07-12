@@ -14,6 +14,7 @@ const salarySlipBoxName = 'salary_slips';
 const personBoxName = 'persons';
 const companyCarBoxName = 'company_cars';
 const budgetBoxName = 'budgets';
+const settingsBoxName = 'settings';
 
 /// Initializes Hive, registers all [TypeAdapter]s, opens the boxes used by
 /// the app and seeds default categories on first launch.
@@ -36,6 +37,7 @@ Future<void> initHive() async {
   await Hive.openBox<Person>(personBoxName);
   await Hive.openBox<CompanyCar>(companyCarBoxName);
   await Hive.openBox<Budget>(budgetBoxName);
+  await Hive.openBox(settingsBoxName);
 
   if (categoryBox.isEmpty) {
     for (final category in buildDefaultCategories()) {

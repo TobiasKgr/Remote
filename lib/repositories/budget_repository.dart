@@ -9,9 +9,9 @@ class BudgetRepository {
 
   List<Budget> getAll() => _box.values.toList(growable: false);
 
-  Budget? getForCategory(String categoryId) => _box.get(categoryId);
+  Budget? getById(String id) => _box.get(id);
 
-  Future<void> save(Budget budget) => _box.put(budget.categoryId, budget);
+  Future<void> save(Budget budget) => _box.put(budget.id, budget);
 
-  Future<void> delete(String categoryId) => _box.delete(categoryId);
+  Future<void> delete(String id) => _box.delete(id);
 }

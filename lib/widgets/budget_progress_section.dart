@@ -12,12 +12,36 @@ class BudgetProgressSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(budgetProgressForSelectedMonthProvider);
+    return BudgetProgressList(title: 'Budgets', progress: progress);
+  }
+}
+
+/// Same as [BudgetProgressSection] but aggregated over the selected year
+/// (planned = sum of the effective monthly limit across all 12 months).
+class YearlyBudgetProgressSection extends ConsumerWidget {
+  const YearlyBudgetProgressSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(budgetProgressForSelectedYearProvider);
+    return BudgetProgressList(title: 'Jahresbudget', progress: progress);
+  }
+}
+
+class BudgetProgressList extends StatelessWidget {
+  const BudgetProgressList({super.key, required this.title, required this.progress});
+
+  final String title;
+  final List<BudgetProgress> progress;
+
+  @override
+  Widget build(BuildContext context) {
     if (progress.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Budgets', style: Theme.of(context).textTheme.titleMedium),
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Card(
           child: Padding(

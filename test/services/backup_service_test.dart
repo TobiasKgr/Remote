@@ -38,7 +38,9 @@ void main() {
   final companyCars = [
     CompanyCar(id: 'car1', name: 'BMW 320d', personId: 'alice', monthlyBenefitInKind: 350, monthlyEmployeeContribution: 120, notes: 'Test'),
   ];
-  final budgets = [Budget(categoryId: 'fixkosten', monthlyLimit: 200)];
+  final budgets = [
+    Budget(id: Budget.overrideId('fixkosten', 2026, 12), categoryId: 'fixkosten', monthlyLimit: 200, year: 2026, month: 12),
+  ];
 
   test('Export/Import-Roundtrip erhält alle Felder', () {
     final json = service.exportToJsonString(
@@ -71,6 +73,9 @@ void main() {
     expect(data.companyCars.first.notes, 'Test');
 
     expect(data.budgets.first.monthlyLimit, 200);
+    expect(data.budgets.first.year, 2026);
+    expect(data.budgets.first.month, 12);
+    expect(data.budgets.first.isOverride, isTrue);
   });
 
   test('leeres Dokument liefert leere Listen', () {

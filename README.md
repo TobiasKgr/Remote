@@ -27,10 +27,13 @@ Umgesetzt:
 - Optimierungsvorschläge: regelbasiertes "Optimierungspotenzial" auf dem Dashboard
   (mehrere Abos in derselben Unterkategorie, Ausgabenspitzen ggü. dem 3-Monats-Schnitt,
   seit mehreren Monaten unverändert laufende Abos, Summe wiederkehrender Kosten)
-- Budgets/Sparziele: monatliches Limit pro Ausgaben-Kategorie (über "Kategorien" →
-  Budget-Icon), Fortschrittsanzeige auf dem Dashboard (grün/gelb/rot)
+- Budgets/Sparziele: Standard-Limit pro Ausgaben-Kategorie plus optionale
+  monatsspezifische Abweichungen (z. B. höheres Limit im Dezember), Fortschrittsanzeige
+  auf Dashboard (Monat) und Jahresübersicht (Jahressumme) - grün/gelb/rot
 - Backup/Export & Import: alle lokalen Daten als JSON-Datei sichern und auf einer
-  anderen Installation wieder einspielen (über "Kategorien" → Backup-Icon)
+  anderen Installation wieder einspielen
+- Ein-/ausschaltbare Erinnerungen: lokale Benachrichtigungen bei Budget-Überschreitung
+  oder erkannter Ausgabenspitze, standardmäßig deaktiviert
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
@@ -43,6 +46,8 @@ gewünschten Erweiterungen vollständig umgesetzt.
 - **Persistenz**: Hive (`hive` + `hive_flutter`), läuft ohne Server/Backend, auch im Web (IndexedDB)
 - **PDF-Textextraktion**: `syncfusion_flutter_pdf` (Community-Lizenz, siehe Hinweis unten)
 - **Diagramme**: `fl_chart`
+- **Lokale Erinnerungen**: `flutter_local_notifications` (Android/iOS/macOS/Linux),
+  Browser-Notification-API im Web, kein Windows (siehe Abschnitt "Erinnerungen")
 
 ```
 lib/
@@ -56,7 +61,7 @@ lib/
                   (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk,
                   Backup-Export/Import, plattformspezifisches Datei-Speichern
   screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien,
-                  Personen, Budgets, Backup, Jahresübersicht
+                  Personen, Budgets, Backup, Einstellungen, Jahresübersicht
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
                   Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, ...)
 ```
@@ -124,8 +129,8 @@ Formular eintragen oder korrigieren.
 
 ## Zweite Person im Haushalt
 
-Über das Personen-Icon oben rechts im **Kategorien**-Tab lassen sich beliebig
-viele Haushaltsmitglieder anlegen (Name + Farbe). Danach:
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Personen verwalten"
+lassen sich beliebig viele Haushaltsmitglieder anlegen (Name + Farbe). Danach:
 
 - Jede Buchung (manuell, PDF-Import) und jede Gehaltsabrechnung kann optional
   einer Person zugeordnet werden. Ohne Zuordnung gilt ein Eintrag als
@@ -177,22 +182,59 @@ Buchungsdaten**, keine Vermutungen über tatsächliche Nutzung:
 Die Hinweise respektieren den Personen-Filter und werden pro Regel als
 eigene Karte angezeigt; ohne Treffer erscheint der Abschnitt gar nicht.
 
+## Erinnerungen (Benachrichtigungen)
+
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Einstellungen" lässt
+sich ein Schalter "Erinnerungen" umlegen (standardmäßig **aus** - reines
+Opt-in, damit keine Berechtigung ungefragt eingefordert wird). Ist er aktiv,
+zeigt die App eine lokale Benachrichtigung, sobald:
+
+- eine Kategorie ihr Budget im aktuell gewählten Monat überschreitet, oder
+- das Optimierungs-Regelwerk eine neue Warnung meldet (z. B. eine
+  Ausgabenspitze oder mehrere Abos in derselben Unterkategorie).
+
+**Wichtige Einschränkung**: Das sind **lokale, In-App-Erinnerungen**, die nur
+ausgelöst werden, während die App geöffnet ist - kein echtes
+Hintergrund-Push bei geschlossener App. Das würde pro Plattform zusätzliche
+Infrastruktur erfordern (z. B. WorkManager unter Android, BGTaskScheduler
+unter iOS, ein Service Worker + Push-Backend im Web), was bewusst außerhalb
+des Umfangs bleibt. Genutzt wird `flutter_local_notifications`
+(`lib/services/notification_backend_io.dart`), das **kein Windows**
+unterstützt - dort bleiben Erinnerungen deaktiviert, auch wenn der Schalter
+aktiviert ist. Im Web wird stattdessen direkt die Browser-Notification-API
+verwendet (`lib/services/notification_backend_web.dart`), was eine
+Berechtigungsabfrage im Browser auslöst. Innerhalb einer App-Sitzung wird
+jede erkannte Überschreitung/Warnung nur einmal gemeldet, nicht bei jedem
+Neu-Rendern.
+
 ## Budgets / Sparziele
 
-Über das Sparschwein-Icon oben rechts im **Kategorien**-Tab lässt sich pro
-Ausgaben-Kategorie ein monatliches Limit festlegen. Auf dem Dashboard
-erscheint darunter eine Sektion "Budgets" mit einem Fortschrittsbalken pro
-Kategorie mit gesetztem Limit (Ist-Ausgaben des gewählten Monats, respektiert
-den Personen-Filter): grün bis 80 %, gelb ab 80 %, rot bei Überschreitung.
-Kategorien ohne Limit erscheinen dort nicht; ein Limit von 0 entfernt das
-Budget wieder.
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Budgets verwalten" lässt
+sich pro Ausgaben-Kategorie planen:
+
+- Ein **Standard-Limit**, das für jeden Monat gilt.
+- Optional eine **Abweichung für einen bestimmten Monat** (z. B. höheres Limit
+  im Dezember für Geschenke) - diese hat Vorrang vor dem Standard, sobald man
+  im Budgets-Screen zu diesem Monat wechselt und dort etwas einträgt.
+- Beide Werte sind jederzeit frei überschreibbar; ein eingetragenes Limit von
+  `0` entfernt den jeweiligen Eintrag wieder.
+
+Auf dem **Dashboard** erscheint eine Sektion "Budgets" mit einem
+Fortschrittsbalken pro Kategorie mit gesetztem (effektivem) Limit für den
+gewählten Monat: grün bis 80 %, gelb ab 80 %, rot bei Überschreitung.
+Respektiert den Personen-Filter. Auf der **Jahresübersicht** gibt es
+zusätzlich eine Sektion "Jahresbudget": Planwert ist dort die Summe der
+effektiven Monatslimits über alle 12 Monate, verglichen mit den tatsächlichen
+Jahresausgaben je Kategorie. Kategorien ganz ohne Limit erscheinen in keiner
+der beiden Ansichten.
 
 ## Backup / Export & Import
 
-Über das Backup-Icon oben rechts im **Kategorien**-Tab lassen sich alle lokal
-gespeicherten Daten (Buchungen, Kategorien, Gehaltsabrechnungen, Personen,
-Firmenwagen, Budgets) als eine JSON-Datei exportieren und auf einer anderen
-Installation (oder nach einer Neuinstallation) wieder importieren:
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Backup exportieren/importieren"
+lassen sich alle lokal gespeicherten Daten (Buchungen, Kategorien,
+Gehaltsabrechnungen, Personen, Firmenwagen, Budgets) als eine JSON-Datei
+exportieren und auf einer anderen Installation (oder nach einer
+Neuinstallation) wieder importieren:
 
 - **Export**: Auf Mobilgeräten öffnet sich der native "Teilen/Speichern"-Dialog,
   auf Desktop ein Speichern-Dialog, im Web wird die Datei direkt heruntergeladen.
@@ -230,5 +272,5 @@ flutter build web          # Web (statische Dateien in build/web)
 
 ## Mögliche Erweiterungen
 
-- Push-/Erinnerungsbenachrichtigungen (z. B. bei erkannten Ausgabenspitzen
-  oder Budget-Überschreitungen).
+- Echtes Hintergrund-Push (statt nur lokaler In-App-Erinnerungen bei
+  geöffneter App) sowie Windows-Unterstützung für Erinnerungen.

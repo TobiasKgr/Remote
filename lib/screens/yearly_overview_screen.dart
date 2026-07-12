@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/category_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../utils/formatters.dart';
+import '../widgets/budget_progress_section.dart';
 import '../widgets/category_breakdown_chart.dart';
 import '../widgets/person_filter_bar.dart';
 import '../widgets/summary_card.dart';
@@ -126,6 +127,8 @@ class YearlyOverviewScreen extends ConsumerWidget {
                 child: CategoryBreakdownChart(totals: breakdown),
               ),
             ),
+            const SizedBox(height: 24),
+            const YearlyBudgetProgressSection(),
           ],
         ),
       ),

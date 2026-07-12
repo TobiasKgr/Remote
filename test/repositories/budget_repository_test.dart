@@ -24,23 +24,35 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  test('save and getForCategory roundtrip', () async {
-    await repository.save(Budget(categoryId: 'lebensmittel', monthlyLimit: 300));
-    final budget = repository.getForCategory('lebensmittel');
+  test('save and getById roundtrip for the default budget', () async {
+    await repository.save(Budget(id: Budget.defaultId('lebensmittel'), categoryId: 'lebensmittel', monthlyLimit: 300));
+    final budget = repository.getById(Budget.defaultId('lebensmittel'));
     expect(budget, isNotNull);
     expect(budget!.monthlyLimit, 300);
   });
 
-  test('save overwrites existing budget for the same category', () async {
-    await repository.save(Budget(categoryId: 'lebensmittel', monthlyLimit: 300));
-    await repository.save(Budget(categoryId: 'lebensmittel', monthlyLimit: 250));
+  test('save overwrites existing budget with the same id', () async {
+    await repository.save(Budget(id: Budget.defaultId('lebensmittel'), categoryId: 'lebensmittel', monthlyLimit: 300));
+    await repository.save(Budget(id: Budget.defaultId('lebensmittel'), categoryId: 'lebensmittel', monthlyLimit: 250));
     expect(repository.getAll(), hasLength(1));
-    expect(repository.getForCategory('lebensmittel')!.monthlyLimit, 250);
+    expect(repository.getById(Budget.defaultId('lebensmittel'))!.monthlyLimit, 250);
+  });
+
+  test('default budget and month override for the same category coexist', () async {
+    await repository.save(Budget(id: Budget.defaultId('lebensmittel'), categoryId: 'lebensmittel', monthlyLimit: 300));
+    await repository.save(Budget(
+      id: Budget.overrideId('lebensmittel', 2026, 12),
+      categoryId: 'lebensmittel',
+      monthlyLimit: 500,
+      year: 2026,
+      month: 12,
+    ));
+    expect(repository.getAll(), hasLength(2));
   });
 
   test('delete removes the budget', () async {
-    await repository.save(Budget(categoryId: 'lebensmittel', monthlyLimit: 300));
-    await repository.delete('lebensmittel');
-    expect(repository.getForCategory('lebensmittel'), isNull);
+    await repository.save(Budget(id: Budget.defaultId('lebensmittel'), categoryId: 'lebensmittel', monthlyLimit: 300));
+    await repository.delete(Budget.defaultId('lebensmittel'));
+    expect(repository.getById(Budget.defaultId('lebensmittel')), isNull);
   });
 }

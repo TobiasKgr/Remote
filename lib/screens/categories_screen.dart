@@ -7,6 +7,9 @@ import '../providers/category_providers.dart';
 import 'backup_screen.dart';
 import 'budgets_screen.dart';
 import 'persons_screen.dart';
+import 'settings_screen.dart';
+
+enum _CategoriesMenuAction { backup, budgets, persons, settings }
 
 const _availableColors = [
   Colors.red,
@@ -36,20 +39,35 @@ class CategoriesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Kategorien'),
         actions: [
-          IconButton(
-            tooltip: 'Backup exportieren/importieren',
-            icon: const Icon(Icons.backup_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BackupScreen())),
-          ),
-          IconButton(
-            tooltip: 'Budgets verwalten',
-            icon: const Icon(Icons.savings_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BudgetsScreen())),
-          ),
-          IconButton(
-            tooltip: 'Personen verwalten',
-            icon: const Icon(Icons.people_outline),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonsScreen())),
+          PopupMenuButton<_CategoriesMenuAction>(
+            tooltip: 'Verwaltung',
+            onSelected: (action) {
+              final Widget screen = switch (action) {
+                _CategoriesMenuAction.backup => const BackupScreen(),
+                _CategoriesMenuAction.budgets => const BudgetsScreen(),
+                _CategoriesMenuAction.persons => const PersonsScreen(),
+                _CategoriesMenuAction.settings => const SettingsScreen(),
+              };
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: _CategoriesMenuAction.persons,
+                child: ListTile(leading: Icon(Icons.people_outline), title: Text('Personen verwalten')),
+              ),
+              PopupMenuItem(
+                value: _CategoriesMenuAction.budgets,
+                child: ListTile(leading: Icon(Icons.savings_outlined), title: Text('Budgets verwalten')),
+              ),
+              PopupMenuItem(
+                value: _CategoriesMenuAction.backup,
+                child: ListTile(leading: Icon(Icons.backup_outlined), title: Text('Backup exportieren/importieren')),
+              ),
+              PopupMenuItem(
+                value: _CategoriesMenuAction.settings,
+                child: ListTile(leading: Icon(Icons.settings_outlined), title: Text('Einstellungen')),
+              ),
+            ],
           ),
         ],
       ),
