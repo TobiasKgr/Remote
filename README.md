@@ -45,6 +45,9 @@ Umgesetzt:
 - Vermögensübersicht: Investments/Depots, Immobilien, sonstige Vermögenswerte und
   Kredite/Schulden manuell erfassen, Netto-Vermögen als Summe aus allen
   Kontoständen plus Vermögenswerten abzüglich Verbindlichkeiten
+- Demo-Modus: realistische Beispieldaten über 3 Monate laden (Personen, Konten,
+  Buchungen, Firmenwagen, Gehaltsabrechnungen, Vermögenswerte), um alle Funktionen
+  ohne eigene Eingaben auszuprobieren, jederzeit gesammelt wieder entfernbar
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
@@ -341,6 +344,28 @@ sich das Netto-Vermögen über die reinen Bankkonten hinaus abbilden:
 - Konten werden zur Übersicht mit angezeigt, aber weiterhin ausschließlich über
   "Konten verwalten" bearbeitet - die Vermögensübersicht selbst verwaltet nur
   die zusätzlichen Positionen (Vermögenswerte/Kredite).
+
+## Demo-Modus
+
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Einstellungen" →
+"Demodaten laden" lässt sich die App sofort ausprobieren, ohne selbst etwas
+einzutragen:
+
+- Lädt realistische Beispieldaten (`lib/services/demo_data_service.dart`):
+  zwei Personen, zwei Konten, drei Monate an Buchungen (Miete, Nebenkosten,
+  Streaming-Abos, Supermarkt, Tanken, Gehalt, ...), einen Firmenwagen, zwei
+  Gehaltsabrechnungen, ein Investment-Depot und einen Kredit - abgestimmt
+  darauf, dass dabei auch die Optimierungsvorschläge (doppelte Streaming-Abos,
+  eine Ausgabenspitze) und eine Umbuchung zwischen den beiden Demo-Konten
+  sichtbar werden.
+- Alle erzeugten Einträge tragen eine `demo_`-ID und sind im Namen mit
+  "(Demo)" gekennzeichnet. Erneutes Laden überschreibt dieselben Einträge
+  (kein Duplizieren); "Demodaten entfernen" löscht ausschließlich Einträge
+  mit `demo_`-ID wieder - eigene Daten bleiben davon komplett unberührt.
+- Bewusst **ohne** Budgets: Ein Standard-Budget teilt sich die ID mit seiner
+  Kategorie, ein Demo-Budget könnte also ein bereits von dir gesetztes Budget
+  überschreiben - dieses eine Risiko wird vermieden, indem der Demo-Modus
+  keine Budgets anlegt.
 
 ## Entwicklung
 
