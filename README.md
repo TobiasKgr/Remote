@@ -34,6 +34,9 @@ Umgesetzt:
   anderen Installation wieder einspielen
 - Ein-/ausschaltbare Erinnerungen: lokale Benachrichtigungen bei Budget-Überschreitung
   oder erkannter Ausgabenspitze, standardmäßig deaktiviert
+- Automatische wiederkehrende Buchungen: eine als "wiederkehrend" markierte Buchung
+  (z. B. ein Abo) erzeugt beim nächsten App-Start automatisch die fällige(n)
+  Buchung(en) für die zwischenzeitlich vergangenen Monate
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
@@ -247,6 +250,29 @@ Das Backup-Format ist reines JSON (`lib/services/backup_service.dart`, Feld
 `formatVersion` für zukünftige Migrationen) und unabhängig vom internen
 Hive-Binärformat, also auch außerhalb der App lesbar.
 
+## Automatische wiederkehrende Buchungen
+
+Jede Buchung lässt sich im Formular als "Wiederkehrend (z. B. Abo)" markieren.
+Beim nächsten App-Start prüft `RecurringTransactionService`
+(`lib/services/recurring_transaction_service.dart`) alle Buchungen:
+
+- Buchungen werden zu **Serien** gruppiert (Beschreibung ohne Ziffern/Satzzeichen
+  + Kategorie + Unterkategorie + Person).
+- Nur die **jüngste Buchung** einer Serie entscheidet, ob es weitergeht: ist sie
+  als wiederkehrend markiert, werden für alle seither vergangenen Kalendermonate
+  bis heute automatisch neue Buchungen erzeugt (gleicher Betrag, gleiche
+  Kategorie/Person, gleicher Tag im Monat - bei kürzeren Monaten auf den letzten
+  Tag begrenzt).
+- Ein Abo **kündigen**: einfach bei der jeweils letzten Buchung dieser Serie den
+  Haken "Wiederkehrend" entfernen - danach wird für diese Serie nichts mehr
+  automatisch erzeugt.
+- Automatisch erzeugte Buchungen sind in der Buchungsliste mit einem kleinen
+  ⟲-Symbol markiert und lassen sich ganz normal bearbeiten oder löschen.
+
+Das läuft einmalig beim Start (nicht im Hintergrund bei geschlossener App) und
+holt dabei bis zu 24 fehlende Monate nach, falls die App länger nicht geöffnet
+wurde.
+
 ## Entwicklung
 
 ```bash
@@ -274,3 +300,7 @@ flutter build web          # Web (statische Dateien in build/web)
 
 - Echtes Hintergrund-Push (statt nur lokaler In-App-Erinnerungen bei
   geöffneter App) sowie Windows-Unterstützung für Erinnerungen.
+- CSV-Import als zuverlässigere Alternative/Ergänzung zum PDF-Import.
+- Konten-Verwaltung: mehrere Bankkonten mit eigenem Kontostand, interne
+  Überträge nicht doppelt als Ein-/Ausgabe zählen.
+- Volltextsuche/Filter (Kategorie, Betragsbereich) in der Buchungsliste.

@@ -82,7 +82,18 @@ class _TransactionTile extends ConsumerWidget {
           backgroundColor: category != null ? Color(category.colorValue) : Colors.grey,
           child: Icon(transaction.isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: Colors.white, size: 18),
         ),
-        title: Text(transaction.description),
+        title: Row(
+          children: [
+            Flexible(child: Text(transaction.description, overflow: TextOverflow.ellipsis)),
+            if (transaction.source == TransactionSource.recurringGenerated) ...[
+              const SizedBox(width: 6),
+              Tooltip(
+                message: 'Automatisch als wiederkehrende Buchung erzeugt',
+                child: Icon(Icons.autorenew, size: 16, color: Theme.of(context).colorScheme.primary),
+              ),
+            ],
+          ],
+        ),
         subtitle: Text(
           [dateFormat.format(transaction.date), category?.name, subcategoryName]
               .where((e) => e != null && e.isNotEmpty)
