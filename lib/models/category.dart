@@ -27,6 +27,14 @@ class Subcategory {
   /// Lower-case description keywords used for automatic categorization when
   /// importing bank statement lines (e.g. "netflix", "spotify").
   final List<String> keywords;
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'keywords': keywords};
+
+  static Subcategory fromJson(Map<String, dynamic> json) => Subcategory(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        keywords: (json['keywords'] as List).cast<String>(),
+      );
 }
 
 class SubcategoryAdapter extends TypeAdapter<Subcategory> {
@@ -67,6 +75,24 @@ class Category extends HiveObject {
   CategoryType type;
   int colorValue;
   final List<Subcategory> subcategories;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'type': type.index,
+        'colorValue': colorValue,
+        'subcategories': subcategories.map((s) => s.toJson()).toList(),
+      };
+
+  static Category fromJson(Map<String, dynamic> json) => Category(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        type: CategoryType.values[json['type'] as int],
+        colorValue: json['colorValue'] as int,
+        subcategories: (json['subcategories'] as List)
+            .map((e) => Subcategory.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+      );
 }
 
 class CategoryAdapter extends TypeAdapter<Category> {

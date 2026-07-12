@@ -9,6 +9,14 @@ class Person extends HiveObject {
   final String id;
   String name;
   int colorValue;
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'colorValue': colorValue};
+
+  static Person fromJson(Map<String, dynamic> json) => Person(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        colorValue: json['colorValue'] as int,
+      );
 }
 
 class PersonAdapter extends TypeAdapter<Person> {

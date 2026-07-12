@@ -46,6 +46,32 @@ class SalarySlip extends HiveObject {
 
   /// Household member this payslip belongs to. `null` means "Gemeinsam".
   String? personId;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'period': period.millisecondsSinceEpoch,
+        'gross': gross,
+        'net': net,
+        'incomeTax': incomeTax,
+        'socialSecurity': socialSecurity,
+        'otherDeductions': otherDeductions,
+        'employer': employer,
+        'linkedTransactionId': linkedTransactionId,
+        'personId': personId,
+      };
+
+  static SalarySlip fromJson(Map<String, dynamic> json) => SalarySlip(
+        id: json['id'] as String,
+        period: DateTime.fromMillisecondsSinceEpoch(json['period'] as int),
+        gross: (json['gross'] as num).toDouble(),
+        net: (json['net'] as num).toDouble(),
+        incomeTax: (json['incomeTax'] as num).toDouble(),
+        socialSecurity: (json['socialSecurity'] as num).toDouble(),
+        otherDeductions: (json['otherDeductions'] as num).toDouble(),
+        employer: json['employer'] as String?,
+        linkedTransactionId: json['linkedTransactionId'] as String?,
+        personId: json['personId'] as String?,
+      );
 }
 
 class SalarySlipAdapter extends TypeAdapter<SalarySlip> {

@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/company_car.dart';
 import '../models/person.dart';
@@ -12,6 +13,7 @@ const transactionBoxName = 'transactions';
 const salarySlipBoxName = 'salary_slips';
 const personBoxName = 'persons';
 const companyCarBoxName = 'company_cars';
+const budgetBoxName = 'budgets';
 
 /// Initializes Hive, registers all [TypeAdapter]s, opens the boxes used by
 /// the app and seeds default categories on first launch.
@@ -26,12 +28,14 @@ Future<void> initHive() async {
   Hive.registerAdapter(SalarySlipAdapter());
   Hive.registerAdapter(PersonAdapter());
   Hive.registerAdapter(CompanyCarAdapter());
+  Hive.registerAdapter(BudgetAdapter());
 
   final categoryBox = await Hive.openBox<Category>(categoryBoxName);
   await Hive.openBox<Transaction>(transactionBoxName);
   await Hive.openBox<SalarySlip>(salarySlipBoxName);
   await Hive.openBox<Person>(personBoxName);
   await Hive.openBox<CompanyCar>(companyCarBoxName);
+  await Hive.openBox<Budget>(budgetBoxName);
 
   if (categoryBox.isEmpty) {
     for (final category in buildDefaultCategories()) {

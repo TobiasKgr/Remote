@@ -27,10 +27,14 @@ Umgesetzt:
 - Optimierungsvorschläge: regelbasiertes "Optimierungspotenzial" auf dem Dashboard
   (mehrere Abos in derselben Unterkategorie, Ausgabenspitzen ggü. dem 3-Monats-Schnitt,
   seit mehreren Monaten unverändert laufende Abos, Summe wiederkehrender Kosten)
+- Budgets/Sparziele: monatliches Limit pro Ausgaben-Kategorie (über "Kategorien" →
+  Budget-Icon), Fortschrittsanzeige auf dem Dashboard (grün/gelb/rot)
+- Backup/Export & Import: alle lokalen Daten als JSON-Datei sichern und auf einer
+  anderen Installation wieder einspielen (über "Kategorien" → Backup-Icon)
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
-Damit ist die ursprünglich geplante Feature-Liste vollständig umgesetzt. Weitere
-Ideen für zukünftige Erweiterungen siehe Abschnitt "Mögliche Erweiterungen" unten.
+Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
+gewünschten Erweiterungen vollständig umgesetzt.
 
 ## Architektur
 
@@ -42,15 +46,19 @@ Ideen für zukünftige Erweiterungen siehe Abschnitt "Mögliche Erweiterungen" u
 
 ```
 lib/
-  models/         Category, Subcategory, Transaction, SalarySlip, Person, CompanyCar (+ Hive TypeAdapter)
+  models/         Category, Subcategory, Transaction, SalarySlip, Person, CompanyCar,
+                  Budget (+ Hive TypeAdapter, + toJson/fromJson für Backups)
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
-  providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter, Insights
+  providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter,
+                  Insights, Budget-Fortschritt
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
-                  (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk
-  screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien, Personen, Jahresübersicht
+                  (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk,
+                  Backup-Export/Import, plattformspezifisches Datei-Speichern
+  screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien,
+                  Personen, Budgets, Backup, Jahresübersicht
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
-                  Optimierungspotenzial-Karten, ...)
+                  Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, ...)
 ```
 
 ## Wichtiger Hinweis zum PDF-Import
@@ -169,6 +177,34 @@ Buchungsdaten**, keine Vermutungen über tatsächliche Nutzung:
 Die Hinweise respektieren den Personen-Filter und werden pro Regel als
 eigene Karte angezeigt; ohne Treffer erscheint der Abschnitt gar nicht.
 
+## Budgets / Sparziele
+
+Über das Sparschwein-Icon oben rechts im **Kategorien**-Tab lässt sich pro
+Ausgaben-Kategorie ein monatliches Limit festlegen. Auf dem Dashboard
+erscheint darunter eine Sektion "Budgets" mit einem Fortschrittsbalken pro
+Kategorie mit gesetztem Limit (Ist-Ausgaben des gewählten Monats, respektiert
+den Personen-Filter): grün bis 80 %, gelb ab 80 %, rot bei Überschreitung.
+Kategorien ohne Limit erscheinen dort nicht; ein Limit von 0 entfernt das
+Budget wieder.
+
+## Backup / Export & Import
+
+Über das Backup-Icon oben rechts im **Kategorien**-Tab lassen sich alle lokal
+gespeicherten Daten (Buchungen, Kategorien, Gehaltsabrechnungen, Personen,
+Firmenwagen, Budgets) als eine JSON-Datei exportieren und auf einer anderen
+Installation (oder nach einer Neuinstallation) wieder importieren:
+
+- **Export**: Auf Mobilgeräten öffnet sich der native "Teilen/Speichern"-Dialog,
+  auf Desktop ein Speichern-Dialog, im Web wird die Datei direkt heruntergeladen.
+- **Import**: Datei auswählen, danach zeigt ein Bestätigungsdialog, wie viele
+  Einträge je Typ enthalten sind. Bestehende Einträge mit gleicher ID werden
+  überschrieben ("Merge"), alles andere bleibt unangetastet – ein Import
+  löscht also nie stillschweigend vorhandene Daten.
+
+Das Backup-Format ist reines JSON (`lib/services/backup_service.dart`, Feld
+`formatVersion` für zukünftige Migrationen) und unabhängig vom internen
+Hive-Binärformat, also auch außerhalb der App lesbar.
+
 ## Entwicklung
 
 ```bash
@@ -194,9 +230,5 @@ flutter build web          # Web (statische Dateien in build/web)
 
 ## Mögliche Erweiterungen
 
-Über die ursprünglich geplante Feature-Liste hinaus, z. B.:
-
-- Export/Backup der lokalen Daten (z. B. als JSON) und Import auf einem
-  anderen Gerät, da aktuell alles nur lokal in Hive gespeichert wird.
-- Budget-/Sparziele pro Kategorie mit Fortschrittsanzeige.
-- Push-/Erinnerungsbenachrichtigungen (z. B. bei erkannten Ausgabenspitzen).
+- Push-/Erinnerungsbenachrichtigungen (z. B. bei erkannten Ausgabenspitzen
+  oder Budget-Überschreitungen).

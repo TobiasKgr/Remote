@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 
 import '../models/category.dart';
 import '../providers/category_providers.dart';
+import 'backup_screen.dart';
+import 'budgets_screen.dart';
 import 'persons_screen.dart';
 
 const _availableColors = [
@@ -34,6 +36,16 @@ class CategoriesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Kategorien'),
         actions: [
+          IconButton(
+            tooltip: 'Backup exportieren/importieren',
+            icon: const Icon(Icons.backup_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BackupScreen())),
+          ),
+          IconButton(
+            tooltip: 'Budgets verwalten',
+            icon: const Icon(Icons.savings_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BudgetsScreen())),
+          ),
           IconButton(
             tooltip: 'Personen verwalten',
             icon: const Icon(Icons.people_outline),

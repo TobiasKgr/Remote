@@ -25,6 +25,24 @@ class CompanyCar extends HiveObject {
   double monthlyBenefitInKind;
   double monthlyEmployeeContribution;
   String? notes;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'personId': personId,
+        'monthlyBenefitInKind': monthlyBenefitInKind,
+        'monthlyEmployeeContribution': monthlyEmployeeContribution,
+        'notes': notes,
+      };
+
+  static CompanyCar fromJson(Map<String, dynamic> json) => CompanyCar(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        personId: json['personId'] as String?,
+        monthlyBenefitInKind: (json['monthlyBenefitInKind'] as num).toDouble(),
+        monthlyEmployeeContribution: (json['monthlyEmployeeContribution'] as num).toDouble(),
+        notes: json['notes'] as String?,
+      );
 }
 
 class CompanyCarAdapter extends TypeAdapter<CompanyCar> {

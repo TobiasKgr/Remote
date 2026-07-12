@@ -42,6 +42,30 @@ class Transaction extends HiveObject {
   String? personId;
 
   bool get isIncome => amount >= 0;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'date': date.millisecondsSinceEpoch,
+        'amount': amount,
+        'description': description,
+        'categoryId': categoryId,
+        'subcategoryId': subcategoryId,
+        'source': source.index,
+        'isRecurring': isRecurring,
+        'personId': personId,
+      };
+
+  static Transaction fromJson(Map<String, dynamic> json) => Transaction(
+        id: json['id'] as String,
+        date: DateTime.fromMillisecondsSinceEpoch(json['date'] as int),
+        amount: (json['amount'] as num).toDouble(),
+        description: json['description'] as String,
+        categoryId: json['categoryId'] as String,
+        subcategoryId: json['subcategoryId'] as String?,
+        source: TransactionSource.values[json['source'] as int],
+        isRecurring: json['isRecurring'] as bool,
+        personId: json['personId'] as String?,
+      );
 }
 
 class TransactionAdapter extends TypeAdapter<Transaction> {
