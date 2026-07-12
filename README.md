@@ -37,6 +37,8 @@ Umgesetzt:
 - Automatische wiederkehrende Buchungen: eine als "wiederkehrend" markierte Buchung
   (z. B. ein Abo) erzeugt beim nächsten App-Start automatisch die fällige(n)
   Buchung(en) für die zwischenzeitlich vergangenen Monate
+- Suche & Filter in Buchungen: Volltextsuche nach Beschreibung sowie Filter nach
+  Kategorie und Betragsbereich (Von/Bis), zusätzlich zu Monat und Personen-Filter
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
@@ -273,6 +275,21 @@ Das läuft einmalig beim Start (nicht im Hintergrund bei geschlossener App) und
 holt dabei bis zu 24 fehlende Monate nach, falls die App länger nicht geöffnet
 wurde.
 
+## Suche & Filter in Buchungen
+
+Im **Buchungen**-Tab gibt es unter dem Monats-/Personen-Filter ein Suchfeld,
+das die Beschreibung case-insensitiv durchsucht, sowie ein Filter-Icon in der
+AppBar (mit Punkt-Badge, sobald ein Filter aktiv ist) für:
+
+- **Kategorie** (eine bestimmte Kategorie oder "Alle Kategorien")
+- **Betrag von/bis** (vergleicht den Absolutbetrag, unabhängig von Einnahme/Ausgabe)
+
+Alle Filter lassen sich kombinieren und wirken zusätzlich zum bereits gewählten
+Monat/Personen-Filter; "Zurücksetzen" im Filter-Dialog setzt Kategorie und
+Betragsbereich zurück. Andere Ansichten (Dashboard, Budgets, Jahresübersicht)
+sind davon nicht betroffen - Suche/Filter gelten nur für die Buchungsliste
+selbst.
+
 ## Entwicklung
 
 ```bash
@@ -303,4 +320,3 @@ flutter build web          # Web (statische Dateien in build/web)
 - CSV-Import als zuverlässigere Alternative/Ergänzung zum PDF-Import.
 - Konten-Verwaltung: mehrere Bankkonten mit eigenem Kontostand, interne
   Überträge nicht doppelt als Ein-/Ausgabe zählen.
-- Volltextsuche/Filter (Kategorie, Betragsbereich) in der Buchungsliste.
