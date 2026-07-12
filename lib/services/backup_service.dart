@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../models/account.dart';
+import '../models/asset.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/company_car.dart';
@@ -19,6 +20,7 @@ class BackupData {
     required this.companyCars,
     required this.budgets,
     required this.accounts,
+    required this.assets,
   });
 
   final List<Category> categories;
@@ -28,6 +30,7 @@ class BackupData {
   final List<CompanyCar> companyCars;
   final List<Budget> budgets;
   final List<Account> accounts;
+  final List<Asset> assets;
 }
 
 /// Exports/imports all locally stored data as a single human-readable JSON
@@ -44,6 +47,7 @@ class BackupService {
     required List<CompanyCar> companyCars,
     required List<Budget> budgets,
     required List<Account> accounts,
+    required List<Asset> assets,
   }) {
     final document = {
       'formatVersion': formatVersion,
@@ -55,6 +59,7 @@ class BackupService {
       'companyCars': companyCars.map((c) => c.toJson()).toList(),
       'budgets': budgets.map((b) => b.toJson()).toList(),
       'accounts': accounts.map((a) => a.toJson()).toList(),
+      'assets': assets.map((a) => a.toJson()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(document);
   }
@@ -80,6 +85,7 @@ class BackupService {
       companyCars: parseList('companyCars', CompanyCar.fromJson),
       budgets: parseList('budgets', Budget.fromJson),
       accounts: parseList('accounts', Account.fromJson),
+      assets: parseList('assets', Asset.fromJson),
     );
   }
 }

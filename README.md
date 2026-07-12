@@ -42,6 +42,9 @@ Umgesetzt:
 - Konten-Verwaltung: mehrere Bankkonten mit eigenem (aus Startsaldo + Buchungen
   berechnetem) Kontostand, Buchungen optional einem Konto zuordnen, interne
   Umbuchungen zwischen eigenen Konten zählen nicht doppelt als Ein-/Ausgabe
+- Vermögensübersicht: Investments/Depots, Immobilien, sonstige Vermögenswerte und
+  Kredite/Schulden manuell erfassen, Netto-Vermögen als Summe aus allen
+  Kontoständen plus Vermögenswerten abzüglich Verbindlichkeiten
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
@@ -60,16 +63,17 @@ gewünschten Erweiterungen vollständig umgesetzt.
 ```
 lib/
   models/         Category, Subcategory, Transaction, SalarySlip, Person, CompanyCar,
-                  Budget, Account (+ Hive TypeAdapter, + toJson/fromJson für Backups)
+                  Budget, Account, Asset (+ Hive TypeAdapter, + toJson/fromJson für Backups)
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
   providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter,
-                  Insights, Budget-Fortschritt, Konto-Fortschritt/-Saldo
+                  Insights, Budget-Fortschritt, Konto-Fortschritt/-Saldo, Netto-Vermögen
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
                   (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk,
                   Backup-Export/Import, plattformspezifisches Datei-Speichern
   screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien,
-                  Personen, Konten, Budgets, Backup, Einstellungen, Jahresübersicht
+                  Personen, Konten, Vermögensübersicht, Budgets, Backup, Einstellungen,
+                  Jahresübersicht
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
                   Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, ...)
 ```
@@ -240,9 +244,9 @@ der beiden Ansichten.
 
 Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Backup exportieren/importieren"
 lassen sich alle lokal gespeicherten Daten (Buchungen, Kategorien,
-Gehaltsabrechnungen, Personen, Firmenwagen, Budgets, Konten) als eine JSON-Datei
-exportieren und auf einer anderen Installation (oder nach einer
-Neuinstallation) wieder importieren:
+Gehaltsabrechnungen, Personen, Firmenwagen, Budgets, Konten, Vermögenswerte/Kredite)
+als eine JSON-Datei exportieren und auf einer anderen Installation (oder nach
+einer Neuinstallation) wieder importieren:
 
 - **Export**: Auf Mobilgeräten öffnet sich der native "Teilen/Speichern"-Dialog,
   auf Desktop ein Speichern-Dialog, im Web wird die Datei direkt heruntergeladen.
@@ -319,6 +323,24 @@ Person zugeordnet):
   Gegenbuchung auf dem anderen Konto automatisch mitgelöscht.
 - Löscht man ein Konto selbst, bleiben dessen bisherige Buchungen erhalten,
   gelten danach aber als keinem Konto zugeordnet.
+
+## Vermögensübersicht
+
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Vermögensübersicht" lässt
+sich das Netto-Vermögen über die reinen Bankkonten hinaus abbilden:
+
+- Zusätzlich zu den Konten lassen sich beliebig viele **Vermögenswerte**
+  (Investments/Depots, Immobilien, Sonstiges) und **Kredite/Schulden** manuell
+  anlegen - jeweils mit Name, Art, aktuellem Wert, optionaler Person und Notiz.
+- Der Wert wird **manuell gepflegt** (kein automatischer Kursabruf o. ä.) und
+  bei Bedarf einfach durch Bearbeiten des Eintrags aktualisiert.
+- Oben auf der Seite steht das **Netto-Vermögen**: Summe aller Kontostände
+  plus aller Vermögenswerte, abzüglich aller Kredite/Schulden
+  (`computeNetWorth` in `lib/providers/asset_providers.dart`) - reagiert live
+  auf neue Buchungen, Kontostände und Personen-Filter.
+- Konten werden zur Übersicht mit angezeigt, aber weiterhin ausschließlich über
+  "Konten verwalten" bearbeitet - die Vermögensübersicht selbst verwaltet nur
+  die zusätzlichen Positionen (Vermögenswerte/Kredite).
 
 ## Entwicklung
 

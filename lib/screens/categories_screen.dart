@@ -5,12 +5,13 @@ import 'package:uuid/uuid.dart';
 import '../models/category.dart';
 import '../providers/category_providers.dart';
 import 'accounts_screen.dart';
+import 'assets_screen.dart';
 import 'backup_screen.dart';
 import 'budgets_screen.dart';
 import 'persons_screen.dart';
 import 'settings_screen.dart';
 
-enum _CategoriesMenuAction { backup, budgets, persons, settings, accounts }
+enum _CategoriesMenuAction { backup, budgets, persons, settings, accounts, assets }
 
 const _availableColors = [
   Colors.red,
@@ -49,6 +50,7 @@ class CategoriesScreen extends ConsumerWidget {
                 _CategoriesMenuAction.persons => const PersonsScreen(),
                 _CategoriesMenuAction.settings => const SettingsScreen(),
                 _CategoriesMenuAction.accounts => const AccountsScreen(),
+                _CategoriesMenuAction.assets => const AssetsScreen(),
               };
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
             },
@@ -60,6 +62,10 @@ class CategoriesScreen extends ConsumerWidget {
               PopupMenuItem(
                 value: _CategoriesMenuAction.accounts,
                 child: ListTile(leading: Icon(Icons.account_balance_outlined), title: Text('Konten verwalten')),
+              ),
+              PopupMenuItem(
+                value: _CategoriesMenuAction.assets,
+                child: ListTile(leading: Icon(Icons.pie_chart_outline), title: Text('Vermögensübersicht')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.budgets,

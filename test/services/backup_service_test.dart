@@ -1,4 +1,5 @@
 import 'package:finance_analyzer/models/account.dart';
+import 'package:finance_analyzer/models/asset.dart';
 import 'package:finance_analyzer/models/budget.dart';
 import 'package:finance_analyzer/models/category.dart';
 import 'package:finance_analyzer/models/company_car.dart';
@@ -45,6 +46,9 @@ void main() {
   final accounts = [
     Account(id: 'acc1', name: 'Girokonto', startingBalance: 100, colorValue: 0xFF2196F3, personId: 'alice'),
   ];
+  final assets = [
+    Asset(id: 'asset1', name: 'ETF-Depot', category: AssetCategory.investment, value: 5000, personId: 'alice'),
+  ];
 
   test('Export/Import-Roundtrip erhält alle Felder', () {
     final json = service.exportToJsonString(
@@ -55,6 +59,7 @@ void main() {
       companyCars: companyCars,
       budgets: budgets,
       accounts: accounts,
+      assets: assets,
     );
 
     final data = service.importFromJsonString(json);
@@ -85,6 +90,11 @@ void main() {
     expect(data.accounts.first.name, 'Girokonto');
     expect(data.accounts.first.startingBalance, 100);
     expect(data.accounts.first.personId, 'alice');
+
+    expect(data.assets.first.name, 'ETF-Depot');
+    expect(data.assets.first.category, AssetCategory.investment);
+    expect(data.assets.first.value, 5000);
+    expect(data.assets.first.isLiability, isFalse);
   });
 
   test('leeres Dokument liefert leere Listen', () {
@@ -96,6 +106,7 @@ void main() {
     expect(data.companyCars, isEmpty);
     expect(data.budgets, isEmpty);
     expect(data.accounts, isEmpty);
+    expect(data.assets, isEmpty);
   });
 
   test('wirft FormatException bei ungültigem JSON-Root', () {

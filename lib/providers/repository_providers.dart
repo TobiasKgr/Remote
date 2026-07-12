@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 
 import '../data/hive_setup.dart';
 import '../models/account.dart';
+import '../models/asset.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/company_car.dart';
@@ -10,6 +11,7 @@ import '../models/person.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
 import '../repositories/account_repository.dart';
+import '../repositories/asset_repository.dart';
 import '../repositories/budget_repository.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/company_car_repository.dart';
@@ -32,6 +34,8 @@ final companyCarBoxProvider = Provider<Box<CompanyCar>>((ref) => Hive.box<Compan
 final budgetBoxProvider = Provider<Box<Budget>>((ref) => Hive.box<Budget>(budgetBoxName));
 
 final accountBoxProvider = Provider<Box<Account>>((ref) => Hive.box<Account>(accountBoxName));
+
+final assetBoxProvider = Provider<Box<Asset>>((ref) => Hive.box<Asset>(assetBoxName));
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository(ref.watch(categoryBoxProvider));
@@ -59,4 +63,8 @@ final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
 
 final accountRepositoryProvider = Provider<AccountRepository>((ref) {
   return AccountRepository(ref.watch(accountBoxProvider));
+});
+
+final assetRepositoryProvider = Provider<AssetRepository>((ref) {
+  return AssetRepository(ref.watch(assetBoxProvider));
 });
