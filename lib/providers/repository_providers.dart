@@ -2,12 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
 import '../data/hive_setup.dart';
+import '../models/account.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/company_car.dart';
 import '../models/person.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
+import '../repositories/account_repository.dart';
 import '../repositories/budget_repository.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/company_car_repository.dart';
@@ -28,6 +30,8 @@ final personBoxProvider = Provider<Box<Person>>((ref) => Hive.box<Person>(person
 final companyCarBoxProvider = Provider<Box<CompanyCar>>((ref) => Hive.box<CompanyCar>(companyCarBoxName));
 
 final budgetBoxProvider = Provider<Box<Budget>>((ref) => Hive.box<Budget>(budgetBoxName));
+
+final accountBoxProvider = Provider<Box<Account>>((ref) => Hive.box<Account>(accountBoxName));
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository(ref.watch(categoryBoxProvider));
@@ -51,4 +55,8 @@ final companyCarRepositoryProvider = Provider<CompanyCarRepository>((ref) {
 
 final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
   return BudgetRepository(ref.watch(budgetBoxProvider));
+});
+
+final accountRepositoryProvider = Provider<AccountRepository>((ref) {
+  return AccountRepository(ref.watch(accountBoxProvider));
 });

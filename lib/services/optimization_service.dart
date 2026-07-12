@@ -24,7 +24,7 @@ class OptimizationService {
 
   List<Insight> analyze(List<Transaction> transactions, List<Category> categories, DateTime referenceMonth) {
     final categoryById = {for (final c in categories) c.id: c};
-    final expenses = transactions.where((t) => !t.isIncome).toList();
+    final expenses = transactions.where((t) => !t.isIncome && !t.isTransfer).toList();
 
     final insights = <Insight>[
       ..._recurringCostSummary(expenses, referenceMonth),

@@ -9,6 +9,8 @@ class TransactionRepository {
 
   List<Transaction> getAll() => _box.values.toList(growable: false);
 
+  Transaction? getById(String id) => _box.get(id);
+
   List<Transaction> getForMonth(int year, int month) {
     return _box.values
         .where((t) => t.date.year == year && t.date.month == month)

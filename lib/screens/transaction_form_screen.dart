@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/category.dart';
 import '../models/transaction.dart';
+import '../providers/account_providers.dart';
 import '../providers/category_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
@@ -28,6 +29,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   String? _categoryId;
   String? _subcategoryId;
   String? _personId;
+  String? _accountId;
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     _categoryId = existing?.categoryId;
     _subcategoryId = existing?.subcategoryId;
     _personId = existing?.personId;
+    _accountId = existing?.accountId;
   }
 
   @override
@@ -54,8 +57,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryNotifierProvider);
     final persons = ref.watch(personNotifierProvider);
+    final accounts = ref.watch(accountNotifierProvider);
     final relevantCategories = categories
-        .where((c) => c.type == (_isIncome ? CategoryType.income : CategoryType.expense))
+        .where((c) => c.id != 'umbuchung' && c.type == (_isIncome ? CategoryType.income : CategoryType.expense))
         .toList();
     if (_categoryId != null && !relevantCategories.any((c) => c.id == _categoryId)) {
       _categoryId = null;
@@ -163,6 +167,18 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 onChanged: (v) => setState(() => _personId = v),
               ),
             ],
+            if (accounts.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _accountId,
+                decoration: const InputDecoration(labelText: 'Konto (optional)'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('—')),
+                  ...accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
+                ],
+                onChanged: (v) => setState(() => _accountId = v),
+              ),
+            ],
             const SizedBox(height: 12),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -196,6 +212,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       source: widget.existing?.source ?? TransactionSource.manual,
       isRecurring: _isRecurring,
       personId: _personId,
+      accountId: _accountId,
     );
 
     await ref.read(transactionNotifierProvider.notifier).upsert(transaction);

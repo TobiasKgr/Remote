@@ -39,6 +39,9 @@ Umgesetzt:
   Buchung(en) für die zwischenzeitlich vergangenen Monate
 - Suche & Filter in Buchungen: Volltextsuche nach Beschreibung sowie Filter nach
   Kategorie und Betragsbereich (Von/Bis), zusätzlich zu Monat und Personen-Filter
+- Konten-Verwaltung: mehrere Bankkonten mit eigenem (aus Startsaldo + Buchungen
+  berechnetem) Kontostand, Buchungen optional einem Konto zuordnen, interne
+  Umbuchungen zwischen eigenen Konten zählen nicht doppelt als Ein-/Ausgabe
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
@@ -57,16 +60,16 @@ gewünschten Erweiterungen vollständig umgesetzt.
 ```
 lib/
   models/         Category, Subcategory, Transaction, SalarySlip, Person, CompanyCar,
-                  Budget (+ Hive TypeAdapter, + toJson/fromJson für Backups)
+                  Budget, Account (+ Hive TypeAdapter, + toJson/fromJson für Backups)
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
   providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter,
-                  Insights, Budget-Fortschritt
+                  Insights, Budget-Fortschritt, Konto-Fortschritt/-Saldo
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
                   (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk,
                   Backup-Export/Import, plattformspezifisches Datei-Speichern
   screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien,
-                  Personen, Budgets, Backup, Einstellungen, Jahresübersicht
+                  Personen, Konten, Budgets, Backup, Einstellungen, Jahresübersicht
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
                   Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, ...)
 ```
@@ -237,7 +240,7 @@ der beiden Ansichten.
 
 Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Backup exportieren/importieren"
 lassen sich alle lokal gespeicherten Daten (Buchungen, Kategorien,
-Gehaltsabrechnungen, Personen, Firmenwagen, Budgets) als eine JSON-Datei
+Gehaltsabrechnungen, Personen, Firmenwagen, Budgets, Konten) als eine JSON-Datei
 exportieren und auf einer anderen Installation (oder nach einer
 Neuinstallation) wieder importieren:
 
@@ -290,6 +293,33 @@ Betragsbereich zurück. Andere Ansichten (Dashboard, Budgets, Jahresübersicht)
 sind davon nicht betroffen - Suche/Filter gelten nur für die Buchungsliste
 selbst.
 
+## Konten-Verwaltung
+
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Konten verwalten" lassen
+sich beliebig viele Bankkonten anlegen (Name, Startsaldo, Farbe, optional einer
+Person zugeordnet):
+
+- Der angezeigte **Kontostand** ist keine eigene gespeicherte Zahl, sondern wird
+  laufend aus Startsaldo + Summe aller diesem Konto zugeordneten Buchungen
+  berechnet (`computeAccountBalance` in `lib/providers/account_providers.dart`).
+- Jede Buchung (manuell, PDF-Import) kann optional einem Konto zugeordnet
+  werden. Solange kein Konto angelegt ist, bleibt die Konto-Auswahl in den
+  Formularen unsichtbar.
+- **Umbuchung**: Über den zusätzlichen FAB "Umbuchung" (ab zwei Konten sichtbar)
+  lässt sich Geld zwischen zwei eigenen Konten verschieben. Das erzeugt zwei
+  verknüpfte Buchungen (gegenläufiger Betrag, gemeinsame `transferGroupId`,
+  Kategorie "Umbuchung", Flag `isTransfer`) - eine je Konto, damit beide
+  Kontostände stimmen.
+- Umbuchungen zählen **nicht doppelt** als Ein-/Ausgabe: Dashboard,
+  Jahresübersicht, Budget-Fortschritt (Monat + Jahr) und Optimierungsvorschläge
+  blenden Buchungen mit `isTransfer = true` konsequent aus ihren Summen aus -
+  sie verschieben nur Geld zwischen eigenen Konten, sind aber weder echtes
+  Einkommen noch echte Ausgabe.
+- Löscht man eine Umbuchung in der Buchungsliste, wird die verknüpfte
+  Gegenbuchung auf dem anderen Konto automatisch mitgelöscht.
+- Löscht man ein Konto selbst, bleiben dessen bisherige Buchungen erhalten,
+  gelten danach aber als keinem Konto zugeordnet.
+
 ## Entwicklung
 
 ```bash
@@ -318,5 +348,3 @@ flutter build web          # Web (statische Dateien in build/web)
 - Echtes Hintergrund-Push (statt nur lokaler In-App-Erinnerungen bei
   geöffneter App) sowie Windows-Unterstützung für Erinnerungen.
 - CSV-Import als zuverlässigere Alternative/Ergänzung zum PDF-Import.
-- Konten-Verwaltung: mehrere Bankkonten mit eigenem Kontostand, interne
-  Überträge nicht doppelt als Ein-/Ausgabe zählen.

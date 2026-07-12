@@ -1,3 +1,4 @@
+import 'package:finance_analyzer/models/account.dart';
 import 'package:finance_analyzer/models/budget.dart';
 import 'package:finance_analyzer/models/category.dart';
 import 'package:finance_analyzer/models/company_car.dart';
@@ -41,6 +42,9 @@ void main() {
   final budgets = [
     Budget(id: Budget.overrideId('fixkosten', 2026, 12), categoryId: 'fixkosten', monthlyLimit: 200, year: 2026, month: 12),
   ];
+  final accounts = [
+    Account(id: 'acc1', name: 'Girokonto', startingBalance: 100, colorValue: 0xFF2196F3, personId: 'alice'),
+  ];
 
   test('Export/Import-Roundtrip erhält alle Felder', () {
     final json = service.exportToJsonString(
@@ -50,6 +54,7 @@ void main() {
       persons: persons,
       companyCars: companyCars,
       budgets: budgets,
+      accounts: accounts,
     );
 
     final data = service.importFromJsonString(json);
@@ -76,6 +81,10 @@ void main() {
     expect(data.budgets.first.year, 2026);
     expect(data.budgets.first.month, 12);
     expect(data.budgets.first.isOverride, isTrue);
+
+    expect(data.accounts.first.name, 'Girokonto');
+    expect(data.accounts.first.startingBalance, 100);
+    expect(data.accounts.first.personId, 'alice');
   });
 
   test('leeres Dokument liefert leere Listen', () {
@@ -86,6 +95,7 @@ void main() {
     expect(data.persons, isEmpty);
     expect(data.companyCars, isEmpty);
     expect(data.budgets, isEmpty);
+    expect(data.accounts, isEmpty);
   });
 
   test('wirft FormatException bei ungültigem JSON-Root', () {

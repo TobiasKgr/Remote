@@ -34,6 +34,9 @@ class Transaction extends HiveObject {
     this.source = TransactionSource.manual,
     this.isRecurring = false,
     this.personId,
+    this.accountId,
+    this.isTransfer = false,
+    this.transferGroupId,
   });
 
   final String id;
@@ -49,6 +52,22 @@ class Transaction extends HiveObject {
   /// "Gemeinsam" (shared, not attributed to one person).
   String? personId;
 
+  /// Which [Account] this booking affects. `null` means it isn't tracked
+  /// against a specific account (the app worked without accounts before
+  /// this field existed, so this stays optional).
+  String? accountId;
+
+  /// True for one half of an internal transfer between two of the user's
+  /// own accounts. Excluded from income/expense totals, budgets and
+  /// optimization insights - it doesn't represent real income or spending -
+  /// but still counts towards the affected accounts' balances.
+  bool isTransfer;
+
+  /// Links the two [Transaction]s that make up one transfer (the debit from
+  /// the source account and the credit to the destination account), so they
+  /// can be deleted together.
+  String? transferGroupId;
+
   bool get isIncome => amount >= 0;
 
   Map<String, dynamic> toJson() => {
@@ -61,6 +80,9 @@ class Transaction extends HiveObject {
         'source': source.index,
         'isRecurring': isRecurring,
         'personId': personId,
+        'accountId': accountId,
+        'isTransfer': isTransfer,
+        'transferGroupId': transferGroupId,
       };
 
   static Transaction fromJson(Map<String, dynamic> json) => Transaction(
@@ -73,6 +95,9 @@ class Transaction extends HiveObject {
         source: TransactionSource.values[json['source'] as int],
         isRecurring: json['isRecurring'] as bool,
         personId: json['personId'] as String?,
+        accountId: json['accountId'] as String?,
+        isTransfer: json['isTransfer'] as bool? ?? false,
+        transferGroupId: json['transferGroupId'] as String?,
       );
 }
 
@@ -93,6 +118,9 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       source: TransactionSource.values[map['source'] as int],
       isRecurring: map['isRecurring'] as bool,
       personId: map['personId'] as String?,
+      accountId: map['accountId'] as String?,
+      isTransfer: map['isTransfer'] as bool? ?? false,
+      transferGroupId: map['transferGroupId'] as String?,
     );
   }
 
@@ -108,6 +136,9 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       'source': obj.source.index,
       'isRecurring': obj.isRecurring,
       'personId': obj.personId,
+      'accountId': obj.accountId,
+      'isTransfer': obj.isTransfer,
+      'transferGroupId': obj.transferGroupId,
     });
   }
 }

@@ -17,7 +17,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(selectedMonthProvider);
-    final transactions = ref.watch(transactionsForSelectedMonthProvider);
+    final transactions = ref.watch(transactionsForSelectedMonthProvider).where((t) => !t.isTransfer);
     final categories = ref.watch(categoryNotifierProvider);
 
     final income = transactions.where((t) => t.isIncome).fold<double>(0, (s, t) => s + t.amount);

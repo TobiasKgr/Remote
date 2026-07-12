@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/account_providers.dart';
 import '../providers/budget_providers.dart';
 import '../providers/category_providers.dart';
 import '../providers/company_car_providers.dart';
@@ -39,6 +40,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         persons: ref.read(personNotifierProvider),
         companyCars: ref.read(companyCarNotifierProvider),
         budgets: ref.read(budgetNotifierProvider),
+        accounts: ref.read(accountNotifierProvider),
       );
       final dateStamp = DateTime.now().toIso8601String().split('T').first;
       final result = await saveTextFile(fileName: 'finanzen_backup_$dateStamp.json', content: json);
@@ -80,7 +82,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         content: Text(
           'Enthält ${data.transactions.length} Buchungen, ${data.categories.length} Kategorien, '
           '${data.salarySlips.length} Gehaltsabrechnungen, ${data.persons.length} Personen, '
-          '${data.companyCars.length} Firmenwagen und ${data.budgets.length} Budgets.\n\n'
+          '${data.companyCars.length} Firmenwagen, ${data.budgets.length} Budgets und '
+          '${data.accounts.length} Konten.\n\n'
           'Bestehende Einträge mit gleicher ID werden überschrieben, alles andere bleibt erhalten.',
         ),
         actions: [
@@ -109,6 +112,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     for (final b in data.budgets) {
       await ref.read(budgetRepositoryProvider).save(b);
     }
+    for (final a in data.accounts) {
+      await ref.read(accountRepositoryProvider).save(a);
+    }
 
     ref.invalidate(categoryNotifierProvider);
     ref.invalidate(transactionNotifierProvider);
@@ -116,6 +122,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     ref.invalidate(personNotifierProvider);
     ref.invalidate(companyCarNotifierProvider);
     ref.invalidate(budgetNotifierProvider);
+    ref.invalidate(accountNotifierProvider);
 
     setState(() {
       _busy = false;
@@ -137,8 +144,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                   children: [
                     const Text(
                       'Exportiert alle lokal gespeicherten Daten (Buchungen, Kategorien, Gehaltsabrechnungen, '
-                      'Personen, Firmenwagen, Budgets) als JSON-Datei. Diese Datei kannst du sichern oder auf '
-                      'einer anderen Installation wieder importieren.',
+                      'Personen, Firmenwagen, Budgets, Konten) als JSON-Datei. Diese Datei kannst du sichern oder '
+                      'auf einer anderen Installation wieder importieren.',
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(

@@ -20,8 +20,22 @@ class TransactionNotifier extends Notifier<List<Transaction>> {
     ref.invalidateSelf();
   }
 
+  /// Deletes the transaction. If it's one half of an internal transfer
+  /// (see [Transaction.transferGroupId]), the other half is deleted too, so
+  /// a transfer is always removed as a whole rather than leaving an
+  /// orphaned single-sided booking.
   Future<void> remove(String id) async {
-    await ref.read(transactionRepositoryProvider).delete(id);
+    final repository = ref.read(transactionRepositoryProvider);
+    final transaction = repository.getById(id);
+    await repository.delete(id);
+
+    final groupId = transaction?.transferGroupId;
+    if (groupId != null) {
+      final siblings = repository.getAll().where((t) => t.transferGroupId == groupId && t.id != id);
+      for (final sibling in siblings) {
+        await repository.delete(sibling.id);
+      }
+    }
     ref.invalidateSelf();
   }
 }

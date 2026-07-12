@@ -4,12 +4,13 @@ import 'package:uuid/uuid.dart';
 
 import '../models/category.dart';
 import '../providers/category_providers.dart';
+import 'accounts_screen.dart';
 import 'backup_screen.dart';
 import 'budgets_screen.dart';
 import 'persons_screen.dart';
 import 'settings_screen.dart';
 
-enum _CategoriesMenuAction { backup, budgets, persons, settings }
+enum _CategoriesMenuAction { backup, budgets, persons, settings, accounts }
 
 const _availableColors = [
   Colors.red,
@@ -31,7 +32,7 @@ class CategoriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoryNotifierProvider);
+    final categories = ref.watch(categoryNotifierProvider).where((c) => c.id != 'umbuchung');
     final income = categories.where((c) => c.type == CategoryType.income).toList();
     final expense = categories.where((c) => c.type == CategoryType.expense).toList();
 
@@ -47,6 +48,7 @@ class CategoriesScreen extends ConsumerWidget {
                 _CategoriesMenuAction.budgets => const BudgetsScreen(),
                 _CategoriesMenuAction.persons => const PersonsScreen(),
                 _CategoriesMenuAction.settings => const SettingsScreen(),
+                _CategoriesMenuAction.accounts => const AccountsScreen(),
               };
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
             },
@@ -54,6 +56,10 @@ class CategoriesScreen extends ConsumerWidget {
               PopupMenuItem(
                 value: _CategoriesMenuAction.persons,
                 child: ListTile(leading: Icon(Icons.people_outline), title: Text('Personen verwalten')),
+              ),
+              PopupMenuItem(
+                value: _CategoriesMenuAction.accounts,
+                child: ListTile(leading: Icon(Icons.account_balance_outlined), title: Text('Konten verwalten')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.budgets,

@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/account.dart';
 import '../models/category.dart';
 import '../models/person.dart';
 import '../models/transaction.dart';
+import '../providers/account_providers.dart';
 import '../providers/category_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
@@ -28,6 +30,7 @@ class _DraftRow {
   String? categoryId;
   String? subcategoryId;
   String? personId;
+  String? accountId;
 }
 
 class ImportScreen extends ConsumerStatefulWidget {
@@ -117,6 +120,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         subcategoryId: d.subcategoryId,
         source: TransactionSource.pdfImport,
         personId: d.personId,
+        accountId: d.accountId,
       ));
     }
 
@@ -137,6 +141,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryNotifierProvider);
     final persons = ref.watch(personNotifierProvider);
+    final accounts = ref.watch(accountNotifierProvider);
     final selectedCount = _drafts.where((d) => d.selected).length;
 
     return Scaffold(
@@ -158,7 +163,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 : ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: _drafts.length,
-                    itemBuilder: (context, index) => _buildDraftCard(context, _drafts[index], categories, persons),
+                    itemBuilder: (context, index) => _buildDraftCard(context, _drafts[index], categories, persons, accounts),
                   ),
       ),
     );
@@ -201,8 +206,15 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     );
   }
 
-  Widget _buildDraftCard(BuildContext context, _DraftRow draft, List<Category> categories, List<Person> persons) {
-    final relevantCategories = categories.where((c) => c.type == (draft.isIncome ? CategoryType.income : CategoryType.expense)).toList();
+  Widget _buildDraftCard(
+    BuildContext context,
+    _DraftRow draft,
+    List<Category> categories,
+    List<Person> persons,
+    List<Account> accounts,
+  ) {
+    final relevantCategories =
+        categories.where((c) => c.id != 'umbuchung' && c.type == (draft.isIncome ? CategoryType.income : CategoryType.expense)).toList();
     final matchingCategory = relevantCategories.where((c) => c.id == draft.categoryId).toList();
     final subcategories = matchingCategory.isNotEmpty ? matchingCategory.first.subcategories : <Subcategory>[];
     if (draft.categoryId != null && matchingCategory.isEmpty && relevantCategories.isNotEmpty) {
@@ -293,6 +305,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
                 ],
                 onChanged: (v) => setState(() => draft.personId = v),
+              ),
+            if (accounts.isNotEmpty)
+              DropdownButtonFormField<String>(
+                initialValue: accounts.any((a) => a.id == draft.accountId) ? draft.accountId : null,
+                decoration: const InputDecoration(labelText: 'Konto (optional)'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('—')),
+                  ...accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
+                ],
+                onChanged: (v) => setState(() => draft.accountId = v),
               ),
           ],
         ),

@@ -105,5 +105,13 @@ List<Category> buildDefaultCategories() {
         Subcategory(id: 'sonstiges_diverses', name: 'Diverses', keywords: []),
       ],
     ),
+    // Used exclusively by the transfer flow on the Konten screen - not meant
+    // to be picked manually, so the transaction/import forms filter it out.
+    Category(
+      id: 'umbuchung',
+      name: 'Umbuchung',
+      type: CategoryType.expense,
+      colorValue: Colors.blueGrey.toARGB32(),
+    ),
   ];
 }

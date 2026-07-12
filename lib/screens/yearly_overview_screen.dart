@@ -16,7 +16,7 @@ class YearlyOverviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final year = ref.watch(selectedYearProvider);
-    final transactions = ref.watch(transactionsForSelectedYearProvider);
+    final transactions = ref.watch(transactionsForSelectedYearProvider).where((t) => !t.isTransfer);
     final categories = ref.watch(categoryNotifierProvider);
     final categoryById = {for (final c in categories) c.id: c};
 

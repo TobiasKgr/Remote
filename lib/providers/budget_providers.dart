@@ -62,7 +62,7 @@ List<BudgetProgress> computeBudgetProgress(
 ) {
   final categoryById = {for (final c in categories) c.id: c};
   final spendByCategory = <String, double>{};
-  for (final t in transactions.where((t) => !t.isIncome)) {
+  for (final t in transactions.where((t) => !t.isIncome && !t.isTransfer)) {
     spendByCategory[t.categoryId] = (spendByCategory[t.categoryId] ?? 0) + t.amount.abs();
   }
 
@@ -94,7 +94,7 @@ List<BudgetProgress> computeYearlyBudgetProgress(
 ) {
   final categoryById = {for (final c in categories) c.id: c};
   final spendByCategory = <String, double>{};
-  for (final t in transactionsForYear.where((t) => !t.isIncome)) {
+  for (final t in transactionsForYear.where((t) => !t.isIncome && !t.isTransfer)) {
     spendByCategory[t.categoryId] = (spendByCategory[t.categoryId] ?? 0) + t.amount.abs();
   }
 
