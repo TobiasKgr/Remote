@@ -9,17 +9,24 @@ WAS IST DAS?
 
 
 -------------------------------------------------------
-1) EINMALIG: ORS-Schlüssel eintragen
+1) EINMALIG: ORS-Schlüssel hinterlegen
 -------------------------------------------------------
   - Kostenlosen Schlüssel holen: https://openrouteservice.org/dev/
     (registrieren -> "Request a token" -> Standard/Free)
-  - Datei "Wibbelt Routing.html" mit dem Editor (Rechtsklick ->
-    Öffnen mit -> Editor) öffnen.
-  - Ganz oben die Zeile suchen:
+
+  EINFACH (empfohlen): direkt in der App eingeben
+  - "Wibbelt Routing.html" per Doppelklick öffnen.
+  - Ganz oben erscheint das Feld "ORS-Key hinterlegen".
+  - Schlüssel einfügen -> "Speichern".
+  - Der Key wird nur im Browser gespeichert (nicht im Code). Jeder
+    Kollege gibt ihn an seinem Rechner einmalig ein.
+
+  ALTERNATIV: fest im Quelltext (dann gilt er für alle sofort)
+  - "Wibbelt Routing.html" mit dem Editor öffnen, oben die Zeile
         const ORS_KEY = "HIER_MEIN_KEY";
-    und HIER_MEIN_KEY durch den eigenen Schlüssel ersetzen, z. B.:
+    ändern in z. B.
         const ORS_KEY = "5b3ce359...ihr-key...";
-  - Speichern.
+    speichern. Hinweis: Der Key steht dann sichtbar in der Datei.
 
 
 -------------------------------------------------------
