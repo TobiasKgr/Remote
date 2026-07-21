@@ -176,6 +176,8 @@
   .mk.ziel{background:var(--red)}
   .mk.emp{background:var(--blue)}
   .mk.wp{background:var(--amber)}
+  .mk.off{background:#94a3b8}
+  .mk.off span{opacity:.9}
 
   /* Modal (Mitarbeiter hinzufügen/bearbeiten) */
   .modal-bg{position:fixed; inset:0; background:rgba(15,23,42,.55); display:none;
@@ -310,7 +312,7 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
         <label class="opt-row">
           <input type="checkbox" id="collectMode">
           <span><b>Mitarbeiter einsammeln</b> – Route führt vom Start über alle markierten Mitarbeiter zum Ziel
-          (statt direkt). Reihenfolge = Listenreihenfolge.</span>
+          (statt direkt). Die <b>Reihenfolge wird automatisch optimiert</b> (kürzeste Gesamt-Fahrzeit).</span>
         </label>
       </div>
 
@@ -401,8 +403,9 @@ function uid(){ return (crypto.randomUUID? crypto.randomUUID() : "id"+Date.now()
 let start = { ...START_DEFAULT };
 let ziel  = null;
 let mitarbeiter = [];              // [{id,name,adresse,lat,lon,gruppe,aktiv}]
-let map, baseLayers, layerGroup;
+let map, baseLayers, layerGroup, empLayer;
 let lastRows = [];
+let orderMap = null;               // Einsammel-Reihenfolge: {employeeId: Positionsnummer}
 let sortState = { key:"distZiel", dir:1 };
 let editId = null;                 // Modal: null=neu, sonst id
 let formGeo = null;                // Modal: {label,lat,lon} aus Autocomplete
@@ -439,11 +442,33 @@ function initMap(){
   osm.addTo(map);
   baseLayers = { "OpenStreetMap":osm, "Humanitarian (HOT)":humanitarian };
   L.control.layers(baseLayers,null,{position:"topright"}).addTo(map);
-  layerGroup = L.layerGroup().addTo(map);
+  empLayer   = L.layerGroup().addTo(map);   // persistente Mitarbeiter-Marker (dauerhaft sichtbar)
+  layerGroup = L.layerGroup().addTo(map);   // Route + Start/Ziel (wird pro Berechnung neu gezeichnet)
 }
 function markerIcon(kind,letter){
   return L.divIcon({ className:"", html:'<div class="mk '+kind+'"><span>'+letter+'</span></div>',
     iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-26] });
+}
+function iconForEmp(m){
+  const num = orderMap && orderMap[m.id];
+  if(num) return markerIcon("wp", String(num));        // Zwischenstopp mit Reihenfolge-Nummer
+  if(m._checked) return markerIcon("emp","");          // ausgewählt (blau)
+  return markerIcon("off","");                         // nicht ausgewählt (grau)
+}
+
+/* Alle sichtbaren, aktiven Mitarbeiter dauerhaft auf der Karte zeigen; Klick schaltet Auswahl um */
+function renderMapEmployees(){
+  if(!empLayer) return;
+  empLayer.clearLayers();
+  visibleEmployees().filter(m=>m.aktiv).forEach(m=>{
+    const row = lastRows.find(r=>r.name===m.name);
+    let tip = "<b>"+escapeHtml(m.name)+"</b>"+(m.gruppe?" ("+escapeHtml(m.gruppe)+")":"")+"<br>"+escapeHtml(m.adresse);
+    if(row) tip += "<br>Entf. Start: "+nfKm(row.distStart)+"<br>Entf. Ziel: "+nfKm(row.distZiel)+"<br>Fahrzeit Ziel: "+fmtDauer(row.durZiel);
+    tip += '<br><i>'+(m._checked?"✓ ausgewählt":"nicht ausgewählt")+' – klicken zum Umschalten</i>';
+    const mk = L.marker([m.lat,m.lon],{icon:iconForEmp(m)}).bindTooltip(tip,{direction:"top",offset:[0,-24]});
+    mk.on("click",()=>{ m._checked=!m._checked; mk.setIcon(iconForEmp(m)); renderEmployees(); });
+    empLayer.addLayer(mk);
+  });
 }
 
 /* ================================================================
@@ -494,6 +519,7 @@ function renderEmployees(){
       '</div>';
     box.appendChild(row);
   });
+  if(empLayer) renderMapEmployees();   // Kartenmarker synchron halten
 }
 function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
@@ -585,20 +611,53 @@ async function getRoute(points){
            distance:f.properties.summary.distance, duration:f.properties.summary.duration };
 }
 
-/* ORS – Matrix: EIN Call, locations[0]=Start,[1]=Ziel,[2..]=Mitarbeiter */
-async function getMatrix(emps){
+/* ORS – Matrix: EIN Call, locations[0]=Start,[1]=Ziel,[2..]=Mitarbeiter.
+   full=true -> komplette N×N-Matrix (für Reihenfolgen-Optimierung), sonst schlanker Call. */
+async function getMatrix(emps, full){
   const locations=[[start.lon,start.lat],[ziel.lon,ziel.lat],...emps.map(m=>[m.lon,m.lat])];
+  const body = full
+    ? { locations, metrics:["distance","duration"], units:"m" }
+    : { locations, sources:emps.map((_,i)=>i+2), destinations:[0,1], metrics:["distance","duration"], units:"m" };
   const res = await fetch("https://api.openrouteservice.org/v2/matrix/driving-car",{
     method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ locations, sources:emps.map((_,i)=>i+2), destinations:[0,1],
-                           metrics:["distance","duration"], units:"m" })
+    body: JSON.stringify(body)
   });
   if(res.status===403) throw {type:"key"};
   if(res.status===429) throw {type:"quota"};
   if(!res.ok) throw {type:"http",status:res.status};
   const data=await res.json();
-  return emps.map((m,i)=>({ name:m.name, adresse:m.adresse, gruppe:m.gruppe, lat:m.lat, lon:m.lon,
+  if(full){
+    // Zeilen aus voller Matrix ableiten: Mitarbeiter-Index gi = i+2, Start=0, Ziel=1
+    const rows = emps.map((m,i)=>({ id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, lat:m.lat, lon:m.lon,
+      distStart:data.distances[i+2][0], distZiel:data.distances[i+2][1], durZiel:data.durations[i+2][1] }));
+    return { rows, durations:data.durations };
+  }
+  return emps.map((m,i)=>({ id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, lat:m.lat, lon:m.lon,
     distStart:data.distances[i][0], distZiel:data.distances[i][1], durZiel:data.durations[i][1] }));
+}
+
+/* Offene Rundreise (TSP): von Start(0) über alle Mitarbeiter(2..N-1) zum Ziel(1),
+   minimiert Gesamt-Fahrzeit. Nearest-Neighbour + 2-opt (für die kleinen Mengen völlig ausreichend). */
+function solveOrder(durations, empCount){
+  const START=0, ZIEL=1, emps=[]; for(let i=0;i<empCount;i++) emps.push(i+2);
+  // Nearest-Neighbour ab Start
+  let cur=START, remaining=emps.slice(), seq=[];
+  while(remaining.length){
+    let best=0, bestD=Infinity;
+    remaining.forEach((n,idx)=>{ const d=durations[cur][n]; if(d<bestD){bestD=d; best=idx;} });
+    cur=remaining.splice(best,1)[0]; seq.push(cur);
+  }
+  // 2-opt auf der Mitarbeiter-Sequenz (Endpunkte Start/Ziel fix)
+  const cost=s=>{ let c=durations[START][s[0]]; for(let i=0;i<s.length-1;i++) c+=durations[s[i]][s[i+1]]; c+=durations[s[s.length-1]][ZIEL]; return c; };
+  let improved=true;
+  while(improved && seq.length>2){
+    improved=false;
+    for(let i=0;i<seq.length-1;i++) for(let j=i+1;j<seq.length;j++){
+      const cand=seq.slice(0,i).concat(seq.slice(i,j+1).reverse(), seq.slice(j+1));
+      if(cost(cand)<cost(seq)-1e-6){ seq=cand; improved=true; }
+    }
+  }
+  return seq.map(gi=>gi-2);   // -> Mitarbeiter-Indizes (0-basiert)
 }
 
 /* ================================================================
@@ -628,15 +687,28 @@ async function calculate(){
 
   try{
     if(!navigator.onLine) throw {type:"offline"};
-    const routePoints = collect ? [start,...emps,ziel] : [start,ziel];
-    const routeP  = getRoute(routePoints);
-    const matrixP = emps.length ? getMatrix(emps) : Promise.resolve([]);
-    const [route,rows]=await Promise.all([routeP,matrixP]);
+    orderMap=null;
+    let route, rows, orderedEmps=null;
+
+    if(collect){
+      // Voller Matrix-Call -> Tabelle + optimale Reihenfolge; dann Route in optimierter Folge
+      const { rows:r, durations } = await getMatrix(emps, true);
+      rows=r;
+      const order = solveOrder(durations, emps.length);      // Indizes in optimaler Folge
+      orderedEmps = order.map(i=>emps[i]);
+      orderMap={}; orderedEmps.forEach((m,i)=>orderMap[m.id]=i+1);
+      route = await getRoute([start,...orderedEmps,ziel]);
+    }else{
+      const routeP  = getRoute([start,ziel]);
+      const matrixP = emps.length ? getMatrix(emps,false) : Promise.resolve([]);
+      [route,rows] = await Promise.all([routeP,matrixP]);
+    }
+
     lastRows=rows;
-    drawResult(route,rows,collect?emps:null);
+    drawResult(route,rows,!!collect);
     document.getElementById("pdfBtn").disabled=false;
     document.getElementById("csvBtn").disabled=rows.length===0;
-    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (Einsammel-Route)":"")+".","ok");
+    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (optimierte Einsammel-Route)":"")+".","ok");
   }catch(e){
     console.error(e);
     if(e instanceof TypeError) setStatus(errText({type:"offline"}),"err");
@@ -647,31 +719,21 @@ async function calculate(){
 /* ================================================================
    Ergebnis zeichnen
    ================================================================ */
-function drawResult(route,rows,collectOrder){
+function drawResult(route,rows,collect){
   layerGroup.clearLayers();
   L.polyline(route.coords,{ color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
 
   L.marker([start.lat,start.lon],{icon:markerIcon("start","S")}).bindPopup("<b>Start</b><br>"+escapeHtml(start.label)).addTo(layerGroup);
   L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")}).bindPopup("<b>Ziel</b><br>"+escapeHtml(ziel.label)).addTo(layerGroup);
 
-  const orderIndex = {};
-  if(collectOrder) collectOrder.forEach((m,i)=> orderIndex[m.name]=i+1);
-
-  rows.forEach(r=>{
-    const isWp = collectOrder && orderIndex[r.name];
-    const kind = isWp ? "wp" : "emp";
-    const letter = isWp ? String(orderIndex[r.name]) : "";
-    L.marker([r.lat,r.lon],{icon:markerIcon(kind,letter)}).bindPopup(
-      "<b>"+escapeHtml(r.name)+"</b>"+(r.gruppe?" ("+escapeHtml(r.gruppe)+")":"")+"<br>"+escapeHtml(r.adresse)+
-      "<br>Entf. Start: "+nfKm(r.distStart)+"<br>Entf. Ziel: "+nfKm(r.distZiel)+
-      "<br>Fahrzeit Ziel: "+fmtDauer(r.durZiel)).addTo(layerGroup);
-  });
+  // Mitarbeiter-Marker (inkl. Reihenfolge-Nummern + jetzt bekannte Entfernungen) neu zeichnen
+  renderMapEmployees();
 
   const pts=[[start.lat,start.lon],[ziel.lat,ziel.lon],...rows.map(r=>[r.lat,r.lon])];
   map.fitBounds(L.latLngBounds(pts).pad(0.15));
 
   const sum=document.getElementById("summary"); sum.style.display="flex";
-  const label = collectOrder ? "Einsammel-Route" : "Gesamtstrecke";
+  const label = collect ? "Einsammel-Route" : "Gesamtstrecke";
   sum.innerHTML =
     '<div class="box"><div class="k">'+label+'</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
     '<div class="box"><div class="k">Fahrzeit</div><div class="v">'+fmtDauer(route.duration)+'</div></div>'+
@@ -839,7 +901,7 @@ window.addEventListener("DOMContentLoaded",()=>{
     }
   });
   document.getElementById("empList").addEventListener("change",e=>{
-    if(e.target.classList.contains("cbx")){ const m=mitarbeiter.find(x=>x.id===e.target.dataset.id); if(m) m._checked=e.target.checked; }
+    if(e.target.classList.contains("cbx")){ const m=mitarbeiter.find(x=>x.id===e.target.dataset.id); if(m){ m._checked=e.target.checked; renderMapEmployees(); } }
   });
 
   // Suche / Filter
