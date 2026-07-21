@@ -243,12 +243,22 @@ const MITARBEITER_SEED = [
 const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
 </script>
 
+<!-- ============================================================= -->
+<!-- GEMEINSAME DATENDATEI (optional): mitarbeiter.js im selben     -->
+<!-- Ordner. Enthält die geteilte Mitarbeiter-Liste für alle        -->
+<!-- Kollegen. Wird sie gefunden, ist sie die "Wahrheit" für alle;  -->
+<!-- fehlt sie, läuft alles über den lokalen Browser-Speicher.      -->
+<!-- Format der Datei:  window.WIBBELT_MITARBEITER = [ … ];         -->
+<!-- Über den Knopf „Für Server speichern" wird sie erzeugt.        -->
+<!-- ============================================================= -->
+<script src="mitarbeiter.js" onerror="window.__maSharedMissing=true"></script>
+
 <header class="app">
   <div>
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v2</div>
+  <div class="ver">v3</div>
 </header>
 
 <div class="wrap">
@@ -301,11 +311,12 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
       <div class="emp-list" id="empList"></div>
 
       <div class="data-btns">
-        <button type="button" id="exportJson">Stammdaten sichern (JSON)</button>
-        <button type="button" id="importJson">Stammdaten laden</button>
-        <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+        <button type="button" id="saveServer" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af">💾 Für Server speichern</button>
+        <button type="button" id="importJson">Datei laden</button>
+        <input type="file" id="importFile" accept=".js,.json,application/json,text/javascript" style="display:none">
       </div>
       <div class="hint" id="dataHint"></div>
+      <div class="hint" id="shareState" style="display:none"></div>
 
       <!-- Routing-Optionen -->
       <div class="subgroup">
@@ -413,12 +424,27 @@ let formGeo = null;                // Modal: {label,lat,lon} aus Autocomplete
 /* ================================================================
    Persistenz (localStorage)
    ================================================================ */
+let sharedFileActive = false;      // true, wenn mitarbeiter.js (gemeinsame Datei) geladen wurde
+
+function normalizeList(arr){
+  return (arr||[]).map(m=>({ id:m.id||uid(), name:m.name||"", adresse:m.adresse||"",
+      lat:+m.lat, lon:+m.lon, gruppe:m.gruppe||"", aktiv:m.aktiv!==false }))
+    .filter(m=>m.name && !isNaN(m.lat) && !isNaN(m.lon));
+}
 function loadMitarbeiter(){
+  // 1) Gemeinsame Datei mitarbeiter.js (Netzwerk-Freigabe) hat Vorrang – "eine Wahrheit" für alle
+  if(Array.isArray(window.WIBBELT_MITARBEITER) && window.WIBBELT_MITARBEITER.length){
+    mitarbeiter = normalizeList(window.WIBBELT_MITARBEITER);
+    sharedFileActive = true;
+    saveMitarbeiter();               // lokaler Cache
+    return;
+  }
+  // 2) Lokaler Browser-Speicher
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){ mitarbeiter = JSON.parse(raw); return; }
+    if(raw){ mitarbeiter = normalizeList(JSON.parse(raw)); if(mitarbeiter.length) return; }
   }catch(e){ console.warn("localStorage nicht lesbar",e); }
-  // Erststart: Seed übernehmen
+  // 3) Erststart: Auslieferungsdaten
   mitarbeiter = MITARBEITER_SEED.map(m=>({ id:uid(), aktiv:true, gruppe:"", ...m }));
   saveMitarbeiter();
 }
@@ -794,25 +820,54 @@ function exportCSV(){
   lines.push(""); lines.push('"Start"'+sep+'"'+start.label+'"'); lines.push('"Ziel"'+sep+'"'+(ziel?ziel.label:'')+'"');
   downloadBlob("﻿"+lines.join("\r\n"),"text/csv;charset=utf-8;","Wibbelt_Routing_"+new Date().toISOString().slice(0,10)+".csv");
 }
+let pendingChanges = false;        // lokale Änderungen noch nicht in die gemeinsame Datei geschrieben
+
+/* Erzeugt die gemeinsame Datei mitarbeiter.js zum Ablegen im Netzwerk-Ordner */
 function exportStammdaten(){
-  const clean=mitarbeiter.map(({_checked,...m})=>m);
-  downloadBlob(JSON.stringify(clean,null,2),"application/json","Wibbelt_Mitarbeiter_"+new Date().toISOString().slice(0,10)+".json");
-  setDataHint("Stammdaten als JSON gesichert.");
+  const clean = mitarbeiter.map(({_checked,...m})=>m);
+  const js =
+    "/* Wibbelt Routing – gemeinsame Mitarbeiter-Stammdaten.\n"+
+    "   Diese Datei im selben Ordner wie 'Wibbelt Routing.html' ablegen/ersetzen.\n"+
+    "   Zuletzt gespeichert: "+nowStr()+" */\n"+
+    "window.WIBBELT_MITARBEITER = "+JSON.stringify(clean,null,2)+";\n";
+  downloadBlob(js,"text/javascript","mitarbeiter.js");
+  pendingChanges=false; updateShareState();
+  setDataHint("„mitarbeiter.js“ erzeugt – jetzt im Server-Ordner ersetzen, dann sehen alle Kollegen die Änderung.");
 }
+/* Lädt eine mitarbeiter.js (window.WIBBELT_MITARBEITER = …) ODER ein JSON-Array */
 function importStammdaten(file){
   const reader=new FileReader();
   reader.onload=()=>{
-    try{
-      const arr=JSON.parse(reader.result);
-      if(!Array.isArray(arr)) throw 0;
-      mitarbeiter=arr.map(m=>({ id:m.id||uid(), name:m.name||"", adresse:m.adresse||"",
-        lat:+m.lat, lon:+m.lon, gruppe:m.gruppe||"", aktiv:m.aktiv!==false }))
-        .filter(m=>m.name && !isNaN(m.lat) && !isNaN(m.lon));
-      saveMitarbeiter(); renderEmployees();
-      setDataHint(mitarbeiter.length+" Mitarbeiter geladen.");
-    }catch(e){ setDataHint("⚠️ Datei konnte nicht gelesen werden (kein gültiges JSON)."); }
+    let arr=null;
+    const txt=String(reader.result);
+    try{ arr=JSON.parse(txt); }catch(e){ /* keine reine JSON-Datei */ }
+    if(!Array.isArray(arr)){
+      // Versuch: mitarbeiter.js auswerten (window.WIBBELT_MITARBEITER = [...])
+      const m=txt.match(/WIBBELT_MITARBEITER\s*=\s*(\[[\s\S]*\])\s*;?/);
+      if(m){ try{ arr=JSON.parse(m[1]); }catch(e){} }
+    }
+    if(!Array.isArray(arr)){ setDataHint("⚠️ Datei nicht lesbar (erwartet mitarbeiter.js oder JSON-Array)."); return; }
+    mitarbeiter=normalizeList(arr);
+    mitarbeiter.forEach(m=>m._checked=m.aktiv);
+    saveMitarbeiter(); renderEmployees();
+    pendingChanges=false; updateShareState();
+    setDataHint(mitarbeiter.length+" Mitarbeiter geladen.");
   };
   reader.readAsText(file);
+}
+function markPending(){ if(sharedFileActive){ pendingChanges=true; updateShareState(); } }
+function updateShareState(){
+  const el=document.getElementById("shareState");
+  if(sharedFileActive){
+    el.style.display="block";
+    el.innerHTML = pendingChanges
+      ? "🟠 <b>Lokale Änderungen</b> – zum Teilen „Für Server speichern“ und Datei im Ordner ersetzen."
+      : "🟢 Gemeinsame Datei „mitarbeiter.js“ aktiv – alle Kollegen sehen denselben Stand.";
+  }else{
+    el.style.display="block";
+    el.innerHTML = "ℹ️ Keine gemeinsame Datei gefunden – Daten liegen nur in diesem Browser. "+
+      "Für die Freigabe „Für Server speichern“ klicken und die Datei in den Ordner legen.";
+  }
 }
 function downloadBlob(content,mime,name){
   const blob=new Blob([content],{type:mime}); const a=document.createElement("a");
@@ -864,7 +919,7 @@ async function saveModal(){
     }else{
       mitarbeiter.push({ id:uid(), name, gruppe, adresse:geo.label||adresse, lat:geo.lat, lon:geo.lon, aktiv:true, _checked:true });
     }
-    saveMitarbeiter(); renderEmployees(); closeModal();
+    saveMitarbeiter(); renderEmployees(); closeModal(); markPending();
     setDataHint((editId?"Mitarbeiter aktualisiert.":"Mitarbeiter hinzugefügt.")+" ");
   }catch(e){ modalError(errText(e instanceof TypeError?{type:"offline"}:e)); }
   finally{ saveBtn.disabled=false; saveBtn.textContent="Speichern"; }
@@ -879,6 +934,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   mitarbeiter.forEach(m=>m._checked = m.aktiv);   // aktive standardmäßig markiert
   initMap();
   renderEmployees();
+  updateShareState();
 
   document.getElementById("startInput").value=start.label;
   wireAutocomplete("startInput","startSuggest",{ set:s=>{start=s;} });
@@ -893,11 +949,11 @@ window.addEventListener("DOMContentLoaded",()=>{
     else if(t.dataset.del){
       const m=mitarbeiter.find(x=>x.id===t.dataset.del);
       if(m && confirm("„"+m.name+"“ wirklich dauerhaft löschen?")){
-        mitarbeiter=mitarbeiter.filter(x=>x.id!==t.dataset.del); saveMitarbeiter(); renderEmployees();
+        mitarbeiter=mitarbeiter.filter(x=>x.id!==t.dataset.del); saveMitarbeiter(); renderEmployees(); markPending();
       }
     }else if(t.dataset.toggle){
       const m=mitarbeiter.find(x=>x.id===t.dataset.toggle);
-      if(m){ m.aktiv=!m.aktiv; if(!m.aktiv) m._checked=false; saveMitarbeiter(); renderEmployees(); }
+      if(m){ m.aktiv=!m.aktiv; if(!m.aktiv) m._checked=false; saveMitarbeiter(); renderEmployees(); markPending(); }
     }
   });
   document.getElementById("empList").addEventListener("change",e=>{
@@ -923,7 +979,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("modalSave").addEventListener("click",saveModal);
   document.getElementById("modalCancel").addEventListener("click",closeModal);
   document.getElementById("modalBg").addEventListener("click",e=>{ if(e.target.id==="modalBg") closeModal(); });
-  document.getElementById("exportJson").addEventListener("click",exportStammdaten);
+  document.getElementById("saveServer").addEventListener("click",exportStammdaten);
   document.getElementById("importJson").addEventListener("click",()=>document.getElementById("importFile").click());
   document.getElementById("importFile").addEventListener("change",e=>{ if(e.target.files[0]) importStammdaten(e.target.files[0]); e.target.value=""; });
 

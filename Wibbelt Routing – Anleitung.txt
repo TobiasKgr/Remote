@@ -1,0 +1,82 @@
+========================================================
+  WIBBELT ROUTING – Kurzanleitung / Installation
+========================================================
+
+WAS IST DAS?
+  Ein Werkzeug, das die Route vom Firmenstandort zu einer Zieladresse
+  anzeigt und dazu für ausgewählte Mitarbeiter die Entfernung zu Start
+  und Ziel sowie die Fahrzeit zum Ziel berechnet.
+
+
+-------------------------------------------------------
+1) EINMALIG: ORS-Schlüssel eintragen
+-------------------------------------------------------
+  - Kostenlosen Schlüssel holen: https://openrouteservice.org/dev/
+    (registrieren -> "Request a token" -> Standard/Free)
+  - Datei "Wibbelt Routing.html" mit dem Editor (Rechtsklick ->
+    Öffnen mit -> Editor) öffnen.
+  - Ganz oben die Zeile suchen:
+        const ORS_KEY = "HIER_MEIN_KEY";
+    und HIER_MEIN_KEY durch den eigenen Schlüssel ersetzen, z. B.:
+        const ORS_KEY = "5b3ce359...ihr-key...";
+  - Speichern.
+
+
+-------------------------------------------------------
+2) AUF DEM NETZWERK-ORDNER BEREITSTELLEN
+-------------------------------------------------------
+  Legt diese beiden Dateien GEMEINSAM in EINEN Ordner der Freigabe:
+
+        Wibbelt Routing.html      (das Programm)
+        mitarbeiter.js            (die gemeinsame Mitarbeiter-Liste)
+
+  Jeder Kollege öffnet einfach die "Wibbelt Routing.html" per Doppelklick
+  (öffnet im Standard-Browser). Es ist KEIN Server und KEINE Installation
+  nötig – nur eine bestehende Internet-Verbindung (für Karte und Routing).
+
+  Gleichzeitiges Öffnen durch mehrere Kollegen ist problemlos.
+
+
+-------------------------------------------------------
+3) MITARBEITER PFLEGEN (gemeinsam)
+-------------------------------------------------------
+  - In der App unter "Mitarbeiter" können Einträge hinzugefügt, bearbeitet,
+    aus-/eingeblendet (Auge-Symbol) und gelöscht werden. Die Adresse wird
+    automatisch in Koordinaten umgewandelt.
+  - Solange Änderungen nur lokal sind, erscheint der Hinweis
+    "Lokale Änderungen".
+  - Damit ALLE Kollegen die Änderung sehen:
+        1. Knopf "Für Server speichern" klicken
+        2. Die heruntergeladene Datei "mitarbeiter.js"
+        3. im Netzwerk-Ordner die alte "mitarbeiter.js" damit ersetzen.
+    Danach sehen alle beim nächsten Öffnen den neuen Stand.
+
+  Hinweis: Ein automatisches, gleichzeitiges Speichern für alle ist auf
+  einer reinen Ordner-Freigabe technisch nicht möglich (dafür bräuchte es
+  einen laufenden Server). Der Weg oben ist der einfache Ersatz dafür.
+
+
+-------------------------------------------------------
+4) BEDIENUNG – KURZ
+-------------------------------------------------------
+  - Zieladresse eintippen (ab 3 Zeichen kommen Vorschläge) und auswählen.
+  - Startpunkt ist vorbelegt, kann aber überschrieben werden.
+  - Mitarbeiter ankreuzen (oder direkt auf der Karte anklicken).
+  - "Route berechnen".
+  - Optional "Mitarbeiter einsammeln": Route fährt vom Start über alle
+    gewählten Mitarbeiter zum Ziel – in automatisch optimierter Reihenfolge.
+  - Ergebnis: Karte, Kopfzeile mit Gesamtstrecke/Fahrzeit, Tabelle.
+  - Export: "Als PDF drucken" oder "Tabelle als CSV" (für Excel).
+
+  Suche/Filter über der Liste: Textsuche, "nur aktive", sowie
+  "im Umkreis X km um Ziel".
+
+
+-------------------------------------------------------
+FEHLERMELDUNGEN
+-------------------------------------------------------
+  "ORS-Key fehlt/ungültig"  -> Schritt 1 prüfen.
+  "Adresse nicht gefunden"  -> Adresse genauer/anders schreiben.
+  "Quota erreicht"          -> Tageslimit des kostenlosen Kontos erreicht,
+                               am nächsten Tag wieder verfügbar.
+  "Keine Internetverbindung"-> Netzwerk/Internet prüfen.
