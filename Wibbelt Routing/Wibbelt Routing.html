@@ -47,11 +47,24 @@
 
   label.fld{display:block; font-size:13px; font-weight:600; color:#334155; margin:12px 0 4px}
   label.fld:first-child{margin-top:0}
-  input[type=text],input[type=number]{
+  input[type=text],input[type=number],input[type=time],select{
     width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;
     font-size:14px; outline:none; transition:border .15s,box-shadow .15s; background:#fff;
   }
-  input:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+  input:focus,select:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+
+  .opt-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px 10px}
+  .opt-grid .mini{display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:3px}
+  .opt-grid input,.opt-grid select{padding:8px 10px}
+
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .chips .chip{font-size:12px; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe;
+    border-radius:20px; padding:4px 10px; cursor:pointer; max-width:100%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .chips .chip:hover{background:#dbeafe}
+  .chips .chip .x{margin-left:6px; opacity:.6; font-weight:700}
+  .chips .chip .x:hover{opacity:1; color:var(--red)}
+  .chips .lbl{font-size:11px; color:var(--muted); align-self:center; margin-right:2px}
 
   .autoc{position:relative}
   .suggest{
@@ -259,7 +272,7 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v3</div>
+  <div class="ver">v4</div>
 </header>
 
 <div class="wrap">
@@ -285,6 +298,34 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
       <div class="autoc">
         <input type="text" id="zielInput" autocomplete="off" placeholder="Zieladresse eingeben (ab 3 Zeichen) …">
         <div class="suggest" id="zielSuggest"></div>
+      </div>
+      <div class="chips" id="zielHistory"></div>
+
+      <!-- Fahrt-Optionen -->
+      <div class="subgroup" style="margin-top:14px">
+        <label class="fld" style="margin-top:0">Fahrt-Optionen</label>
+        <div class="opt-grid">
+          <div>
+            <span class="mini">Fahrzeug</span>
+            <select id="profile">
+              <option value="driving-car">PKW</option>
+              <option value="driving-hgv">Transporter / LKW</option>
+            </select>
+          </div>
+          <div>
+            <span class="mini">Abfahrt</span>
+            <input type="time" id="departTime">
+          </div>
+          <div>
+            <span class="mini">€ / km</span>
+            <input type="number" id="costKm" min="0" step="0.01" placeholder="z. B. 0,30">
+          </div>
+          <div>
+            <span class="mini">€ / Std.</span>
+            <input type="number" id="costH" min="0" step="1" placeholder="optional">
+          </div>
+        </div>
+        <div class="hint">Kosten optional – nur gefüllte Felder fließen ein. Profil wirkt auf Route und Entfernungen.</div>
       </div>
 
       <!-- Mitarbeiter -->
@@ -399,6 +440,58 @@ function fmtDauer(sec){
 }
 function nowStr(){ return new Date().toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"}); }
 function kmPlain(m){ return (m/1000).toLocaleString("de-DE",{minimumFractionDigits:1,maximumFractionDigits:1}); }
+function fmtEuro(v){ return v.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"; }
+function euroPlain(v){ return v.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* Kosten aus den Eingabefeldern (€/km, €/Std) */
+function costRates(){
+  const km=parseFloat(String(document.getElementById("costKm").value||"").replace(",","."));
+  const h =parseFloat(String(document.getElementById("costH").value||"").replace(",","."));
+  return { km:isNaN(km)?0:km, h:isNaN(h)?0:h };
+}
+function costEnabled(){ const r=costRates(); return r.km>0||r.h>0; }
+function calcCost(meters,sec){ const r=costRates(); return (meters/1000)*r.km + (sec/3600)*r.h; }
+
+/* Ankunftszeit = Abfahrt + Fahrdauer */
+function arrivalTime(departStr,durSec){
+  if(!departStr) return null;
+  const p=departStr.split(":"); const h=+p[0], m=+p[1];
+  if(isNaN(h)||isNaN(m)) return null;
+  const d=new Date(); d.setHours(h,m,0,0); d.setSeconds(d.getSeconds()+Math.round(durSec||0));
+  return d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+}
+
+/* Ziel-Historie (localStorage) */
+const HIST_KEY="wibbelt.zielhistorie.v1";
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem(HIST_KEY)||"[]"); }catch(e){ return []; } }
+function saveHistory(a){ try{ localStorage.setItem(HIST_KEY,JSON.stringify(a.slice(0,8))); }catch(e){} }
+function pushHistory(z){
+  if(!z||!z.label) return;
+  const h=loadHistory().filter(x=>x.label!==z.label);
+  h.unshift({label:z.label,lat:z.lat,lon:z.lon}); saveHistory(h); renderHistory();
+}
+function renderHistory(){
+  const box=document.getElementById("zielHistory"); const h=loadHistory();
+  box.innerHTML = h.length ? '<span class="lbl">Zuletzt:</span>'+h.map((z,i)=>
+    '<span class="chip" data-pick="'+i+'" title="'+escapeHtml(z.label)+'">'+
+    escapeHtml(z.label.length>28?z.label.slice(0,27)+"…":z.label)+
+    '<span class="x" data-del="'+i+'">×</span></span>').join("") : "";
+}
+
+/* Fahrt-Einstellungen (Profil, Abfahrt, Kostensätze) im Browser merken */
+const SETTINGS_KEY="wibbelt.einstellungen.v1";
+const SETTING_IDS=["profile","departTime","costKm","costH"];
+function loadSettings(){
+  let s={}; try{ s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}"); }catch(e){}
+  SETTING_IDS.forEach(id=>{ if(s[id]!=null && s[id]!=="") document.getElementById(id).value=s[id]; });
+  if(!document.getElementById("departTime").value){
+    document.getElementById("departTime").value=new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+  }
+}
+function saveSettings(){
+  const s={}; SETTING_IDS.forEach(id=>s[id]=document.getElementById(id).value);
+  try{ localStorage.setItem(SETTINGS_KEY,JSON.stringify(s)); }catch(e){}
+}
 
 /* Luftlinie (Haversine) in Metern – für Umkreis-Filter ohne API */
 function haversine(a,b){
@@ -624,8 +717,10 @@ function wireAutocomplete(inputId, suggestId, handlers){
 /* ================================================================
    ORS – Directions (Start -> [Zwischenstopps] -> Ziel)
    ================================================================ */
+function profile(){ return document.getElementById("profile").value || "driving-car"; }
+
 async function getRoute(points){
-  const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
+  const res = await fetch("https://api.openrouteservice.org/v2/directions/"+profile()+"/geojson",{
     method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
     body: JSON.stringify({ coordinates: points.map(p=>[p.lon,p.lat]) })
   });
@@ -645,7 +740,7 @@ async function getMatrix(emps, full){
   const body = full
     ? { locations, metrics:["distance","duration"], units:"m" }
     : { locations, sources:emps.map((_,i)=>i+2), destinations:[0,1], metrics:["distance","duration"], units:"m" };
-  const res = await fetch("https://api.openrouteservice.org/v2/matrix/driving-car",{
+  const res = await fetch("https://api.openrouteservice.org/v2/matrix/"+profile(),{
     method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
     body: JSON.stringify(body)
   });
@@ -733,6 +828,7 @@ async function calculate(){
 
     lastRows=rows;
     drawResult(route,rows,!!collect);
+    pushHistory(ziel);
     document.getElementById("pdfBtn").disabled=false;
     document.getElementById("csvBtn").disabled=rows.length===0;
     setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (optimierte Einsammel-Route)":"")+".","ok");
@@ -761,22 +857,33 @@ function drawResult(route,rows,collect){
 
   const sum=document.getElementById("summary"); sum.style.display="flex";
   const label = collect ? "Einsammel-Route" : "Gesamtstrecke";
-  sum.innerHTML =
-    '<div class="box"><div class="k">'+label+'</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
-    '<div class="box"><div class="k">Fahrzeit</div><div class="v">'+fmtDauer(route.duration)+'</div></div>'+
-    '<div class="box dest"><div class="k">Ziel</div><div class="v">'+escapeHtml(ziel.label)+'</div></div>';
+  const eta = arrivalTime(document.getElementById("departTime").value, route.duration);
+  const profLabel = profile()==="driving-hgv" ? "Transporter/LKW" : "PKW";
+  let html =
+    '<div class="box"><div class="k">'+label+' · '+profLabel+'</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
+    '<div class="box"><div class="k">Fahrzeit'+(eta?' · Ankunft '+eta:'')+'</div><div class="v">'+fmtDauer(route.duration)+'</div></div>';
+  if(costEnabled())
+    html += '<div class="box"><div class="k">Fahrtkosten</div><div class="v">'+fmtEuro(calcCost(route.distance,route.duration))+'</div></div>';
+  html += '<div class="box dest"><div class="k">Ziel</div><div class="v">'+escapeHtml(ziel.label)+'</div></div>';
+  sum.innerHTML = html;
 
   document.getElementById("printMeta").textContent =
-    "Start: "+start.label+"  →  Ziel: "+ziel.label+"   |   "+label+" "+nfKm(route.distance)+
-    ", Fahrzeit "+fmtDauer(route.duration)+"   |   erstellt "+nowStr();
+    "Start: "+start.label+"  →  Ziel: "+ziel.label+"   |   "+profLabel+" · "+label+" "+nfKm(route.distance)+
+    ", Fahrzeit "+fmtDauer(route.duration)+(eta?", Ankunft "+eta:"")+
+    (costEnabled()?", Kosten "+fmtEuro(calcCost(route.distance,route.duration)):"")+
+    "   |   erstellt "+nowStr();
 
   renderTable();
+}
+function rowVal(r,k){
+  if(k==="cost") return calcCost(r.distZiel,r.durZiel);
+  return r[k];
 }
 function sortedRows(){
   return [...lastRows].sort((a,b)=>{
     const k=sortState.key;
     if(k==="name") return sortState.dir*a.name.localeCompare(b.name,"de");
-    return sortState.dir*((a[k]??Infinity)-(b[k]??Infinity));
+    return sortState.dir*((rowVal(a,k)??Infinity)-(rowVal(b,k)??Infinity));
   });
 }
 function renderTable(){
@@ -784,6 +891,7 @@ function renderTable(){
   if(lastRows.length===0){ wrap.innerHTML='<div class="result-empty">Keine Mitarbeiter ausgewählt.</div>'; return; }
   const minZiel=Math.min(...lastRows.map(r=>r.distZiel??Infinity));
   const rows=sortedRows();
+  const showCost=costEnabled();
   const arrow=k=>sortState.key===k?(sortState.dir>0?'▲':'▼'):'↕';
   const cls=k=>sortState.key===k?'sorted':'';
   let html='<div style="overflow-x:auto"><table><thead><tr>'+
@@ -791,13 +899,15 @@ function renderTable(){
     '<th class="'+cls('distStart')+'" data-sort="distStart">Entfernung Start <span class="arrow">'+arrow('distStart')+'</span></th>'+
     '<th class="'+cls('distZiel')+'" data-sort="distZiel">Entfernung Ziel <span class="arrow">'+arrow('distZiel')+'</span></th>'+
     '<th class="'+cls('durZiel')+'" data-sort="durZiel">Fahrzeit Ziel <span class="arrow">'+arrow('durZiel')+'</span></th>'+
+    (showCost?'<th class="'+cls('cost')+'" data-sort="cost">Fahrtkosten Ziel <span class="arrow">'+arrow('cost')+'</span></th>':'')+
     '</tr></thead><tbody>';
   rows.forEach(r=>{
     const near=(r.distZiel===minZiel);
     html+='<tr class="'+(near?'nearest':'')+'">'+
       '<td><span class="dot b"></span>'+escapeHtml(r.name)+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
       '<td class="num">'+nfKm(r.distStart)+'</td><td class="num">'+nfKm(r.distZiel)+'</td>'+
-      '<td class="num">'+fmtDauer(r.durZiel)+'</td></tr>';
+      '<td class="num">'+fmtDauer(r.durZiel)+'</td>'+
+      (showCost?'<td class="num">'+fmtEuro(calcCost(r.distZiel,r.durZiel))+'</td>':'')+'</tr>';
   });
   html+='</tbody></table></div>';
   wrap.innerHTML=html;
@@ -814,11 +924,21 @@ function renderTable(){
 function exportCSV(){
   if(lastRows.length===0) return;
   const sep=";";
-  const lines=[["Mitarbeiter","Gruppe","Adresse","Entfernung Start (km)","Entfernung Ziel (km)","Fahrzeit Ziel"].join(sep)];
-  sortedRows().forEach(r=>lines.push([
-    '"'+r.name+'"','"'+(r.gruppe||"")+'"','"'+r.adresse+'"',
-    kmPlain(r.distStart),kmPlain(r.distZiel),'"'+fmtDauer(r.durZiel)+'"'].join(sep)));
-  lines.push(""); lines.push('"Start"'+sep+'"'+start.label+'"'); lines.push('"Ziel"'+sep+'"'+(ziel?ziel.label:'')+'"');
+  const showCost=costEnabled();
+  const head=["Mitarbeiter","Gruppe","Adresse","Entfernung Start (km)","Entfernung Ziel (km)","Fahrzeit Ziel"];
+  if(showCost) head.push("Fahrtkosten Ziel (€)");
+  const lines=[head.join(sep)];
+  sortedRows().forEach(r=>{
+    const cells=['"'+r.name+'"','"'+(r.gruppe||"")+'"','"'+r.adresse+'"',
+      kmPlain(r.distStart),kmPlain(r.distZiel),'"'+fmtDauer(r.durZiel)+'"'];
+    if(showCost) cells.push(euroPlain(calcCost(r.distZiel,r.durZiel)));
+    lines.push(cells.join(sep));
+  });
+  lines.push("");
+  lines.push('"Start"'+sep+'"'+start.label+'"');
+  lines.push('"Ziel"'+sep+'"'+(ziel?ziel.label:'')+'"');
+  lines.push('"Fahrzeug"'+sep+'"'+(profile()==="driving-hgv"?"Transporter/LKW":"PKW")+'"');
+  if(showCost){ const r=costRates(); lines.push('"Kostensatz"'+sep+'"'+euroPlain(r.km)+" €/km"+(r.h>0?", "+euroPlain(r.h)+" €/Std.":"")+'"'); }
   downloadBlob("﻿"+lines.join("\r\n"),"text/csv;charset=utf-8;","Wibbelt_Routing_"+new Date().toISOString().slice(0,10)+".csv");
 }
 let pendingChanges = false;        // lokale Änderungen noch nicht in die gemeinsame Datei geschrieben
@@ -936,6 +1056,8 @@ window.addEventListener("DOMContentLoaded",()=>{
   initMap();
   renderEmployees();
   updateShareState();
+  loadSettings();
+  renderHistory();
 
   document.getElementById("startInput").value=start.label;
   wireAutocomplete("startInput","startSuggest",{ set:s=>{start=s;} });
@@ -983,6 +1105,17 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("saveServer").addEventListener("click",exportStammdaten);
   document.getElementById("importJson").addEventListener("click",()=>document.getElementById("importFile").click());
   document.getElementById("importFile").addEventListener("change",e=>{ if(e.target.files[0]) importStammdaten(e.target.files[0]); e.target.value=""; });
+
+  // Fahrt-Optionen merken
+  SETTING_IDS.forEach(id=>document.getElementById(id).addEventListener("change",saveSettings));
+
+  // Ziel-Historie: Chip anklicken übernimmt Ziel, × entfernt Eintrag
+  document.getElementById("zielHistory").addEventListener("click",e=>{
+    const del=e.target.closest("[data-del]");
+    if(del){ e.stopPropagation(); const h=loadHistory(); h.splice(+del.dataset.del,1); saveHistory(h); renderHistory(); return; }
+    const chip=e.target.closest("[data-pick]");
+    if(chip){ const z=loadHistory()[+chip.dataset.pick]; if(z){ ziel={label:z.label,lat:z.lat,lon:z.lon}; document.getElementById("zielInput").value=z.label; renderEmployees(); } }
+  });
 
   // Berechnung / Export
   document.getElementById("calcBtn").addEventListener("click",calculate);
