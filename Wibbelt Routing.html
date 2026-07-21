@@ -13,9 +13,10 @@
 
 <style>
   :root{
-    --bg:#0f172a; --panel:#ffffff; --line:#e2e8f0; --muted:#64748b;
+    --panel:#ffffff; --line:#e2e8f0; --muted:#64748b;
     --accent:#2563eb; --accent-dark:#1d4ed8; --green:#16a34a; --red:#dc2626;
-    --blue:#2563eb; --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    --blue:#2563eb; --amber:#d97706;
+    --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -26,27 +27,31 @@
   header.app{
     background:linear-gradient(135deg,#1e3a8a,#2563eb);
     color:#fff; padding:18px 24px; box-shadow:var(--shadow);
+    display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
   }
   header.app h1{margin:0; font-size:22px; font-weight:700; letter-spacing:.2px}
   header.app .sub{opacity:.85; font-size:13px; margin-top:2px}
+  header.app .ver{font-size:11px; opacity:.6}
 
-  .wrap{max-width:1280px; margin:0 auto; padding:20px}
-  .grid{display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start}
-  @media(max-width:900px){ .grid{grid-template-columns:1fr} }
+  .wrap{max-width:1320px; margin:0 auto; padding:20px}
+  .grid{display:grid; grid-template-columns:390px 1fr; gap:20px; align-items:start}
+  @media(max-width:920px){ .grid{grid-template-columns:1fr} }
 
   .card{
     background:var(--panel); border:1px solid var(--line);
     border-radius:12px; box-shadow:var(--shadow); padding:18px;
   }
-  .card h2{margin:0 0 12px; font-size:15px; font-weight:700; color:#1e293b}
+  .card h2{margin:0 0 12px; font-size:15px; font-weight:700; color:#1e293b; display:flex;
+           justify-content:space-between; align-items:center}
+  .card h2 .count{font-size:12px; font-weight:600; color:var(--muted)}
 
   label.fld{display:block; font-size:13px; font-weight:600; color:#334155; margin:12px 0 4px}
   label.fld:first-child{margin-top:0}
-  input[type=text]{
+  input[type=text],input[type=number]{
     width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;
-    font-size:14px; outline:none; transition:border .15s,box-shadow .15s;
+    font-size:14px; outline:none; transition:border .15s,box-shadow .15s; background:#fff;
   }
-  input[type=text]:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+  input:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15)}
 
   .autoc{position:relative}
   .suggest{
@@ -60,49 +65,66 @@
   .suggest .item:hover,.suggest .item.active{background:#eff6ff}
   .suggest .empty{padding:10px 12px; font-size:13px; color:var(--muted)}
 
-  .emp-list{display:flex; flex-direction:column; gap:2px; margin-top:6px}
+  /* Mitarbeiter-Toolbar */
+  .ma-tools{display:flex; flex-direction:column; gap:8px; margin:6px 0 8px}
+  .ma-tools .row{display:flex; gap:8px; align-items:center}
+  .ma-tools input[type=text]{flex:1}
+  .chk{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#334155; cursor:pointer; white-space:nowrap}
+  .chk input{width:15px; height:15px; accent-color:var(--accent)}
+  .radius-box{display:flex; align-items:center; gap:6px; font-size:12px; color:#334155}
+  .radius-box input[type=number]{width:64px; padding:6px 8px}
+
+  .emp-list{display:flex; flex-direction:column; gap:2px; max-height:340px; overflow:auto; margin-top:4px;
+            border:1px solid #f1f5f9; border-radius:8px; padding:4px}
   .emp{
-    display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;
-    cursor:pointer; transition:background .12s;
+    display:flex; align-items:center; gap:9px; padding:7px 8px; border-radius:8px;
+    transition:background .12s;
   }
   .emp:hover{background:#f8fafc}
-  .emp input{width:17px; height:17px; accent-color:var(--accent); cursor:pointer}
-  .emp .info{flex:1; min-width:0}
-  .emp .nm{font-size:14px; font-weight:600}
+  .emp.inactive{opacity:.5}
+  .emp .cbx{width:17px; height:17px; accent-color:var(--accent); cursor:pointer; flex:none}
+  .emp .info{flex:1; min-width:0; cursor:pointer}
+  .emp .nm{font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px}
   .emp .ad{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .emp .grp{font-size:10px; font-weight:700; color:#3730a3; background:#e0e7ff; padding:1px 6px; border-radius:20px}
+  .emp .rowbtns{display:flex; gap:2px; flex:none}
+  .iconbtn{background:none; border:none; cursor:pointer; padding:4px; border-radius:6px; font-size:14px;
+           line-height:1; color:#64748b}
+  .iconbtn:hover{background:#eef2f7; color:#1e293b}
+  .iconbtn.del:hover{background:#fef2f2; color:var(--red)}
+  .emp-empty{padding:16px 8px; text-align:center; color:var(--muted); font-size:13px}
 
-  .emp-actions{display:flex; gap:8px; margin:4px 0 2px}
-  .emp-actions button{
-    background:none; border:none; color:var(--accent); font-size:12px;
-    cursor:pointer; padding:2px 4px; font-weight:600;
-  }
-  .emp-actions button:hover{text-decoration:underline}
+  .emp-actions{display:flex; gap:8px; margin:8px 0 2px; flex-wrap:wrap}
+  .linkbtn{background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer;
+           padding:2px 4px; font-weight:600}
+  .linkbtn:hover{text-decoration:underline}
+  .linkbtn.add{color:var(--green)}
 
   button.primary{
     width:100%; margin-top:16px; padding:12px; background:var(--accent); color:#fff;
-    border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;
-    transition:background .15s;
+    border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; transition:background .15s;
   }
   button.primary:hover{background:var(--accent-dark)}
   button.primary:disabled{opacity:.6; cursor:not-allowed}
 
-  .exports{display:flex; gap:8px; margin-top:10px}
-  .exports button{
-    flex:1; padding:9px; background:#fff; border:1px solid #cbd5e1; border-radius:8px;
+  .subgroup{border-top:1px solid var(--line); margin-top:16px; padding-top:12px}
+  .opt-row{display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#334155; margin-top:8px}
+  .opt-row input{margin-top:3px; width:16px; height:16px; accent-color:var(--accent)}
+
+  .exports{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap}
+  .exports button, .data-btns button{
+    flex:1; min-width:120px; padding:9px; background:#fff; border:1px solid #cbd5e1; border-radius:8px;
     font-size:13px; font-weight:600; color:#334155; cursor:pointer;
   }
-  .exports button:hover{background:#f8fafc; border-color:#94a3b8}
+  .exports button:hover, .data-btns button:hover{background:#f8fafc; border-color:#94a3b8}
   .exports button:disabled{opacity:.5; cursor:not-allowed}
+  .data-btns{display:flex; gap:8px; margin-top:8px}
 
-  #map{height:460px; border-radius:12px; border:1px solid var(--line); background:#e2e8f0}
+  #map{height:480px; border-radius:12px; border:1px solid var(--line); background:#e2e8f0}
 
-  .summary{
-    display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px;
-  }
-  .summary .box{
-    flex:1; min-width:150px; background:linear-gradient(135deg,#eff6ff,#dbeafe);
-    border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px;
-  }
+  .summary{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px}
+  .summary .box{flex:1; min-width:150px; background:linear-gradient(135deg,#eff6ff,#dbeafe);
+    border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px}
   .summary .box .k{font-size:12px; color:#1e40af; font-weight:600; text-transform:uppercase; letter-spacing:.4px}
   .summary .box .v{font-size:22px; font-weight:800; color:#1e3a8a; margin-top:2px}
   .summary .box.dest{background:linear-gradient(135deg,#fef2f2,#fee2e2); border-color:#fecaca}
@@ -110,11 +132,9 @@
   .summary .box.dest .v{color:#991b1b; font-size:16px}
 
   table{width:100%; border-collapse:collapse; font-size:14px}
-  thead th{
-    text-align:left; padding:10px 12px; background:#f8fafc; color:#475569;
-    font-size:12px; text-transform:uppercase; letter-spacing:.3px; border-bottom:2px solid var(--line);
-    cursor:pointer; user-select:none; white-space:nowrap;
-  }
+  thead th{text-align:left; padding:10px 12px; background:#f8fafc; color:#475569; font-size:12px;
+    text-transform:uppercase; letter-spacing:.3px; border-bottom:2px solid var(--line);
+    cursor:pointer; user-select:none; white-space:nowrap}
   thead th:hover{background:#f1f5f9}
   thead th .arrow{opacity:.4; font-size:10px}
   thead th.sorted .arrow{opacity:1}
@@ -132,24 +152,22 @@
   .status.show{display:block}
   .status.err{background:#fef2f2; border:1px solid #fecaca; color:#991b1b}
   .status.info{background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af}
+  .status.ok{background:#f0fdf4; border:1px solid #bbf7d0; color:#166534}
 
-  .spinner{
-    display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4);
-    border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite;
-    vertical-align:middle; margin-right:8px;
-  }
+  .spinner{display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4);
+    border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:8px}
   @keyframes spin{to{transform:rotate(360deg)}}
 
   .hint{font-size:12px; color:var(--muted); margin-top:6px}
   .keyhint{background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:10px 12px;
            border-radius:8px; font-size:13px; margin-bottom:14px; display:none}
   .keyhint.show{display:block}
-
   .result-empty{color:var(--muted); text-align:center; padding:40px 20px; font-size:14px}
+
   .leaflet-popup-content{font-size:13px; line-height:1.45}
   .leaflet-popup-content b{color:#1e293b}
 
-  /* Marker-Farben via Filter (CSS) auf Standard-Icon nicht möglich -> DivIcons */
+  /* Marker (DivIcons) */
   .mk{width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
       border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.35); position:relative}
   .mk span{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -157,8 +175,25 @@
   .mk.start{background:var(--green)}
   .mk.ziel{background:var(--red)}
   .mk.emp{background:var(--blue)}
+  .mk.wp{background:var(--amber)}
 
-  /* ---------- Druck / PDF (A4) ---------- */
+  /* Modal (Mitarbeiter hinzufügen/bearbeiten) */
+  .modal-bg{position:fixed; inset:0; background:rgba(15,23,42,.55); display:none;
+            align-items:center; justify-content:center; z-index:2000; padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.3);
+         width:100%; max-width:440px; padding:22px}
+  .modal h3{margin:0 0 14px; font-size:18px}
+  .modal .actions{display:flex; gap:10px; margin-top:18px}
+  .modal .actions button{flex:1; padding:11px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; border:none}
+  .modal .save{background:var(--accent); color:#fff}
+  .modal .save:hover{background:var(--accent-dark)}
+  .modal .cancel{background:#f1f5f9; color:#334155}
+  .modal .cancel:hover{background:#e2e8f0}
+  .modal .err{color:var(--red); font-size:13px; margin-top:10px; display:none}
+  .modal .err.show{display:block}
+
+  /* Druck / PDF (A4) */
   @media print{
     @page{size:A4 portrait; margin:12mm}
     body{background:#fff}
@@ -168,11 +203,8 @@
     .no-print{display:none !important}
     #map{height:340px; page-break-inside:avoid; box-shadow:none}
     .card{box-shadow:none; border:none; padding:0; margin-bottom:14px}
-    .summary .box{-webkit-print-color-adjust:exact; print-color-adjust:exact}
-    table{page-break-inside:auto}
-    tr{page-break-inside:avoid}
-    thead th{-webkit-print-color-adjust:exact; print-color-adjust:exact}
-    tbody tr.nearest{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .summary .box, thead th, tbody tr.nearest{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    table{page-break-inside:auto} tr{page-break-inside:avoid}
     .print-only{display:block !important}
   }
   .print-only{display:none}
@@ -187,7 +219,7 @@
 <!-- KONFIGURATION – hier deinen ORS-Key eintragen                 -->
 <!-- ============================================================= -->
 <script>
-/* ORS API-Key: kostenlos auf https://openrouteservice.org/dev/  registrieren */
+/* ORS API-Key: kostenlos auf https://openrouteservice.org/dev/ registrieren */
 const ORS_KEY = "HIER_MEIN_KEY";
 
 /* Fester Startpunkt (vorbelegt, überschreibbar) */
@@ -197,19 +229,24 @@ const START_DEFAULT = {
   lon: 8.0265572
 };
 
-/* Mitarbeiter-Stammdaten */
-const MITARBEITER = [
-  { name:"Tobias Krüger", adresse:"Konrad-Adenauer-Ring 18, 59269 Beckum",       lat:51.7598376, lon:8.0343958 },
-  { name:"Egor Batt",     adresse:"Steinbrink 8, 32049 Herford",                 lat:52.1335478, lon:8.6830755 },
-  { name:"Metin Yildiz",  adresse:"Königgrätzer Str. 23, 45897 Gelsenkirchen",   lat:51.5731184, lon:7.0441897 },
-  { name:"Frank Vogel",   adresse:"Styrumer Str. 88, 47138 Duisburg",            lat:51.4627960, lon:6.8116800 },
-  { name:"Johann Moor",   adresse:"Gelsenkirchener Str. 53, 45141 Essen",        lat:51.4798709, lon:7.0392152 }
+/* Mitarbeiter-Grunddaten (Auslieferungszustand).
+   Manuelle Änderungen werden im Browser gespeichert und überschreiben diese Liste. */
+const MITARBEITER_SEED = [
+  { name:"Tobias Krüger", adresse:"Konrad-Adenauer-Ring 18, 59269 Beckum",     lat:51.7598376, lon:8.0343958, gruppe:"" },
+  { name:"Egor Batt",     adresse:"Steinbrink 8, 32049 Herford",               lat:52.1335478, lon:8.6830755, gruppe:"" },
+  { name:"Metin Yildiz",  adresse:"Königgrätzer Str. 23, 45897 Gelsenkirchen", lat:51.5731184, lon:7.0441897, gruppe:"" },
+  { name:"Frank Vogel",   adresse:"Styrumer Str. 88, 47138 Duisburg",          lat:51.4627960, lon:6.8116800, gruppe:"" },
+  { name:"Johann Moor",   adresse:"Gelsenkirchener Str. 53, 45141 Essen",      lat:51.4798709, lon:7.0392152, gruppe:"" }
 ];
+const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
 </script>
 
 <header class="app">
-  <h1>Wibbelt&nbsp;Routing</h1>
-  <div class="sub">Route vom festen Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
+  <div>
+    <h1>Wibbelt&nbsp;Routing</h1>
+    <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
+  </div>
+  <div class="ver">v2</div>
 </header>
 
 <div class="wrap">
@@ -237,12 +274,45 @@ const MITARBEITER = [
         <div class="suggest" id="zielSuggest"></div>
       </div>
 
-      <label class="fld">Mitarbeiter auswählen</label>
-      <div class="emp-actions">
-        <button type="button" id="selAll">Alle auswählen</button>
-        <button type="button" id="selNone">Keine</button>
+      <!-- Mitarbeiter -->
+      <h2 style="margin-top:18px">Mitarbeiter <span class="count" id="maCount"></span></h2>
+
+      <div class="ma-tools">
+        <div class="row">
+          <input type="text" id="maSearch" placeholder="🔍 Suchen (Name, Adresse, Gruppe) …">
+        </div>
+        <div class="row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
+          <label class="chk"><input type="checkbox" id="onlyActive"> nur aktive anzeigen</label>
+          <label class="chk radius-box">
+            <input type="checkbox" id="radiusOn"> im Umkreis
+            <input type="number" id="radiusKm" value="50" min="1" step="5"> km um Ziel
+          </label>
+        </div>
       </div>
+
+      <div class="emp-actions">
+        <button type="button" class="linkbtn" id="selAll">Alle markieren</button>
+        <button type="button" class="linkbtn" id="selNone">Keine</button>
+        <button type="button" class="linkbtn add" id="addBtn">＋ Mitarbeiter hinzufügen</button>
+      </div>
+
       <div class="emp-list" id="empList"></div>
+
+      <div class="data-btns">
+        <button type="button" id="exportJson">Stammdaten sichern (JSON)</button>
+        <button type="button" id="importJson">Stammdaten laden</button>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      </div>
+      <div class="hint" id="dataHint"></div>
+
+      <!-- Routing-Optionen -->
+      <div class="subgroup">
+        <label class="opt-row">
+          <input type="checkbox" id="collectMode">
+          <span><b>Mitarbeiter einsammeln</b> – Route führt vom Start über alle markierten Mitarbeiter zum Ziel
+          (statt direkt). Reihenfolge = Listenreihenfolge.</span>
+        </label>
+      </div>
 
       <button class="primary" id="calcBtn">Route berechnen</button>
 
@@ -276,423 +346,533 @@ const MITARBEITER = [
   </div>
 </div>
 
+<!-- ===================== MODAL: Mitarbeiter ===================== -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Mitarbeiter hinzufügen</h3>
+    <label class="fld" for="mName">Name</label>
+    <input type="text" id="mName" placeholder="Vor- und Nachname">
+    <label class="fld" for="mGruppe">Gruppe / Standort (optional)</label>
+    <input type="text" id="mGruppe" placeholder="z. B. Team West">
+    <label class="fld" for="mAdresse">Adresse</label>
+    <div class="autoc">
+      <input type="text" id="mAdresse" autocomplete="off" placeholder="Adresse (wird automatisch geokodiert) …">
+      <div class="suggest" id="mSuggest"></div>
+    </div>
+    <div class="hint" id="mCoordHint">Koordinaten werden beim Speichern automatisch aus der Adresse ermittelt.</div>
+    <div class="err" id="modalErr"></div>
+    <div class="actions">
+      <button class="cancel" id="modalCancel">Abbrechen</button>
+      <button class="save" id="modalSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ================================================================
-   Hilfsfunktionen: Formatierung (deutsch)
+   Formatierung (deutsch)
    ================================================================ */
 function nfKm(meters){
-  const km = meters/1000;
-  return km.toLocaleString("de-DE",{minimumFractionDigits:1, maximumFractionDigits:1}) + " km";
+  if(meters==null||isNaN(meters)) return "–";
+  return (meters/1000).toLocaleString("de-DE",{minimumFractionDigits:1,maximumFractionDigits:1})+" km";
 }
 function fmtDauer(sec){
-  if(sec==null || isNaN(sec)) return "–";
-  const totalMin = Math.round(sec/60);
-  const std = Math.floor(totalMin/60);
-  const min = totalMin%60;
-  if(std>0 && min>0) return std+" Std. "+min+" Min.";
-  if(std>0)          return std+" Std.";
+  if(sec==null||isNaN(sec)) return "–";
+  const totalMin=Math.round(sec/60), std=Math.floor(totalMin/60), min=totalMin%60;
+  if(std>0&&min>0) return std+" Std. "+min+" Min.";
+  if(std>0) return std+" Std.";
   return min+" Min.";
 }
-function nowStr(){
-  return new Date().toLocaleString("de-DE",{dateStyle:"medium", timeStyle:"short"});
+function nowStr(){ return new Date().toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"}); }
+function kmPlain(m){ return (m/1000).toLocaleString("de-DE",{minimumFractionDigits:1,maximumFractionDigits:1}); }
+
+/* Luftlinie (Haversine) in Metern – für Umkreis-Filter ohne API */
+function haversine(a,b){
+  const R=6371000, toR=x=>x*Math.PI/180;
+  const dLat=toR(b.lat-a.lat), dLon=toR(b.lon-a.lon);
+  const s=Math.sin(dLat/2)**2 + Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
 }
+function uid(){ return (crypto.randomUUID? crypto.randomUUID() : "id"+Date.now()+Math.random().toString(16).slice(2)); }
 
 /* ================================================================
    Zustand
    ================================================================ */
 let start = { ...START_DEFAULT };
-let ziel  = null;                 // {label, lat, lon}
-let map, layerGroup, routeLayer;
-let lastRows = [];                // Ergebnis für CSV/Sortierung
+let ziel  = null;
+let mitarbeiter = [];              // [{id,name,adresse,lat,lon,gruppe,aktiv}]
+let map, baseLayers, layerGroup;
+let lastRows = [];
 let sortState = { key:"distZiel", dir:1 };
+let editId = null;                 // Modal: null=neu, sonst id
+let formGeo = null;                // Modal: {label,lat,lon} aus Autocomplete
 
 /* ================================================================
-   Karte initialisieren
+   Persistenz (localStorage)
+   ================================================================ */
+function loadMitarbeiter(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ mitarbeiter = JSON.parse(raw); return; }
+  }catch(e){ console.warn("localStorage nicht lesbar",e); }
+  // Erststart: Seed übernehmen
+  mitarbeiter = MITARBEITER_SEED.map(m=>({ id:uid(), aktiv:true, gruppe:"", ...m }));
+  saveMitarbeiter();
+}
+function saveMitarbeiter(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(mitarbeiter)); }
+  catch(e){ setDataHint("⚠️ Konnte Stammdaten nicht speichern (Browser blockiert localStorage)."); }
+}
+function setDataHint(t){ document.getElementById("dataHint").textContent = t||""; }
+
+/* ================================================================
+   Karte
    ================================================================ */
 function initMap(){
-  map = L.map("map",{ scrollWheelZoom:true }).setView([start.lat, start.lon], 8);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-    maxZoom:19,
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
-  }).addTo(map);
+  map = L.map("map",{ scrollWheelZoom:true }).setView([start.lat,start.lon],8);
+  const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
+  });
+  const humanitarian = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",{
+    maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, Tiles: HOT'
+  });
+  osm.addTo(map);
+  baseLayers = { "OpenStreetMap":osm, "Humanitarian (HOT)":humanitarian };
+  L.control.layers(baseLayers,null,{position:"topright"}).addTo(map);
   layerGroup = L.layerGroup().addTo(map);
 }
-function markerIcon(kind, letter){
-  return L.divIcon({
-    className:"", html:'<div class="mk '+kind+'"><span>'+letter+'</span></div>',
-    iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-26]
-  });
+function markerIcon(kind,letter){
+  return L.divIcon({ className:"", html:'<div class="mk '+kind+'"><span>'+letter+'</span></div>',
+    iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-26] });
 }
 
 /* ================================================================
-   Mitarbeiter-Checkboxen rendern
+   Mitarbeiter-Liste rendern (mit Suche / Filter / CRUD)
    ================================================================ */
+function visibleEmployees(){
+  const q = document.getElementById("maSearch").value.trim().toLowerCase();
+  const onlyActive = document.getElementById("onlyActive").checked;
+  const radiusOn = document.getElementById("radiusOn").checked && ziel;
+  const radiusM = (parseFloat(document.getElementById("radiusKm").value)||0)*1000;
+  return mitarbeiter.filter(m=>{
+    if(onlyActive && !m.aktiv) return false;
+    if(q){
+      const hay = (m.name+" "+m.adresse+" "+(m.gruppe||"")).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(radiusOn && radiusM>0){
+      if(haversine(m,ziel) > radiusM) return false;
+    }
+    return true;
+  });
+}
 function renderEmployees(){
   const box = document.getElementById("empList");
+  const list = visibleEmployees();
+  const total = mitarbeiter.length, aktiv = mitarbeiter.filter(m=>m.aktiv).length;
+  document.getElementById("maCount").textContent = aktiv+" aktiv / "+total+" gesamt";
+
+  if(list.length===0){
+    box.innerHTML = '<div class="emp-empty">Keine Mitarbeiter passen zum Filter.</div>';
+    return;
+  }
   box.innerHTML = "";
-  MITARBEITER.forEach((m,i)=>{
-    const lab = document.createElement("label");
-    lab.className = "emp";
-    lab.innerHTML =
-      '<input type="checkbox" data-i="'+i+'" checked>'+
-      '<span class="info"><span class="nm">'+m.name+'</span>'+
-      '<span class="ad">'+m.adresse+'</span></span>';
-    box.appendChild(lab);
+  list.forEach(m=>{
+    const row = document.createElement("div");
+    row.className = "emp"+(m.aktiv?"":" inactive");
+    const dist = ziel ? " · "+kmPlain(haversine(m,ziel))+" km Luftlinie z. Ziel" : "";
+    row.innerHTML =
+      '<input type="checkbox" class="cbx" data-id="'+m.id+'" '+(m.aktiv?"":"disabled")+' '+(m._checked?"checked":"")+'>'+
+      '<div class="info" data-edit="'+m.id+'">'+
+        '<div class="nm">'+escapeHtml(m.name)+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</div>'+
+        '<div class="ad">'+escapeHtml(m.adresse)+dist+'</div>'+
+      '</div>'+
+      '<div class="rowbtns">'+
+        '<button class="iconbtn" title="'+(m.aktiv?"Ausblenden":"Einblenden")+'" data-toggle="'+m.id+'">'+(m.aktiv?"👁":"🚫")+'</button>'+
+        '<button class="iconbtn" title="Bearbeiten" data-edit="'+m.id+'">✏️</button>'+
+        '<button class="iconbtn del" title="Löschen" data-del="'+m.id+'">🗑</button>'+
+      '</div>';
+    box.appendChild(row);
+  });
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* Auswahl-Zustand merken (überlebt Re-Render bei Suche/Filter) */
+function syncCheckedState(){
+  document.querySelectorAll('#empList .cbx').forEach(c=>{
+    const m = mitarbeiter.find(x=>x.id===c.dataset.id);
+    if(m) m._checked = c.checked;
   });
 }
 function selectedEmployees(){
-  return [...document.querySelectorAll('#empList input:checked')].map(c=>MITARBEITER[+c.dataset.i]);
+  return mitarbeiter.filter(m=>m._checked && m.aktiv);
 }
 
 /* ================================================================
-   ORS – Geocoding / Autocomplete
+   ORS – Key-Check / Geocoding
    ================================================================ */
 function checkKey(){
-  if(!ORS_KEY || ORS_KEY==="HIER_MEIN_KEY"){
-    document.getElementById("keyhint").classList.add("show");
-    return false;
-  }
+  if(!ORS_KEY || ORS_KEY==="HIER_MEIN_KEY"){ document.getElementById("keyhint").classList.add("show"); return false; }
   return true;
 }
-
 async function geocode(text){
   const url = "https://api.openrouteservice.org/geocode/search"+
-    "?api_key="+encodeURIComponent(ORS_KEY)+
-    "&text="+encodeURIComponent(text)+
-    "&boundary.country=DE&size=6"+
-    "&focus.point.lon="+START_DEFAULT.lon+"&focus.point.lat="+START_DEFAULT.lat;
+    "?api_key="+encodeURIComponent(ORS_KEY)+"&text="+encodeURIComponent(text)+
+    "&boundary.country=DE&size=6&focus.point.lon="+START_DEFAULT.lon+"&focus.point.lat="+START_DEFAULT.lat;
   const res = await fetch(url);
   if(res.status===403) throw {type:"key"};
   if(res.status===429) throw {type:"quota"};
-  if(!res.ok) throw {type:"http", status:res.status};
+  if(!res.ok) throw {type:"http",status:res.status};
   const data = await res.json();
-  return (data.features||[]).map(f=>({
-    label: f.properties.label,
-    lat: f.geometry.coordinates[1],
-    lon: f.geometry.coordinates[0]
-  }));
+  return (data.features||[]).map(f=>({ label:f.properties.label, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0] }));
+}
+function errText(e){
+  if(!e) return "Fehler.";
+  if(e.type==="key") return "ORS-Key fehlt oder ist ungültig.";
+  if(e.type==="quota") return "Tageslimit (Quota) erreicht – später erneut versuchen.";
+  if(e.type==="offline") return "Keine Internetverbindung.";
+  if(e.type==="notfound") return "Adresse nicht gefunden.";
+  if(e.type==="http") return "Serverfehler ("+e.status+").";
+  return "Unerwarteter Fehler.";
 }
 
-/* Autocomplete-Verdrahtung für ein Feld */
-function wireAutocomplete(inputId, suggestId, onPick){
-  const input = document.getElementById(inputId);
-  const sug   = document.getElementById(suggestId);
+/* Autocomplete für ein Feld */
+function wireAutocomplete(inputId, suggestId, handlers){
+  const input=document.getElementById(inputId), sug=document.getElementById(suggestId);
   let timer=null, items=[], active=-1;
-
   function close(){ sug.classList.remove("open"); active=-1; }
   function render(){
     if(items.length===0){ sug.innerHTML='<div class="empty">Keine Treffer</div>'; sug.classList.add("open"); return; }
-    sug.innerHTML = items.map((it,i)=>
-      '<div class="item'+(i===active?' active':'')+'" data-i="'+i+'">'+it.label+'</div>').join("");
+    sug.innerHTML=items.map((it,i)=>'<div class="item'+(i===active?' active':'')+'" data-i="'+i+'">'+escapeHtml(it.label)+'</div>').join("");
     sug.classList.add("open");
   }
-  input.addEventListener("input", ()=>{
-    const q = input.value.trim();
-    onPick.dirty();                                  // Auswahl verworfen -> neu wählen
+  input.addEventListener("input",()=>{
+    const q=input.value.trim(); if(handlers.dirty) handlers.dirty();
     if(timer) clearTimeout(timer);
     if(q.length<3){ close(); return; }
-    if(!checkKey()){ return; }
-    timer = setTimeout(async ()=>{
-      try{
-        items = await geocode(q); active=-1; render();
-      }catch(e){
-        items=[]; sug.innerHTML='<div class="empty">'+errText(e)+'</div>'; sug.classList.add("open");
-      }
-    }, 300);
+    if(!checkKey()) return;
+    timer=setTimeout(async()=>{
+      try{ items=await geocode(q); active=-1; render(); }
+      catch(e){ items=[]; sug.innerHTML='<div class="empty">'+errText(e)+'</div>'; sug.classList.add("open"); }
+    },300);
   });
-  input.addEventListener("keydown", (e)=>{
+  input.addEventListener("keydown",e=>{
     if(!sug.classList.contains("open")) return;
     if(e.key==="ArrowDown"){ active=Math.min(active+1,items.length-1); render(); e.preventDefault(); }
     else if(e.key==="ArrowUp"){ active=Math.max(active-1,0); render(); e.preventDefault(); }
     else if(e.key==="Enter"){ if(active>=0){ pick(items[active]); e.preventDefault(); } }
     else if(e.key==="Escape"){ close(); }
   });
-  sug.addEventListener("click",(e)=>{
-    const it = e.target.closest(".item"); if(!it) return;
-    pick(items[+it.dataset.i]);
-  });
-  input.addEventListener("blur", ()=> setTimeout(close,150));
-  function pick(sel){ if(!sel) return; input.value=sel.label; onPick.set(sel); close(); }
-  return { setValue:(v)=>{ input.value=v; } };
-}
-function errText(e){
-  if(!e) return "Fehler.";
-  if(e.type==="key")     return "ORS-Key fehlt oder ist ungültig.";
-  if(e.type==="quota")   return "Tageslimit (Quota) erreicht – später erneut versuchen.";
-  if(e.type==="offline") return "Keine Internetverbindung.";
-  if(e.type==="notfound")return "Adresse nicht gefunden.";
-  if(e.type==="http")    return "Serverfehler ("+e.status+").";
-  return "Unerwarteter Fehler.";
+  sug.addEventListener("click",e=>{ const it=e.target.closest(".item"); if(it) pick(items[+it.dataset.i]); });
+  input.addEventListener("blur",()=>setTimeout(close,150));
+  function pick(sel){ if(!sel) return; input.value=sel.label; if(handlers.set) handlers.set(sel); close(); }
 }
 
 /* ================================================================
-   ORS – Directions (Route Start -> Ziel)
+   ORS – Directions (Start -> [Zwischenstopps] -> Ziel)
    ================================================================ */
-async function getRoute(a, b){
-  const url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
-  const res = await fetch(url,{
-    method:"POST",
-    headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ coordinates:[[a.lon,a.lat],[b.lon,b.lat]] })
+async function getRoute(points){
+  const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
+    method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ coordinates: points.map(p=>[p.lon,p.lat]) })
   });
   if(res.status===403) throw {type:"key"};
   if(res.status===429) throw {type:"quota"};
-  if(!res.ok) throw {type:"http", status:res.status};
-  const data = await res.json();
-  const f = (data.features||[])[0];
+  if(!res.ok) throw {type:"http",status:res.status};
+  const data=await res.json(); const f=(data.features||[])[0];
   if(!f) throw {type:"notfound"};
-  return {
-    coords: f.geometry.coordinates.map(c=>[c[1],c[0]]),  // -> [lat,lon]
-    distance: f.properties.summary.distance,
-    duration: f.properties.summary.duration
-  };
+  return { coords:f.geometry.coordinates.map(c=>[c[1],c[0]]),
+           distance:f.properties.summary.distance, duration:f.properties.summary.duration };
 }
 
-/* ================================================================
-   ORS – Matrix (EIN Call für alle Mitarbeiter)
-   locations: [0]=Start, [1]=Ziel, [2..]=Mitarbeiter
-   sources = Mitarbeiter, destinations = [0,1]
-   ================================================================ */
+/* ORS – Matrix: EIN Call, locations[0]=Start,[1]=Ziel,[2..]=Mitarbeiter */
 async function getMatrix(emps){
-  const locations = [
-    [start.lon, start.lat],
-    [ziel.lon,  ziel.lat],
-    ...emps.map(m=>[m.lon, m.lat])
-  ];
-  const sources      = emps.map((_,i)=> i+2);
-  const destinations = [0,1];
+  const locations=[[start.lon,start.lat],[ziel.lon,ziel.lat],...emps.map(m=>[m.lon,m.lat])];
   const res = await fetch("https://api.openrouteservice.org/v2/matrix/driving-car",{
-    method:"POST",
-    headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ locations, sources, destinations, metrics:["distance","duration"], units:"m" })
+    method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ locations, sources:emps.map((_,i)=>i+2), destinations:[0,1],
+                           metrics:["distance","duration"], units:"m" })
   });
   if(res.status===403) throw {type:"key"};
   if(res.status===429) throw {type:"quota"};
-  if(!res.ok) throw {type:"http", status:res.status};
-  const data = await res.json();
-  // distances[i][0] = MA i -> Start, distances[i][1] = MA i -> Ziel
-  // durations[i][1] = MA i -> Ziel (Fahrzeit)
-  return emps.map((m,i)=>({
-    name: m.name, adresse:m.adresse, lat:m.lat, lon:m.lon,
-    distStart: data.distances[i][0],
-    distZiel:  data.distances[i][1],
-    durZiel:   data.durations[i][1]
-  }));
+  if(!res.ok) throw {type:"http",status:res.status};
+  const data=await res.json();
+  return emps.map((m,i)=>({ name:m.name, adresse:m.adresse, gruppe:m.gruppe, lat:m.lat, lon:m.lon,
+    distStart:data.distances[i][0], distZiel:data.distances[i][1], durZiel:data.durations[i][1] }));
 }
 
 /* ================================================================
-   Status / UI
+   Status
    ================================================================ */
-function setStatus(msg, kind){
-  const el = document.getElementById("status");
-  el.className = "status show "+(kind||"info");
-  el.innerHTML = msg;
-}
+function setStatus(msg,kind){ const el=document.getElementById("status"); el.className="status show "+(kind||"info"); el.innerHTML=msg; }
 function clearStatus(){ document.getElementById("status").className="status"; }
 
 /* ================================================================
    Hauptberechnung
    ================================================================ */
 async function calculate(){
+  syncCheckedState();
   if(!checkKey()){ setStatus(errText({type:"key"}),"err"); return; }
   if(!ziel){
-    // Versuch: freien Text im Zielfeld geocodieren
-    const q = document.getElementById("zielInput").value.trim();
+    const q=document.getElementById("zielInput").value.trim();
     if(q.length>=3){
-      try{
-        const r = await geocode(q);
-        if(r.length){ ziel = r[0]; document.getElementById("zielInput").value = ziel.label; }
-      }catch(e){ setStatus(errText(e),"err"); return; }
+      try{ const r=await geocode(q); if(r.length){ ziel=r[0]; document.getElementById("zielInput").value=ziel.label; } }
+      catch(e){ setStatus(errText(e),"err"); return; }
     }
     if(!ziel){ setStatus("Bitte zuerst eine gültige Zieladresse auswählen.","err"); return; }
   }
-  const emps = selectedEmployees();
-  const btn = document.getElementById("calcBtn");
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Berechne …';
-  clearStatus();
+  const emps=selectedEmployees();
+  const collect=document.getElementById("collectMode").checked && emps.length>0;
+  const btn=document.getElementById("calcBtn");
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Berechne …'; clearStatus();
 
   try{
     if(!navigator.onLine) throw {type:"offline"};
-
-    // Route + Matrix parallel
-    const routeP  = getRoute(start, ziel);
+    const routePoints = collect ? [start,...emps,ziel] : [start,ziel];
+    const routeP  = getRoute(routePoints);
     const matrixP = emps.length ? getMatrix(emps) : Promise.resolve([]);
-    const [route, rows] = await Promise.all([routeP, matrixP]);
-
-    lastRows = rows;
-    drawResult(route, rows);
-    document.getElementById("pdfBtn").disabled = false;
-    document.getElementById("csvBtn").disabled = rows.length===0;
-    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt.","info");
+    const [route,rows]=await Promise.all([routeP,matrixP]);
+    lastRows=rows;
+    drawResult(route,rows,collect?emps:null);
+    document.getElementById("pdfBtn").disabled=false;
+    document.getElementById("csvBtn").disabled=rows.length===0;
+    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (Einsammel-Route)":"")+".","ok");
   }catch(e){
     console.error(e);
-    if(e instanceof TypeError) setStatus(errText({type:"offline"}),"err"); // Netzwerk-/Fetch-Fehler
+    if(e instanceof TypeError) setStatus(errText({type:"offline"}),"err");
     else setStatus(errText(e),"err");
-  }finally{
-    btn.disabled = false;
-    btn.textContent = "Route berechnen";
-  }
+  }finally{ btn.disabled=false; btn.textContent="Route berechnen"; }
 }
 
 /* ================================================================
-   Ergebnis zeichnen: Karte, Summary, Tabelle
+   Ergebnis zeichnen
    ================================================================ */
-function drawResult(route, rows){
+function drawResult(route,rows,collectOrder){
   layerGroup.clearLayers();
+  L.polyline(route.coords,{ color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
 
-  // Route-Polyline
-  L.polyline(route.coords, { color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
+  L.marker([start.lat,start.lon],{icon:markerIcon("start","S")}).bindPopup("<b>Start</b><br>"+escapeHtml(start.label)).addTo(layerGroup);
+  L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")}).bindPopup("<b>Ziel</b><br>"+escapeHtml(ziel.label)).addTo(layerGroup);
 
-  // Marker Start / Ziel
-  L.marker([start.lat,start.lon],{icon:markerIcon("start","S")})
-    .bindPopup("<b>Start</b><br>"+start.label).addTo(layerGroup);
-  L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")})
-    .bindPopup("<b>Ziel</b><br>"+ziel.label).addTo(layerGroup);
+  const orderIndex = {};
+  if(collectOrder) collectOrder.forEach((m,i)=> orderIndex[m.name]=i+1);
 
-  // Marker Mitarbeiter
   rows.forEach(r=>{
-    L.marker([r.lat,r.lon],{icon:markerIcon("emp","")})
-      .bindPopup("<b>"+r.name+"</b><br>"+r.adresse+
-        "<br>Entf. Start: "+nfKm(r.distStart)+
-        "<br>Entf. Ziel: "+nfKm(r.distZiel)+
-        "<br>Fahrzeit Ziel: "+fmtDauer(r.durZiel)).addTo(layerGroup);
+    const isWp = collectOrder && orderIndex[r.name];
+    const kind = isWp ? "wp" : "emp";
+    const letter = isWp ? String(orderIndex[r.name]) : "";
+    L.marker([r.lat,r.lon],{icon:markerIcon(kind,letter)}).bindPopup(
+      "<b>"+escapeHtml(r.name)+"</b>"+(r.gruppe?" ("+escapeHtml(r.gruppe)+")":"")+"<br>"+escapeHtml(r.adresse)+
+      "<br>Entf. Start: "+nfKm(r.distStart)+"<br>Entf. Ziel: "+nfKm(r.distZiel)+
+      "<br>Fahrzeit Ziel: "+fmtDauer(r.durZiel)).addTo(layerGroup);
   });
 
-  // Auto-Zoom auf alles
-  const pts = [[start.lat,start.lon],[ziel.lat,ziel.lon], ...rows.map(r=>[r.lat,r.lon])];
+  const pts=[[start.lat,start.lon],[ziel.lat,ziel.lon],...rows.map(r=>[r.lat,r.lon])];
   map.fitBounds(L.latLngBounds(pts).pad(0.15));
 
-  // Summary
-  const sum = document.getElementById("summary");
-  sum.style.display="flex";
+  const sum=document.getElementById("summary"); sum.style.display="flex";
+  const label = collectOrder ? "Einsammel-Route" : "Gesamtstrecke";
   sum.innerHTML =
-    '<div class="box"><div class="k">Gesamtstrecke</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
+    '<div class="box"><div class="k">'+label+'</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
     '<div class="box"><div class="k">Fahrzeit</div><div class="v">'+fmtDauer(route.duration)+'</div></div>'+
-    '<div class="box dest"><div class="k">Ziel</div><div class="v">'+ziel.label+'</div></div>';
+    '<div class="box dest"><div class="k">Ziel</div><div class="v">'+escapeHtml(ziel.label)+'</div></div>';
 
   document.getElementById("printMeta").textContent =
-    "Start: "+start.label+"  →  Ziel: "+ziel.label+
-    "   |   Gesamtstrecke "+nfKm(route.distance)+", Fahrzeit "+fmtDauer(route.duration)+
-    "   |   erstellt "+nowStr();
+    "Start: "+start.label+"  →  Ziel: "+ziel.label+"   |   "+label+" "+nfKm(route.distance)+
+    ", Fahrzeit "+fmtDauer(route.duration)+"   |   erstellt "+nowStr();
 
   renderTable();
 }
-
-/* Tabelle rendern (mit Sortierung + Hervorhebung des nächsten MA) */
-function renderTable(){
-  const wrap = document.getElementById("tableWrap");
-  if(lastRows.length===0){
-    wrap.innerHTML = '<div class="result-empty">Keine Mitarbeiter ausgewählt.</div>';
-    return;
-  }
-  // nächster Mitarbeiter zum Ziel
-  let minZiel = Math.min(...lastRows.map(r=>r.distZiel ?? Infinity));
-
-  const rows = [...lastRows].sort((a,b)=>{
+function sortedRows(){
+  return [...lastRows].sort((a,b)=>{
     const k=sortState.key;
-    if(k==="name") return sortState.dir * a.name.localeCompare(b.name,"de");
-    return sortState.dir * ((a[k]??Infinity)-(b[k]??Infinity));
+    if(k==="name") return sortState.dir*a.name.localeCompare(b.name,"de");
+    return sortState.dir*((a[k]??Infinity)-(b[k]??Infinity));
   });
-
-  const arrow = (k)=> sortState.key===k ? (sortState.dir>0?'▲':'▼') : '↕';
-  const cls   = (k)=> sortState.key===k ? 'sorted' : '';
-
-  let html = '<div style="overflow-x:auto"><table><thead><tr>'+
+}
+function renderTable(){
+  const wrap=document.getElementById("tableWrap");
+  if(lastRows.length===0){ wrap.innerHTML='<div class="result-empty">Keine Mitarbeiter ausgewählt.</div>'; return; }
+  const minZiel=Math.min(...lastRows.map(r=>r.distZiel??Infinity));
+  const rows=sortedRows();
+  const arrow=k=>sortState.key===k?(sortState.dir>0?'▲':'▼'):'↕';
+  const cls=k=>sortState.key===k?'sorted':'';
+  let html='<div style="overflow-x:auto"><table><thead><tr>'+
     '<th class="'+cls('name')+'" data-sort="name">Mitarbeiter <span class="arrow">'+arrow('name')+'</span></th>'+
     '<th class="'+cls('distStart')+'" data-sort="distStart">Entfernung Start <span class="arrow">'+arrow('distStart')+'</span></th>'+
     '<th class="'+cls('distZiel')+'" data-sort="distZiel">Entfernung Ziel <span class="arrow">'+arrow('distZiel')+'</span></th>'+
     '<th class="'+cls('durZiel')+'" data-sort="durZiel">Fahrzeit Ziel <span class="arrow">'+arrow('durZiel')+'</span></th>'+
     '</tr></thead><tbody>';
-
   rows.forEach(r=>{
-    const near = (r.distZiel===minZiel);
-    html += '<tr class="'+(near?'nearest':'')+'">'+
-      '<td><span class="dot b"></span>'+r.name+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
-      '<td class="num">'+nfKm(r.distStart)+'</td>'+
-      '<td class="num">'+nfKm(r.distZiel)+'</td>'+
-      '<td class="num">'+fmtDauer(r.durZiel)+'</td>'+
-      '</tr>';
+    const near=(r.distZiel===minZiel);
+    html+='<tr class="'+(near?'nearest':'')+'">'+
+      '<td><span class="dot b"></span>'+escapeHtml(r.name)+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
+      '<td class="num">'+nfKm(r.distStart)+'</td><td class="num">'+nfKm(r.distZiel)+'</td>'+
+      '<td class="num">'+fmtDauer(r.durZiel)+'</td></tr>';
   });
-  html += '</tbody></table></div>';
-  wrap.innerHTML = html;
-
-  wrap.querySelectorAll("th[data-sort]").forEach(th=>{
-    th.addEventListener("click", ()=>{
-      const k = th.dataset.sort;
-      if(sortState.key===k) sortState.dir *= -1;
-      else { sortState.key=k; sortState.dir = 1; }
-      renderTable();
-    });
-  });
+  html+='</tbody></table></div>';
+  wrap.innerHTML=html;
+  wrap.querySelectorAll("th[data-sort]").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.sort;
+    if(sortState.key===k) sortState.dir*=-1; else { sortState.key=k; sortState.dir=1; }
+    renderTable();
+  }));
 }
 
 /* ================================================================
-   Export: CSV (Semikolon, deutsches Excel)
+   Export CSV / Stammdaten JSON
    ================================================================ */
 function exportCSV(){
   if(lastRows.length===0) return;
   const sep=";";
-  const head = ["Mitarbeiter","Adresse","Entfernung Start (km)","Entfernung Ziel (km)","Fahrzeit Ziel"];
-  const lines = [head.join(sep)];
-  // gleiche Sortierung wie Tabelle
-  const rows = [...lastRows].sort((a,b)=>{
-    const k=sortState.key;
-    if(k==="name") return sortState.dir * a.name.localeCompare(b.name,"de");
-    return sortState.dir * ((a[k]??Infinity)-(b[k]??Infinity));
-  });
-  const kmStr = m => (m/1000).toLocaleString("de-DE",{minimumFractionDigits:1,maximumFractionDigits:1});
-  rows.forEach(r=>{
-    lines.push([
-      '"'+r.name+'"', '"'+r.adresse+'"',
-      kmStr(r.distStart), kmStr(r.distZiel), '"'+fmtDauer(r.durZiel)+'"'
-    ].join(sep));
-  });
-  lines.push("");
-  lines.push('"Start"'+sep+'"'+start.label+'"');
-  lines.push('"Ziel"'+sep+'"'+(ziel?ziel.label:'')+'"');
-
-  const csv = "﻿"+lines.join("\r\n");   // BOM -> Umlaute korrekt in Excel
-  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "Wibbelt_Routing_"+new Date().toISOString().slice(0,10)+".csv";
-  a.click();
-  URL.revokeObjectURL(a.href);
+  const lines=[["Mitarbeiter","Gruppe","Adresse","Entfernung Start (km)","Entfernung Ziel (km)","Fahrzeit Ziel"].join(sep)];
+  sortedRows().forEach(r=>lines.push([
+    '"'+r.name+'"','"'+(r.gruppe||"")+'"','"'+r.adresse+'"',
+    kmPlain(r.distStart),kmPlain(r.distZiel),'"'+fmtDauer(r.durZiel)+'"'].join(sep)));
+  lines.push(""); lines.push('"Start"'+sep+'"'+start.label+'"'); lines.push('"Ziel"'+sep+'"'+(ziel?ziel.label:'')+'"');
+  downloadBlob("﻿"+lines.join("\r\n"),"text/csv;charset=utf-8;","Wibbelt_Routing_"+new Date().toISOString().slice(0,10)+".csv");
+}
+function exportStammdaten(){
+  const clean=mitarbeiter.map(({_checked,...m})=>m);
+  downloadBlob(JSON.stringify(clean,null,2),"application/json","Wibbelt_Mitarbeiter_"+new Date().toISOString().slice(0,10)+".json");
+  setDataHint("Stammdaten als JSON gesichert.");
+}
+function importStammdaten(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const arr=JSON.parse(reader.result);
+      if(!Array.isArray(arr)) throw 0;
+      mitarbeiter=arr.map(m=>({ id:m.id||uid(), name:m.name||"", adresse:m.adresse||"",
+        lat:+m.lat, lon:+m.lon, gruppe:m.gruppe||"", aktiv:m.aktiv!==false }))
+        .filter(m=>m.name && !isNaN(m.lat) && !isNaN(m.lon));
+      saveMitarbeiter(); renderEmployees();
+      setDataHint(mitarbeiter.length+" Mitarbeiter geladen.");
+    }catch(e){ setDataHint("⚠️ Datei konnte nicht gelesen werden (kein gültiges JSON)."); }
+  };
+  reader.readAsText(file);
+}
+function downloadBlob(content,mime,name){
+  const blob=new Blob([content],{type:mime}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href);
 }
 
 /* ================================================================
-   Init / Event-Verdrahtung
+   Modal: Mitarbeiter hinzufügen / bearbeiten
    ================================================================ */
-window.addEventListener("DOMContentLoaded", ()=>{
+function openModal(id){
+  editId=id||null; formGeo=null;
+  const m = id? mitarbeiter.find(x=>x.id===id):null;
+  document.getElementById("modalTitle").textContent = m?"Mitarbeiter bearbeiten":"Mitarbeiter hinzufügen";
+  document.getElementById("mName").value = m?m.name:"";
+  document.getElementById("mGruppe").value = m?(m.gruppe||""):"";
+  document.getElementById("mAdresse").value = m?m.adresse:"";
+  if(m) formGeo={ label:m.adresse, lat:m.lat, lon:m.lon };   // vorhandene Koordinaten behalten
+  document.getElementById("modalErr").className="err";
+  document.getElementById("mCoordHint").textContent = m
+    ? "Adresse nur ändern, wenn Koordinaten neu ermittelt werden sollen."
+    : "Koordinaten werden beim Speichern automatisch aus der Adresse ermittelt.";
+  document.getElementById("modalBg").classList.add("open");
+  setTimeout(()=>document.getElementById("mName").focus(),50);
+}
+function closeModal(){ document.getElementById("modalBg").classList.remove("open"); }
+function modalError(t){ const e=document.getElementById("modalErr"); e.textContent=t; e.className="err show"; }
+
+async function saveModal(){
+  const name=document.getElementById("mName").value.trim();
+  const gruppe=document.getElementById("mGruppe").value.trim();
+  const adresse=document.getElementById("mAdresse").value.trim();
+  if(!name){ modalError("Bitte einen Namen eingeben."); return; }
+  if(!adresse){ modalError("Bitte eine Adresse eingeben."); return; }
+
+  const saveBtn=document.getElementById("modalSave");
+  saveBtn.disabled=true; saveBtn.textContent="Speichere …";
+  try{
+    // Koordinaten: vorhandene nutzen, sonst geocodieren
+    let geo=formGeo;
+    if(!geo || geo.label!==adresse){
+      if(!checkKey()){ modalError(errText({type:"key"})); return; }
+      const r=await geocode(adresse);
+      if(!r.length){ modalError(errText({type:"notfound"})); return; }
+      geo=r[0];
+    }
+    if(editId){
+      const m=mitarbeiter.find(x=>x.id===editId);
+      Object.assign(m,{ name, gruppe, adresse:geo.label||adresse, lat:geo.lat, lon:geo.lon });
+    }else{
+      mitarbeiter.push({ id:uid(), name, gruppe, adresse:geo.label||adresse, lat:geo.lat, lon:geo.lon, aktiv:true, _checked:true });
+    }
+    saveMitarbeiter(); renderEmployees(); closeModal();
+    setDataHint((editId?"Mitarbeiter aktualisiert.":"Mitarbeiter hinzugefügt.")+" ");
+  }catch(e){ modalError(errText(e instanceof TypeError?{type:"offline"}:e)); }
+  finally{ saveBtn.disabled=false; saveBtn.textContent="Speichern"; }
+}
+
+/* ================================================================
+   Init / Events
+   ================================================================ */
+window.addEventListener("DOMContentLoaded",()=>{
   checkKey();
+  loadMitarbeiter();
+  mitarbeiter.forEach(m=>m._checked = m.aktiv);   // aktive standardmäßig markiert
   initMap();
   renderEmployees();
 
-  // Startfeld vorbelegen
-  document.getElementById("startInput").value = start.label;
+  document.getElementById("startInput").value=start.label;
+  wireAutocomplete("startInput","startSuggest",{ set:s=>{start=s;} });
+  wireAutocomplete("zielInput","zielSuggest",{ set:s=>{ziel=s; renderEmployees();}, dirty:()=>{ziel=null;} });
+  wireAutocomplete("mAdresse","mSuggest",{ set:s=>{formGeo=s;}, dirty:()=>{ /* freier Text -> beim Speichern geocodieren */ } });
 
-  wireAutocomplete("startInput","startSuggest",{
-    set:(sel)=>{ start=sel; },
-    dirty:()=>{ /* Start bleibt gültig bis neue Auswahl; freier Text wird beim Rechnen ignoriert */ }
+  // Mitarbeiter-Liste: delegiertes Klick-Handling
+  document.getElementById("empList").addEventListener("click",e=>{
+    const t=e.target.closest("[data-edit],[data-del],[data-toggle]");
+    if(!t) return;
+    if(t.dataset.edit!==undefined && t.dataset.edit){ openModal(t.dataset.edit); }
+    else if(t.dataset.del){
+      const m=mitarbeiter.find(x=>x.id===t.dataset.del);
+      if(m && confirm("„"+m.name+"“ wirklich dauerhaft löschen?")){
+        mitarbeiter=mitarbeiter.filter(x=>x.id!==t.dataset.del); saveMitarbeiter(); renderEmployees();
+      }
+    }else if(t.dataset.toggle){
+      const m=mitarbeiter.find(x=>x.id===t.dataset.toggle);
+      if(m){ m.aktiv=!m.aktiv; if(!m.aktiv) m._checked=false; saveMitarbeiter(); renderEmployees(); }
+    }
   });
-  wireAutocomplete("zielInput","zielSuggest",{
-    set:(sel)=>{ ziel=sel; },
-    dirty:()=>{ ziel=null; }
+  document.getElementById("empList").addEventListener("change",e=>{
+    if(e.target.classList.contains("cbx")){ const m=mitarbeiter.find(x=>x.id===e.target.dataset.id); if(m) m._checked=e.target.checked; }
   });
 
-  document.getElementById("selAll").addEventListener("click",()=>
-    document.querySelectorAll('#empList input').forEach(c=>c.checked=true));
-  document.getElementById("selNone").addEventListener("click",()=>
-    document.querySelectorAll('#empList input').forEach(c=>c.checked=false));
+  // Suche / Filter
+  document.getElementById("maSearch").addEventListener("input",()=>{ syncCheckedState(); renderEmployees(); });
+  document.getElementById("onlyActive").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
+  document.getElementById("radiusOn").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
+  document.getElementById("radiusKm").addEventListener("input",()=>{ if(document.getElementById("radiusOn").checked){ syncCheckedState(); renderEmployees(); }});
 
-  document.getElementById("calcBtn").addEventListener("click", calculate);
-  document.getElementById("pdfBtn").addEventListener("click", ()=>window.print());
-  document.getElementById("csvBtn").addEventListener("click", exportCSV);
+  // Auswahl-Aktionen
+  document.getElementById("selAll").addEventListener("click",()=>{
+    visibleEmployees().forEach(m=>{ if(m.aktiv) m._checked=true; }); renderEmployees();
+  });
+  document.getElementById("selNone").addEventListener("click",()=>{
+    visibleEmployees().forEach(m=>m._checked=false); renderEmployees();
+  });
 
-  // Offline-Hinweis live
-  window.addEventListener("offline", ()=> setStatus(errText({type:"offline"}),"err"));
-  window.addEventListener("online",  ()=> clearStatus());
+  // CRUD / Daten
+  document.getElementById("addBtn").addEventListener("click",()=>openModal(null));
+  document.getElementById("modalSave").addEventListener("click",saveModal);
+  document.getElementById("modalCancel").addEventListener("click",closeModal);
+  document.getElementById("modalBg").addEventListener("click",e=>{ if(e.target.id==="modalBg") closeModal(); });
+  document.getElementById("exportJson").addEventListener("click",exportStammdaten);
+  document.getElementById("importJson").addEventListener("click",()=>document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change",e=>{ if(e.target.files[0]) importStammdaten(e.target.files[0]); e.target.value=""; });
+
+  // Berechnung / Export
+  document.getElementById("calcBtn").addEventListener("click",calculate);
+  document.getElementById("pdfBtn").addEventListener("click",()=>window.print());
+  document.getElementById("csvBtn").addEventListener("click",exportCSV);
+
+  // Offline
+  window.addEventListener("offline",()=>setStatus(errText({type:"offline"}),"err"));
+  window.addEventListener("online",clearStatus);
 });
 </script>
 </body>
