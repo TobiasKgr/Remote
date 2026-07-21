@@ -222,9 +222,7 @@
 <!-- ============================================================= -->
 <script>
 /* ORS API-Key: kostenlos auf https://openrouteservice.org/dev/ registrieren.
-   Empfohlen: Key NICHT hier eintragen, sondern beim ersten Öffnen im Feld
-   "ORS-Key hinterlegen" oben in der App speichern (bleibt nur im Browser).
-   Wer ihn lieber fest hinterlegen will, ersetzt HIER_MEIN_KEY durch den Key. */
+   HIER_MEIN_KEY durch den eigenen Schlüssel ersetzen (Anführungszeichen behalten). */
 const ORS_KEY = "HIER_MEIN_KEY";
 
 /* Fester Startpunkt (vorbelegt, überschreibbar) */
@@ -244,7 +242,6 @@ const MITARBEITER_SEED = [
   { name:"Johann Moor",   adresse:"Gelsenkirchener Str. 53, 45141 Essen",      lat:51.4798709, lon:7.0392152, gruppe:"" }
 ];
 const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
-const KEY_STORAGE = "wibbelt.orskey.v1";   // ORS-Key wird hier im Browser gespeichert (nicht im Code)
 </script>
 
 <!-- ============================================================= -->
@@ -266,7 +263,11 @@ const KEY_STORAGE = "wibbelt.orskey.v1";   // ORS-Key wird hier im Browser gespe
 </header>
 
 <div class="wrap">
-  <div class="keyhint no-print" id="keyhint"></div>
+  <div class="keyhint no-print" id="keyhint">
+    ⚠️ Es ist noch kein ORS-Key hinterlegt. Trage oben im Quelltext bei
+    <code>const ORS_KEY</code> deinen persönlichen Schlüssel von
+    openrouteservice.org ein, sonst funktionieren Suche und Routenberechnung nicht.
+  </div>
 
   <div class="grid">
     <!-- ===================== EINGABE ===================== -->
@@ -563,53 +564,13 @@ function selectedEmployees(){
 /* ================================================================
    ORS – Key-Check / Geocoding
    ================================================================ */
-/* Effektiver Key: fest im Code hinterlegt hat Vorrang, sonst der im Browser gespeicherte. */
-function getKey(){
-  if(ORS_KEY && ORS_KEY!=="HIER_MEIN_KEY") return ORS_KEY;
-  try{ return (localStorage.getItem(KEY_STORAGE)||"").trim(); }catch(e){ return ""; }
-}
 function checkKey(){
-  if(getKey()) return true;
-  refreshKeyUI(true);
-  return false;
-}
-/* Baut die Key-Box: Eingabe, wenn kein Key; sonst grüner Status mit "ändern". */
-function refreshKeyUI(expand){
-  const box=document.getElementById("keyhint");
-  box.classList.add("show");
-  const hard = (ORS_KEY && ORS_KEY!=="HIER_MEIN_KEY");
-  let stored=""; try{ stored=(localStorage.getItem(KEY_STORAGE)||"").trim(); }catch(e){}
-
-  if(hard){
-    box.style.cssText="background:#f0fdf4;border-color:#bbf7d0;color:#166534";
-    box.innerHTML="🟢 ORS-Key ist fest im Quelltext hinterlegt.";
-    return;
-  }
-  if(stored && !expand){
-    box.style.cssText="background:#f0fdf4;border-color:#bbf7d0;color:#166534";
-    box.innerHTML='🟢 ORS-Key ist gespeichert (in diesem Browser). '+
-      '<a href="#" id="keyEdit" style="color:#166534;font-weight:700">ändern</a>';
-    box.querySelector("#keyEdit").addEventListener("click",e=>{e.preventDefault();refreshKeyUI(true);});
-    return;
-  }
-  box.style.cssText="background:#fffbeb;border-color:#fde68a;color:#92400e";
-  box.innerHTML=
-    '<div style="margin-bottom:8px">🔑 <b>ORS-Key hinterlegen</b> – einmalig eingeben. Er wird nur in diesem Browser gespeichert (nicht im Code, nicht auf GitHub).</div>'+
-    '<div style="display:flex;gap:8px">'+
-      '<input type="text" id="keyInput" placeholder="ORS-Key hier einfügen …" style="flex:1" value="'+escapeHtml(stored)+'">'+
-      '<button id="keySave" style="padding:8px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer">Speichern</button>'+
-    '</div>'+
-    '<div style="font-size:11px;margin-top:6px">Kostenlosen Key holen: openrouteservice.org/dev</div>';
-  box.querySelector("#keySave").addEventListener("click",()=>{
-    const v=box.querySelector("#keyInput").value.trim();
-    try{ if(v) localStorage.setItem(KEY_STORAGE,v); else localStorage.removeItem(KEY_STORAGE); }catch(e){}
-    refreshKeyUI(false); clearStatus();
-  });
-  box.querySelector("#keyInput").addEventListener("keydown",e=>{ if(e.key==="Enter") box.querySelector("#keySave").click(); });
+  if(!ORS_KEY || ORS_KEY==="HIER_MEIN_KEY"){ document.getElementById("keyhint").classList.add("show"); return false; }
+  return true;
 }
 async function geocode(text){
   const url = "https://api.openrouteservice.org/geocode/search"+
-    "?api_key="+encodeURIComponent(getKey())+"&text="+encodeURIComponent(text)+
+    "?api_key="+encodeURIComponent(ORS_KEY)+"&text="+encodeURIComponent(text)+
     "&boundary.country=DE&size=6&focus.point.lon="+START_DEFAULT.lon+"&focus.point.lat="+START_DEFAULT.lat;
   const res = await fetch(url);
   if(res.status===403) throw {type:"key"};
@@ -665,7 +626,7 @@ function wireAutocomplete(inputId, suggestId, handlers){
    ================================================================ */
 async function getRoute(points){
   const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
-    method:"POST", headers:{ "Authorization":getKey(), "Content-Type":"application/json" },
+    method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
     body: JSON.stringify({ coordinates: points.map(p=>[p.lon,p.lat]) })
   });
   if(res.status===403) throw {type:"key"};
@@ -685,7 +646,7 @@ async function getMatrix(emps, full){
     ? { locations, metrics:["distance","duration"], units:"m" }
     : { locations, sources:emps.map((_,i)=>i+2), destinations:[0,1], metrics:["distance","duration"], units:"m" };
   const res = await fetch("https://api.openrouteservice.org/v2/matrix/driving-car",{
-    method:"POST", headers:{ "Authorization":getKey(), "Content-Type":"application/json" },
+    method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
     body: JSON.stringify(body)
   });
   if(res.status===403) throw {type:"key"};
@@ -969,7 +930,7 @@ async function saveModal(){
    Init / Events
    ================================================================ */
 window.addEventListener("DOMContentLoaded",()=>{
-  refreshKeyUI(false);
+  checkKey();
   loadMitarbeiter();
   mitarbeiter.forEach(m=>m._checked = m.aktiv);   // aktive standardmäßig markiert
   initMap();
