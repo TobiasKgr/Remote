@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wibbelt Routing</title>
+
+<!-- Leaflet 1.9 per CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJ9DH5N9bLIYD9M5hjUJZBt4pdHrE=" crossorigin=""></script>
+
+<style>
+  :root{
+    --bg:#0f172a; --panel:#ffffff; --line:#e2e8f0; --muted:#64748b;
+    --accent:#2563eb; --accent-dark:#1d4ed8; --green:#16a34a; --red:#dc2626;
+    --blue:#2563eb; --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#f1f5f9; color:#0f172a; line-height:1.5;
+  }
+  header.app{
+    background:linear-gradient(135deg,#1e3a8a,#2563eb);
+    color:#fff; padding:18px 24px; box-shadow:var(--shadow);
+  }
+  header.app h1{margin:0; font-size:22px; font-weight:700; letter-spacing:.2px}
+  header.app .sub{opacity:.85; font-size:13px; margin-top:2px}
+
+  .wrap{max-width:1280px; margin:0 auto; padding:20px}
+  .grid{display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start}
+  @media(max-width:900px){ .grid{grid-template-columns:1fr} }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; box-shadow:var(--shadow); padding:18px;
+  }
+  .card h2{margin:0 0 12px; font-size:15px; font-weight:700; color:#1e293b}
+
+  label.fld{display:block; font-size:13px; font-weight:600; color:#334155; margin:12px 0 4px}
+  label.fld:first-child{margin-top:0}
+  input[type=text]{
+    width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;
+    font-size:14px; outline:none; transition:border .15s,box-shadow .15s;
+  }
+  input[type=text]:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+
+  .autoc{position:relative}
+  .suggest{
+    position:absolute; z-index:1200; left:0; right:0; top:calc(100% + 4px);
+    background:#fff; border:1px solid var(--line); border-radius:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.12); max-height:240px; overflow:auto; display:none;
+  }
+  .suggest.open{display:block}
+  .suggest .item{padding:9px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid #f1f5f9}
+  .suggest .item:last-child{border-bottom:none}
+  .suggest .item:hover,.suggest .item.active{background:#eff6ff}
+  .suggest .empty{padding:10px 12px; font-size:13px; color:var(--muted)}
+
+  .emp-list{display:flex; flex-direction:column; gap:2px; margin-top:6px}
+  .emp{
+    display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;
+    cursor:pointer; transition:background .12s;
+  }
+  .emp:hover{background:#f8fafc}
+  .emp input{width:17px; height:17px; accent-color:var(--accent); cursor:pointer}
+  .emp .info{flex:1; min-width:0}
+  .emp .nm{font-size:14px; font-weight:600}
+  .emp .ad{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  .emp-actions{display:flex; gap:8px; margin:4px 0 2px}
+  .emp-actions button{
+    background:none; border:none; color:var(--accent); font-size:12px;
+    cursor:pointer; padding:2px 4px; font-weight:600;
+  }
+  .emp-actions button:hover{text-decoration:underline}
+
+  button.primary{
+    width:100%; margin-top:16px; padding:12px; background:var(--accent); color:#fff;
+    border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;
+    transition:background .15s;
+  }
+  button.primary:hover{background:var(--accent-dark)}
+  button.primary:disabled{opacity:.6; cursor:not-allowed}
+
+  .exports{display:flex; gap:8px; margin-top:10px}
+  .exports button{
+    flex:1; padding:9px; background:#fff; border:1px solid #cbd5e1; border-radius:8px;
+    font-size:13px; font-weight:600; color:#334155; cursor:pointer;
+  }
+  .exports button:hover{background:#f8fafc; border-color:#94a3b8}
+  .exports button:disabled{opacity:.5; cursor:not-allowed}
+
+  #map{height:460px; border-radius:12px; border:1px solid var(--line); background:#e2e8f0}
+
+  .summary{
+    display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px;
+  }
+  .summary .box{
+    flex:1; min-width:150px; background:linear-gradient(135deg,#eff6ff,#dbeafe);
+    border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px;
+  }
+  .summary .box .k{font-size:12px; color:#1e40af; font-weight:600; text-transform:uppercase; letter-spacing:.4px}
+  .summary .box .v{font-size:22px; font-weight:800; color:#1e3a8a; margin-top:2px}
+  .summary .box.dest{background:linear-gradient(135deg,#fef2f2,#fee2e2); border-color:#fecaca}
+  .summary .box.dest .k{color:#991b1b}
+  .summary .box.dest .v{color:#991b1b; font-size:16px}
+
+  table{width:100%; border-collapse:collapse; font-size:14px}
+  thead th{
+    text-align:left; padding:10px 12px; background:#f8fafc; color:#475569;
+    font-size:12px; text-transform:uppercase; letter-spacing:.3px; border-bottom:2px solid var(--line);
+    cursor:pointer; user-select:none; white-space:nowrap;
+  }
+  thead th:hover{background:#f1f5f9}
+  thead th .arrow{opacity:.4; font-size:10px}
+  thead th.sorted .arrow{opacity:1}
+  tbody td{padding:10px 12px; border-bottom:1px solid #f1f5f9}
+  tbody tr:hover{background:#f8fafc}
+  tbody tr.nearest{background:#f0fdf4}
+  tbody tr.nearest:hover{background:#dcfce7}
+  td.num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle}
+  .dot.b{background:var(--blue)}
+  .badge{display:inline-block; font-size:10px; font-weight:700; color:#166534; background:#dcfce7;
+         padding:1px 6px; border-radius:20px; margin-left:6px; vertical-align:middle}
+
+  .status{margin-top:14px; padding:12px 14px; border-radius:8px; font-size:14px; display:none}
+  .status.show{display:block}
+  .status.err{background:#fef2f2; border:1px solid #fecaca; color:#991b1b}
+  .status.info{background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af}
+
+  .spinner{
+    display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4);
+    border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite;
+    vertical-align:middle; margin-right:8px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .hint{font-size:12px; color:var(--muted); margin-top:6px}
+  .keyhint{background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:10px 12px;
+           border-radius:8px; font-size:13px; margin-bottom:14px; display:none}
+  .keyhint.show{display:block}
+
+  .result-empty{color:var(--muted); text-align:center; padding:40px 20px; font-size:14px}
+  .leaflet-popup-content{font-size:13px; line-height:1.45}
+  .leaflet-popup-content b{color:#1e293b}
+
+  /* Marker-Farben via Filter (CSS) auf Standard-Icon nicht möglich -> DivIcons */
+  .mk{width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+      border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.35); position:relative}
+  .mk span{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+           transform:rotate(45deg); color:#fff; font-size:12px; font-weight:800}
+  .mk.start{background:var(--green)}
+  .mk.ziel{background:var(--red)}
+  .mk.emp{background:var(--blue)}
+
+  /* ---------- Druck / PDF (A4) ---------- */
+  @media print{
+    @page{size:A4 portrait; margin:12mm}
+    body{background:#fff}
+    header.app{background:#1e3a8a !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .wrap{max-width:none; padding:0}
+    .grid{display:block}
+    .no-print{display:none !important}
+    #map{height:340px; page-break-inside:avoid; box-shadow:none}
+    .card{box-shadow:none; border:none; padding:0; margin-bottom:14px}
+    .summary .box{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    table{page-break-inside:auto}
+    tr{page-break-inside:avoid}
+    thead th{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    tbody tr.nearest{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .print-only{display:block !important}
+  }
+  .print-only{display:none}
+  .print-head{margin-bottom:10px}
+  .print-head h2{margin:0}
+  .print-head .meta{font-size:12px; color:#475569}
+</style>
+</head>
+<body>
+
+<!-- ============================================================= -->
+<!-- KONFIGURATION – hier deinen ORS-Key eintragen                 -->
+<!-- ============================================================= -->
+<script>
+/* ORS API-Key: kostenlos auf https://openrouteservice.org/dev/  registrieren */
+const ORS_KEY = "HIER_MEIN_KEY";
+
+/* Fester Startpunkt (vorbelegt, überschreibbar) */
+const START_DEFAULT = {
+  label: "Rieckstraße 26, 59269 Beckum",
+  lat: 51.8052659,
+  lon: 8.0265572
+};
+
+/* Mitarbeiter-Stammdaten */
+const MITARBEITER = [
+  { name:"Tobias Krüger", adresse:"Konrad-Adenauer-Ring 18, 59269 Beckum",       lat:51.7598376, lon:8.0343958 },
+  { name:"Egor Batt",     adresse:"Steinbrink 8, 32049 Herford",                 lat:52.1335478, lon:8.6830755 },
+  { name:"Metin Yildiz",  adresse:"Königgrätzer Str. 23, 45897 Gelsenkirchen",   lat:51.5731184, lon:7.0441897 },
+  { name:"Frank Vogel",   adresse:"Styrumer Str. 88, 47138 Duisburg",            lat:51.4627960, lon:6.8116800 },
+  { name:"Johann Moor",   adresse:"Gelsenkirchener Str. 53, 45141 Essen",        lat:51.4798709, lon:7.0392152 }
+];
+</script>
+
+<header class="app">
+  <h1>Wibbelt&nbsp;Routing</h1>
+  <div class="sub">Route vom festen Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
+</header>
+
+<div class="wrap">
+  <div class="keyhint no-print" id="keyhint">
+    ⚠️ Es ist noch kein ORS-Key hinterlegt. Trage oben im Quelltext bei
+    <code>const ORS_KEY</code> deinen persönlichen Schlüssel von
+    openrouteservice.org ein, sonst funktionieren Suche und Routenberechnung nicht.
+  </div>
+
+  <div class="grid">
+    <!-- ===================== EINGABE ===================== -->
+    <div class="card no-print" id="inputCard">
+      <h2>Eingabe</h2>
+
+      <label class="fld" for="startInput">Startpunkt</label>
+      <div class="autoc">
+        <input type="text" id="startInput" autocomplete="off" placeholder="Startadresse …">
+        <div class="suggest" id="startSuggest"></div>
+      </div>
+      <div class="hint">Vorbelegt mit dem Firmenstandort – bei Bedarf überschreibbar.</div>
+
+      <label class="fld" for="zielInput">Zieladresse</label>
+      <div class="autoc">
+        <input type="text" id="zielInput" autocomplete="off" placeholder="Zieladresse eingeben (ab 3 Zeichen) …">
+        <div class="suggest" id="zielSuggest"></div>
+      </div>
+
+      <label class="fld">Mitarbeiter auswählen</label>
+      <div class="emp-actions">
+        <button type="button" id="selAll">Alle auswählen</button>
+        <button type="button" id="selNone">Keine</button>
+      </div>
+      <div class="emp-list" id="empList"></div>
+
+      <button class="primary" id="calcBtn">Route berechnen</button>
+
+      <div class="exports">
+        <button id="pdfBtn" disabled>Als PDF drucken</button>
+        <button id="csvBtn" disabled>Tabelle als CSV</button>
+      </div>
+
+      <div class="status no-print" id="status"></div>
+    </div>
+
+    <!-- ===================== AUSGABE ===================== -->
+    <div>
+      <div class="print-only print-head">
+        <h2>Wibbelt Routing</h2>
+        <div class="meta" id="printMeta"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px; padding:14px">
+        <div id="summary" class="summary" style="display:none"></div>
+        <div id="map"></div>
+      </div>
+
+      <div class="card">
+        <h2>Mitarbeiter &amp; Entfernungen</h2>
+        <div id="tableWrap">
+          <div class="result-empty">Noch keine Berechnung – wähle ein Ziel und Mitarbeiter und klicke auf „Route berechnen“.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   Hilfsfunktionen: Formatierung (deutsch)
+   ================================================================ */
+function nfKm(meters){
+  const km = meters/1000;
+  return km.toLocaleString("de-DE",{minimumFractionDigits:1, maximumFractionDigits:1}) + " km";
+}
+function fmtDauer(sec){
+  if(sec==null || isNaN(sec)) return "–";
+  const totalMin = Math.round(sec/60);
+  const std = Math.floor(totalMin/60);
+  const min = totalMin%60;
+  if(std>0 && min>0) return std+" Std. "+min+" Min.";
+  if(std>0)          return std+" Std.";
+  return min+" Min.";
+}
+function nowStr(){
+  return new Date().toLocaleString("de-DE",{dateStyle:"medium", timeStyle:"short"});
+}
+
+/* ================================================================
+   Zustand
+   ================================================================ */
+let start = { ...START_DEFAULT };
+let ziel  = null;                 // {label, lat, lon}
+let map, layerGroup, routeLayer;
+let lastRows = [];                // Ergebnis für CSV/Sortierung
+let sortState = { key:"distZiel", dir:1 };
+
+/* ================================================================
+   Karte initialisieren
+   ================================================================ */
+function initMap(){
+  map = L.map("map",{ scrollWheelZoom:true }).setView([start.lat, start.lon], 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
+  }).addTo(map);
+  layerGroup = L.layerGroup().addTo(map);
+}
+function markerIcon(kind, letter){
+  return L.divIcon({
+    className:"", html:'<div class="mk '+kind+'"><span>'+letter+'</span></div>',
+    iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-26]
+  });
+}
+
+/* ================================================================
+   Mitarbeiter-Checkboxen rendern
+   ================================================================ */
+function renderEmployees(){
+  const box = document.getElementById("empList");
+  box.innerHTML = "";
+  MITARBEITER.forEach((m,i)=>{
+    const lab = document.createElement("label");
+    lab.className = "emp";
+    lab.innerHTML =
+      '<input type="checkbox" data-i="'+i+'" checked>'+
+      '<span class="info"><span class="nm">'+m.name+'</span>'+
+      '<span class="ad">'+m.adresse+'</span></span>';
+    box.appendChild(lab);
+  });
+}
+function selectedEmployees(){
+  return [...document.querySelectorAll('#empList input:checked')].map(c=>MITARBEITER[+c.dataset.i]);
+}
+
+/* ================================================================
+   ORS – Geocoding / Autocomplete
+   ================================================================ */
+function checkKey(){
+  if(!ORS_KEY || ORS_KEY==="HIER_MEIN_KEY"){
+    document.getElementById("keyhint").classList.add("show");
+    return false;
+  }
+  return true;
+}
+
+async function geocode(text){
+  const url = "https://api.openrouteservice.org/geocode/search"+
+    "?api_key="+encodeURIComponent(ORS_KEY)+
+    "&text="+encodeURIComponent(text)+
+    "&boundary.country=DE&size=6"+
+    "&focus.point.lon="+START_DEFAULT.lon+"&focus.point.lat="+START_DEFAULT.lat;
+  const res = await fetch(url);
+  if(res.status===403) throw {type:"key"};
+  if(res.status===429) throw {type:"quota"};
+  if(!res.ok) throw {type:"http", status:res.status};
+  const data = await res.json();
+  return (data.features||[]).map(f=>({
+    label: f.properties.label,
+    lat: f.geometry.coordinates[1],
+    lon: f.geometry.coordinates[0]
+  }));
+}
+
+/* Autocomplete-Verdrahtung für ein Feld */
+function wireAutocomplete(inputId, suggestId, onPick){
+  const input = document.getElementById(inputId);
+  const sug   = document.getElementById(suggestId);
+  let timer=null, items=[], active=-1;
+
+  function close(){ sug.classList.remove("open"); active=-1; }
+  function render(){
+    if(items.length===0){ sug.innerHTML='<div class="empty">Keine Treffer</div>'; sug.classList.add("open"); return; }
+    sug.innerHTML = items.map((it,i)=>
+      '<div class="item'+(i===active?' active':'')+'" data-i="'+i+'">'+it.label+'</div>').join("");
+    sug.classList.add("open");
+  }
+  input.addEventListener("input", ()=>{
+    const q = input.value.trim();
+    onPick.dirty();                                  // Auswahl verworfen -> neu wählen
+    if(timer) clearTimeout(timer);
+    if(q.length<3){ close(); return; }
+    if(!checkKey()){ return; }
+    timer = setTimeout(async ()=>{
+      try{
+        items = await geocode(q); active=-1; render();
+      }catch(e){
+        items=[]; sug.innerHTML='<div class="empty">'+errText(e)+'</div>'; sug.classList.add("open");
+      }
+    }, 300);
+  });
+  input.addEventListener("keydown", (e)=>{
+    if(!sug.classList.contains("open")) return;
+    if(e.key==="ArrowDown"){ active=Math.min(active+1,items.length-1); render(); e.preventDefault(); }
+    else if(e.key==="ArrowUp"){ active=Math.max(active-1,0); render(); e.preventDefault(); }
+    else if(e.key==="Enter"){ if(active>=0){ pick(items[active]); e.preventDefault(); } }
+    else if(e.key==="Escape"){ close(); }
+  });
+  sug.addEventListener("click",(e)=>{
+    const it = e.target.closest(".item"); if(!it) return;
+    pick(items[+it.dataset.i]);
+  });
+  input.addEventListener("blur", ()=> setTimeout(close,150));
+  function pick(sel){ if(!sel) return; input.value=sel.label; onPick.set(sel); close(); }
+  return { setValue:(v)=>{ input.value=v; } };
+}
+function errText(e){
+  if(!e) return "Fehler.";
+  if(e.type==="key")     return "ORS-Key fehlt oder ist ungültig.";
+  if(e.type==="quota")   return "Tageslimit (Quota) erreicht – später erneut versuchen.";
+  if(e.type==="offline") return "Keine Internetverbindung.";
+  if(e.type==="notfound")return "Adresse nicht gefunden.";
+  if(e.type==="http")    return "Serverfehler ("+e.status+").";
+  return "Unerwarteter Fehler.";
+}
+
+/* ================================================================
+   ORS – Directions (Route Start -> Ziel)
+   ================================================================ */
+async function getRoute(a, b){
+  const url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
+  const res = await fetch(url,{
+    method:"POST",
+    headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ coordinates:[[a.lon,a.lat],[b.lon,b.lat]] })
+  });
+  if(res.status===403) throw {type:"key"};
+  if(res.status===429) throw {type:"quota"};
+  if(!res.ok) throw {type:"http", status:res.status};
+  const data = await res.json();
+  const f = (data.features||[])[0];
+  if(!f) throw {type:"notfound"};
+  return {
+    coords: f.geometry.coordinates.map(c=>[c[1],c[0]]),  // -> [lat,lon]
+    distance: f.properties.summary.distance,
+    duration: f.properties.summary.duration
+  };
+}
+
+/* ================================================================
+   ORS – Matrix (EIN Call für alle Mitarbeiter)
+   locations: [0]=Start, [1]=Ziel, [2..]=Mitarbeiter
+   sources = Mitarbeiter, destinations = [0,1]
+   ================================================================ */
+async function getMatrix(emps){
+  const locations = [
+    [start.lon, start.lat],
+    [ziel.lon,  ziel.lat],
+    ...emps.map(m=>[m.lon, m.lat])
+  ];
+  const sources      = emps.map((_,i)=> i+2);
+  const destinations = [0,1];
+  const res = await fetch("https://api.openrouteservice.org/v2/matrix/driving-car",{
+    method:"POST",
+    headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ locations, sources, destinations, metrics:["distance","duration"], units:"m" })
+  });
+  if(res.status===403) throw {type:"key"};
+  if(res.status===429) throw {type:"quota"};
+  if(!res.ok) throw {type:"http", status:res.status};
+  const data = await res.json();
+  // distances[i][0] = MA i -> Start, distances[i][1] = MA i -> Ziel
+  // durations[i][1] = MA i -> Ziel (Fahrzeit)
+  return emps.map((m,i)=>({
+    name: m.name, adresse:m.adresse, lat:m.lat, lon:m.lon,
+    distStart: data.distances[i][0],
+    distZiel:  data.distances[i][1],
+    durZiel:   data.durations[i][1]
+  }));
+}
+
+/* ================================================================
+   Status / UI
+   ================================================================ */
+function setStatus(msg, kind){
+  const el = document.getElementById("status");
+  el.className = "status show "+(kind||"info");
+  el.innerHTML = msg;
+}
+function clearStatus(){ document.getElementById("status").className="status"; }
+
+/* ================================================================
+   Hauptberechnung
+   ================================================================ */
+async function calculate(){
+  if(!checkKey()){ setStatus(errText({type:"key"}),"err"); return; }
+  if(!ziel){
+    // Versuch: freien Text im Zielfeld geocodieren
+    const q = document.getElementById("zielInput").value.trim();
+    if(q.length>=3){
+      try{
+        const r = await geocode(q);
+        if(r.length){ ziel = r[0]; document.getElementById("zielInput").value = ziel.label; }
+      }catch(e){ setStatus(errText(e),"err"); return; }
+    }
+    if(!ziel){ setStatus("Bitte zuerst eine gültige Zieladresse auswählen.","err"); return; }
+  }
+  const emps = selectedEmployees();
+  const btn = document.getElementById("calcBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Berechne …';
+  clearStatus();
+
+  try{
+    if(!navigator.onLine) throw {type:"offline"};
+
+    // Route + Matrix parallel
+    const routeP  = getRoute(start, ziel);
+    const matrixP = emps.length ? getMatrix(emps) : Promise.resolve([]);
+    const [route, rows] = await Promise.all([routeP, matrixP]);
+
+    lastRows = rows;
+    drawResult(route, rows);
+    document.getElementById("pdfBtn").disabled = false;
+    document.getElementById("csvBtn").disabled = rows.length===0;
+    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt.","info");
+  }catch(e){
+    console.error(e);
+    if(e instanceof TypeError) setStatus(errText({type:"offline"}),"err"); // Netzwerk-/Fetch-Fehler
+    else setStatus(errText(e),"err");
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Route berechnen";
+  }
+}
+
+/* ================================================================
+   Ergebnis zeichnen: Karte, Summary, Tabelle
+   ================================================================ */
+function drawResult(route, rows){
+  layerGroup.clearLayers();
+
+  // Route-Polyline
+  L.polyline(route.coords, { color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
+
+  // Marker Start / Ziel
+  L.marker([start.lat,start.lon],{icon:markerIcon("start","S")})
+    .bindPopup("<b>Start</b><br>"+start.label).addTo(layerGroup);
+  L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")})
+    .bindPopup("<b>Ziel</b><br>"+ziel.label).addTo(layerGroup);
+
+  // Marker Mitarbeiter
+  rows.forEach(r=>{
+    L.marker([r.lat,r.lon],{icon:markerIcon("emp","")})
+      .bindPopup("<b>"+r.name+"</b><br>"+r.adresse+
+        "<br>Entf. Start: "+nfKm(r.distStart)+
+        "<br>Entf. Ziel: "+nfKm(r.distZiel)+
+        "<br>Fahrzeit Ziel: "+fmtDauer(r.durZiel)).addTo(layerGroup);
+  });
+
+  // Auto-Zoom auf alles
+  const pts = [[start.lat,start.lon],[ziel.lat,ziel.lon], ...rows.map(r=>[r.lat,r.lon])];
+  map.fitBounds(L.latLngBounds(pts).pad(0.15));
+
+  // Summary
+  const sum = document.getElementById("summary");
+  sum.style.display="flex";
+  sum.innerHTML =
+    '<div class="box"><div class="k">Gesamtstrecke</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
+    '<div class="box"><div class="k">Fahrzeit</div><div class="v">'+fmtDauer(route.duration)+'</div></div>'+
+    '<div class="box dest"><div class="k">Ziel</div><div class="v">'+ziel.label+'</div></div>';
+
+  document.getElementById("printMeta").textContent =
+    "Start: "+start.label+"  →  Ziel: "+ziel.label+
+    "   |   Gesamtstrecke "+nfKm(route.distance)+", Fahrzeit "+fmtDauer(route.duration)+
+    "   |   erstellt "+nowStr();
+
+  renderTable();
+}
+
+/* Tabelle rendern (mit Sortierung + Hervorhebung des nächsten MA) */
+function renderTable(){
+  const wrap = document.getElementById("tableWrap");
+  if(lastRows.length===0){
+    wrap.innerHTML = '<div class="result-empty">Keine Mitarbeiter ausgewählt.</div>';
+    return;
+  }
+  // nächster Mitarbeiter zum Ziel
+  let minZiel = Math.min(...lastRows.map(r=>r.distZiel ?? Infinity));
+
+  const rows = [...lastRows].sort((a,b)=>{
+    const k=sortState.key;
+    if(k==="name") return sortState.dir * a.name.localeCompare(b.name,"de");
+    return sortState.dir * ((a[k]??Infinity)-(b[k]??Infinity));
+  });
+
+  const arrow = (k)=> sortState.key===k ? (sortState.dir>0?'▲':'▼') : '↕';
+  const cls   = (k)=> sortState.key===k ? 'sorted' : '';
+
+  let html = '<div style="overflow-x:auto"><table><thead><tr>'+
+    '<th class="'+cls('name')+'" data-sort="name">Mitarbeiter <span class="arrow">'+arrow('name')+'</span></th>'+
+    '<th class="'+cls('distStart')+'" data-sort="distStart">Entfernung Start <span class="arrow">'+arrow('distStart')+'</span></th>'+
+    '<th class="'+cls('distZiel')+'" data-sort="distZiel">Entfernung Ziel <span class="arrow">'+arrow('distZiel')+'</span></th>'+
+    '<th class="'+cls('durZiel')+'" data-sort="durZiel">Fahrzeit Ziel <span class="arrow">'+arrow('durZiel')+'</span></th>'+
+    '</tr></thead><tbody>';
+
+  rows.forEach(r=>{
+    const near = (r.distZiel===minZiel);
+    html += '<tr class="'+(near?'nearest':'')+'">'+
+      '<td><span class="dot b"></span>'+r.name+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
+      '<td class="num">'+nfKm(r.distStart)+'</td>'+
+      '<td class="num">'+nfKm(r.distZiel)+'</td>'+
+      '<td class="num">'+fmtDauer(r.durZiel)+'</td>'+
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll("th[data-sort]").forEach(th=>{
+    th.addEventListener("click", ()=>{
+      const k = th.dataset.sort;
+      if(sortState.key===k) sortState.dir *= -1;
+      else { sortState.key=k; sortState.dir = 1; }
+      renderTable();
+    });
+  });
+}
+
+/* ================================================================
+   Export: CSV (Semikolon, deutsches Excel)
+   ================================================================ */
+function exportCSV(){
+  if(lastRows.length===0) return;
+  const sep=";";
+  const head = ["Mitarbeiter","Adresse","Entfernung Start (km)","Entfernung Ziel (km)","Fahrzeit Ziel"];
+  const lines = [head.join(sep)];
+  // gleiche Sortierung wie Tabelle
+  const rows = [...lastRows].sort((a,b)=>{
+    const k=sortState.key;
+    if(k==="name") return sortState.dir * a.name.localeCompare(b.name,"de");
+    return sortState.dir * ((a[k]??Infinity)-(b[k]??Infinity));
+  });
+  const kmStr = m => (m/1000).toLocaleString("de-DE",{minimumFractionDigits:1,maximumFractionDigits:1});
+  rows.forEach(r=>{
+    lines.push([
+      '"'+r.name+'"', '"'+r.adresse+'"',
+      kmStr(r.distStart), kmStr(r.distZiel), '"'+fmtDauer(r.durZiel)+'"'
+    ].join(sep));
+  });
+  lines.push("");
+  lines.push('"Start"'+sep+'"'+start.label+'"');
+  lines.push('"Ziel"'+sep+'"'+(ziel?ziel.label:'')+'"');
+
+  const csv = "﻿"+lines.join("\r\n");   // BOM -> Umlaute korrekt in Excel
+  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "Wibbelt_Routing_"+new Date().toISOString().slice(0,10)+".csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ================================================================
+   Init / Event-Verdrahtung
+   ================================================================ */
+window.addEventListener("DOMContentLoaded", ()=>{
+  checkKey();
+  initMap();
+  renderEmployees();
+
+  // Startfeld vorbelegen
+  document.getElementById("startInput").value = start.label;
+
+  wireAutocomplete("startInput","startSuggest",{
+    set:(sel)=>{ start=sel; },
+    dirty:()=>{ /* Start bleibt gültig bis neue Auswahl; freier Text wird beim Rechnen ignoriert */ }
+  });
+  wireAutocomplete("zielInput","zielSuggest",{
+    set:(sel)=>{ ziel=sel; },
+    dirty:()=>{ ziel=null; }
+  });
+
+  document.getElementById("selAll").addEventListener("click",()=>
+    document.querySelectorAll('#empList input').forEach(c=>c.checked=true));
+  document.getElementById("selNone").addEventListener("click",()=>
+    document.querySelectorAll('#empList input').forEach(c=>c.checked=false));
+
+  document.getElementById("calcBtn").addEventListener("click", calculate);
+  document.getElementById("pdfBtn").addEventListener("click", ()=>window.print());
+  document.getElementById("csvBtn").addEventListener("click", exportCSV);
+
+  // Offline-Hinweis live
+  window.addEventListener("offline", ()=> setStatus(errText({type:"offline"}),"err"));
+  window.addEventListener("online",  ()=> clearStatus());
+});
+</script>
+</body>
+</html>
