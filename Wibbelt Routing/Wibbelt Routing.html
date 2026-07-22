@@ -66,6 +66,17 @@
   .chips .chip .x:hover{opacity:1; color:var(--red)}
   .chips .lbl{font-size:11px; color:var(--muted); align-self:center; margin-right:2px}
 
+  /* Auf-/zuklappbare Gruppen */
+  .panel{border:1px solid var(--line); border-radius:10px; margin-top:14px; overflow:hidden}
+  .panel-head{width:100%; text-align:left; background:#f8fafc; border:none; padding:10px 12px;
+    font-size:13px; font-weight:700; color:#334155; cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center}
+  .panel-head:hover{background:#f1f5f9}
+  .panel-head .chev{transition:transform .2s; font-size:11px; color:#94a3b8}
+  .panel.collapsed .panel-head .chev{transform:rotate(-90deg)}
+  .panel-body{padding:12px}
+  .panel.collapsed .panel-body{display:none}
+
   .autoc{position:relative}
   .suggest{
     position:absolute; z-index:1200; left:0; right:0; top:calc(100% + 4px);
@@ -272,7 +283,7 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v4</div>
+  <div class="ver">v5</div>
 </header>
 
 <div class="wrap">
@@ -301,54 +312,61 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
       </div>
       <div class="chips" id="zielHistory"></div>
 
-      <!-- Fahrt-Optionen -->
-      <div class="subgroup" style="margin-top:14px">
-        <label class="fld" style="margin-top:0">Fahrt-Optionen</label>
-        <div class="opt-grid">
-          <div>
-            <span class="mini">Fahrzeug</span>
-            <select id="profile">
-              <option value="driving-car">PKW</option>
-              <option value="driving-hgv">Transporter / LKW</option>
-            </select>
+      <!-- Fahrt-Optionen (auf-/zuklappbar) -->
+      <div class="panel" id="panel-fahrt">
+        <button type="button" class="panel-head" data-toggle-panel="fahrt">🚗 Fahrt-Optionen <span class="chev">▾</span></button>
+        <div class="panel-body">
+          <div class="opt-grid">
+            <div>
+              <span class="mini">Fahrzeug</span>
+              <select id="profile">
+                <option value="driving-car">PKW</option>
+                <option value="driving-hgv">Transporter / LKW</option>
+              </select>
+            </div>
+            <div>
+              <span class="mini">Abfahrt</span>
+              <input type="time" id="departTime">
+            </div>
+            <div>
+              <span class="mini">€ / km</span>
+              <input type="number" id="costKm" min="0" step="0.01" placeholder="z. B. 0,30">
+            </div>
+            <div>
+              <span class="mini">€ / Std.</span>
+              <input type="number" id="costH" min="0" step="1" placeholder="optional">
+            </div>
           </div>
-          <div>
-            <span class="mini">Abfahrt</span>
-            <input type="time" id="departTime">
-          </div>
-          <div>
-            <span class="mini">€ / km</span>
-            <input type="number" id="costKm" min="0" step="0.01" placeholder="z. B. 0,30">
-          </div>
-          <div>
-            <span class="mini">€ / Std.</span>
-            <input type="number" id="costH" min="0" step="1" placeholder="optional">
-          </div>
+          <div class="hint">Kosten optional – nur gefüllte Felder fließen ein. Profil wirkt auf Route und Entfernungen.</div>
         </div>
-        <div class="hint">Kosten optional – nur gefüllte Felder fließen ein. Profil wirkt auf Route und Entfernungen.</div>
       </div>
 
       <!-- Mitarbeiter -->
       <h2 style="margin-top:18px">Mitarbeiter <span class="count" id="maCount"></span></h2>
 
-      <div class="ma-tools">
-        <div class="row">
-          <input type="text" id="maSearch" placeholder="🔍 Suchen (Name, Adresse, Gruppe) …">
-        </div>
-        <div class="row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
-          <label class="chk"><input type="checkbox" id="onlyActive"> nur aktive anzeigen</label>
-          <label class="chk radius-box">
-            <input type="checkbox" id="radiusOn"> im Umkreis
-            <input type="number" id="radiusKm" value="50" min="1" step="5"> km um Ziel
-          </label>
-        </div>
-        <div class="row">
-          <label class="chk" style="flex:none">Sortierung:</label>
-          <select id="empSort" style="flex:1">
-            <option value="">Standard (Reihenfolge)</option>
-            <option value="name">Name (A–Z)</option>
-            <option value="near">Nähe zum Ziel</option>
-          </select>
+      <div class="panel" id="panel-filter">
+        <button type="button" class="panel-head" data-toggle-panel="filter">🔍 Filter &amp; Sortierung <span class="chev">▾</span></button>
+        <div class="panel-body">
+          <div class="ma-tools">
+            <div class="row">
+              <input type="text" id="maSearch" placeholder="🔍 Suchen (Name, Adresse, Gruppe) …">
+            </div>
+            <div class="row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
+              <label class="chk"><input type="checkbox" id="onlyActive"> nur aktive anzeigen</label>
+              <label class="chk radius-box">
+                <input type="checkbox" id="radiusOn"> im Umkreis
+                <input type="number" id="radiusKm" value="50" min="1" step="5"> km um Ziel
+              </label>
+            </div>
+            <div class="row">
+              <label class="chk" style="flex:none">Sortierung:</label>
+              <select id="empSort" style="flex:1">
+                <option value="">Standard (Reihenfolge)</option>
+                <option value="name">Name (A–Z)</option>
+                <option value="near">Nähe zum Ziel</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -501,6 +519,18 @@ function saveSettings(){
   try{ localStorage.setItem(SETTINGS_KEY,JSON.stringify(s)); }catch(e){}
 }
 
+/* Auf-/zuklappbare Gruppen – Zustand merken */
+const PANEL_KEY="wibbelt.panels.v1";
+function togglePanel(id){ const p=document.getElementById("panel-"+id); if(p){ p.classList.toggle("collapsed"); savePanels(); } }
+function savePanels(){
+  const st={}; document.querySelectorAll(".panel").forEach(p=>{ if(p.id) st[p.id]=p.classList.contains("collapsed"); });
+  try{ localStorage.setItem(PANEL_KEY,JSON.stringify(st)); }catch(e){}
+}
+function restorePanels(){
+  let st={}; try{ st=JSON.parse(localStorage.getItem(PANEL_KEY)||"{}"); }catch(e){}
+  Object.keys(st).forEach(id=>{ const p=document.getElementById(id); if(p) p.classList.toggle("collapsed",!!st[id]); });
+}
+
 /* Luftlinie (Haversine) in Metern – für Umkreis-Filter ohne API */
 function haversine(a,b){
   const R=6371000, toR=x=>x*Math.PI/180;
@@ -560,6 +590,17 @@ function setDataHint(t){ document.getElementById("dataHint").textContent = t||""
    Karte
    ================================================================ */
 function initMap(){
+  // Robust: läuft Leaflet nicht (CDN blockiert/offline), bleibt der Rest der App voll nutzbar
+  if(typeof L==="undefined" || !L.map){
+    const el=document.getElementById("map");
+    el.style.cssText="display:flex;align-items:center;justify-content:center;text-align:center;padding:24px";
+    el.innerHTML='<div style="color:#64748b;font-size:14px;max-width:420px">🗺️ <b>Karte nicht geladen.</b><br>'+
+      'Die Karten-Bibliothek (Leaflet) ist nicht erreichbar – vermutlich blockiert das Netzwerk den CDN-Zugriff (unpkg.com) '+
+      'oder es besteht keine Internetverbindung.<br><br>'+
+      '<b>Alle übrigen Funktionen laufen normal</b> (Mitarbeiter, Suche, Routenberechnung, Tabelle, Export). '+
+      'Nur die grafische Karte fehlt.</div>';
+    return false;
+  }
   map = L.map("map",{ scrollWheelZoom:true }).setView([start.lat,start.lon],8);
   const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
     maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
@@ -572,6 +613,7 @@ function initMap(){
   L.control.layers(baseLayers,null,{position:"topright"}).addTo(map);
   empLayer   = L.layerGroup().addTo(map);   // persistente Mitarbeiter-Marker (dauerhaft sichtbar)
   layerGroup = L.layerGroup().addTo(map);   // Route + Start/Ziel (wird pro Berechnung neu gezeichnet)
+  return true;
 }
 function markerIcon(kind,letter){
   return L.divIcon({ className:"", html:'<div class="mk '+kind+'"><span>'+letter+'</span></div>',
@@ -859,17 +901,16 @@ async function calculate(){
    Ergebnis zeichnen
    ================================================================ */
 function drawResult(route,rows,collect){
-  layerGroup.clearLayers();
-  L.polyline(route.coords,{ color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
-
-  L.marker([start.lat,start.lon],{icon:markerIcon("start","S")}).bindPopup("<b>Start</b><br>"+escapeHtml(start.label)).addTo(layerGroup);
-  L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")}).bindPopup("<b>Ziel</b><br>"+escapeHtml(ziel.label)).addTo(layerGroup);
-
-  // Mitarbeiter-Marker (inkl. Reihenfolge-Nummern + jetzt bekannte Entfernungen) neu zeichnen
-  renderMapEmployees();
-
-  const pts=[[start.lat,start.lon],[ziel.lat,ziel.lon],...rows.map(r=>[r.lat,r.lon])];
-  map.fitBounds(L.latLngBounds(pts).pad(0.15));
+  // Kartenteil nur, wenn Leaflet/Karte verfügbar sind
+  if(map){
+    layerGroup.clearLayers();
+    L.polyline(route.coords,{ color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
+    L.marker([start.lat,start.lon],{icon:markerIcon("start","S")}).bindPopup("<b>Start</b><br>"+escapeHtml(start.label)).addTo(layerGroup);
+    L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")}).bindPopup("<b>Ziel</b><br>"+escapeHtml(ziel.label)).addTo(layerGroup);
+    renderMapEmployees();
+    const pts=[[start.lat,start.lon],[ziel.lat,ziel.lon],...rows.map(r=>[r.lat,r.lon])];
+    map.fitBounds(L.latLngBounds(pts).pad(0.15));
+  }
 
   const sum=document.getElementById("summary"); sum.style.display="flex";
   const label = collect ? "Einsammel-Route" : "Gesamtstrecke";
@@ -1069,11 +1110,16 @@ window.addEventListener("DOMContentLoaded",()=>{
   checkKey();
   loadMitarbeiter();
   mitarbeiter.forEach(m=>m._checked = m.aktiv);   // aktive standardmäßig markiert
-  initMap();
+  try{ initMap(); }catch(e){ console.error("Karte konnte nicht initialisiert werden:",e); }
   renderEmployees();
   updateShareState();
   loadSettings();
   renderHistory();
+  restorePanels();
+
+  // Panels auf-/zuklappen
+  document.querySelectorAll("[data-toggle-panel]").forEach(b=>
+    b.addEventListener("click",()=>togglePanel(b.dataset.togglePanel)));
 
   document.getElementById("startInput").value=start.label;
   wireAutocomplete("startInput","startSuggest",{ set:s=>{start=s;} });
