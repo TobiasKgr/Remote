@@ -342,6 +342,14 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
             <input type="number" id="radiusKm" value="50" min="1" step="5"> km um Ziel
           </label>
         </div>
+        <div class="row">
+          <label class="chk" style="flex:none">Sortierung:</label>
+          <select id="empSort" style="flex:1">
+            <option value="">Standard (Reihenfolge)</option>
+            <option value="name">Name (A–Z)</option>
+            <option value="near">Nähe zum Ziel</option>
+          </select>
+        </div>
       </div>
 
       <div class="emp-actions">
@@ -599,7 +607,7 @@ function visibleEmployees(){
   const onlyActive = document.getElementById("onlyActive").checked;
   const radiusOn = document.getElementById("radiusOn").checked && ziel;
   const radiusM = (parseFloat(document.getElementById("radiusKm").value)||0)*1000;
-  return mitarbeiter.filter(m=>{
+  const list = mitarbeiter.filter(m=>{
     if(onlyActive && !m.aktiv) return false;
     if(q){
       const hay = (m.name+" "+m.adresse+" "+(m.gruppe||"")).toLowerCase();
@@ -610,6 +618,14 @@ function visibleEmployees(){
     }
     return true;
   });
+  // Sortierung der Auswahlliste
+  const sort = document.getElementById("empSort").value;
+  if(sort==="name"){
+    list.sort((a,b)=>a.name.localeCompare(b.name,"de"));
+  }else if(sort==="near" && ziel){
+    list.sort((a,b)=>haversine(a,ziel)-haversine(b,ziel));
+  }
+  return list;
 }
 function renderEmployees(){
   const box = document.getElementById("empList");
@@ -1088,6 +1104,11 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("onlyActive").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("radiusOn").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("radiusKm").addEventListener("input",()=>{ if(document.getElementById("radiusOn").checked){ syncCheckedState(); renderEmployees(); }});
+  document.getElementById("empSort").addEventListener("change",()=>{
+    syncCheckedState(); renderEmployees();
+    if(document.getElementById("empSort").value==="near" && !ziel)
+      setDataHint("Hinweis: „Nähe zum Ziel“ wirkt erst, sobald eine Zieladresse gewählt ist.");
+  });
 
   // Auswahl-Aktionen
   document.getElementById("selAll").addEventListener("click",()=>{
