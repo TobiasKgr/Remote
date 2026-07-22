@@ -9,24 +9,22 @@ WAS IST DAS?
 
 
 -------------------------------------------------------
-1) EINMALIG: ORS-Schlüssel erstellen und eintragen
+1) EINMALIG: Geoapify-Schlüssel erstellen und eintragen
 -------------------------------------------------------
-  a) Key erstellen (kostenlos):
-     - https://openrouteservice.org/dev/#/signup öffnen, registrieren
-       (E-Mail + Passwort) und die Bestätigungsmail anklicken.
-     - Einloggen -> Bereich "Request a token":
-         Token name: Wibbelt Routing
-         Plan:       Standard (Free)
-       -> "CREATE TOKEN". Den erzeugten Token (lange Zeichenkette)
-       kopieren = das ist der Key.
+  a) Key erstellen (kostenlos, 3.000 Anfragen/Tag, kommerziell erlaubt):
+     - https://www.geoapify.com/ öffnen -> "Get Started for Free"
+       bzw. "Sign Up". Registrieren (E-Mail oder Google/GitHub-Login).
+     - Nach dem Login im Bereich "Projects" ein Projekt anlegen
+       (z. B. "Wibbelt Routing"). Dafür wird automatisch ein API-Key
+       erzeugt. Diesen API-Key kopieren.
 
   b) Key eintragen:
      - "Wibbelt Routing.html" mit dem Editor öffnen (Rechtsklick ->
        Öffnen mit -> Editor).
      - Ganz oben die Zeile suchen:
-           const ORS_KEY = "HIER_MEIN_KEY";
+           const GEOAPIFY_KEY = "HIER_MEIN_KEY";
        und HIER_MEIN_KEY durch den Key ersetzen, z. B.:
-           const ORS_KEY = "5b3ce359...ihr-key...";
+           const GEOAPIFY_KEY = "a1b2c3...ihr-key...";
      - Speichern. (Danach gilt der Key für alle, die die Datei öffnen.)
 
 
@@ -83,7 +81,7 @@ WAS IST DAS?
 -------------------------------------------------------
 FEHLERMELDUNGEN
 -------------------------------------------------------
-  "ORS-Key fehlt/ungültig"  -> Schritt 1 prüfen.
+  "Geoapify-Key fehlt/ungültig" -> Schritt 1 prüfen.
   "Adresse nicht gefunden"  -> Adresse genauer/anders schreiben.
   "Quota erreicht"          -> Tageslimit des kostenlosen Kontos erreicht,
                                am nächsten Tag wieder verfügbar.

@@ -910,12 +910,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <body>
 
 <!-- ============================================================= -->
-<!-- KONFIGURATION – hier deinen ORS-Key eintragen                 -->
+<!-- KONFIGURATION – hier deinen Geoapify-Key eintragen            -->
 <!-- ============================================================= -->
 <script>
-/* ORS API-Key: kostenlos auf https://openrouteservice.org/dev/ registrieren.
+/* Geoapify API-Key: kostenlos auf https://www.geoapify.com/ registrieren (Projekt anlegen -> API Key).
    HIER_MEIN_KEY durch den eigenen Schlüssel ersetzen (Anführungszeichen behalten). */
-const ORS_KEY = "HIER_MEIN_KEY";
+const GEOAPIFY_KEY = "HIER_MEIN_KEY";
 
 /* Fester Startpunkt (vorbelegt, überschreibbar) */
 const START_DEFAULT = {
@@ -951,14 +951,14 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v6</div>
+  <div class="ver">v7 · Geoapify</div>
 </header>
 
 <div class="wrap">
   <div class="keyhint no-print" id="keyhint">
-    ⚠️ Es ist noch kein ORS-Key hinterlegt. Trage oben im Quelltext bei
-    <code>const ORS_KEY</code> deinen persönlichen Schlüssel von
-    openrouteservice.org ein, sonst funktionieren Suche und Routenberechnung nicht.
+    ⚠️ Es ist noch kein Geoapify-Key hinterlegt. Trage oben im Quelltext bei
+    <code>const GEOAPIFY_KEY</code> deinen persönlichen Schlüssel von
+    geoapify.com ein, sonst funktionieren Suche und Routenberechnung nicht.
   </div>
 
   <div class="grid">
@@ -988,8 +988,8 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
             <div>
               <span class="mini">Fahrzeug</span>
               <select id="profile">
-                <option value="driving-car">PKW</option>
-                <option value="driving-hgv">Transporter / LKW</option>
+                <option value="drive">PKW</option>
+                <option value="truck">Transporter / LKW</option>
               </select>
             </div>
             <div>
@@ -1071,6 +1071,10 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
       </div>
 
       <div class="status no-print" id="status"></div>
+      <div class="hint" style="margin-top:12px; text-align:center">
+        Adresssuche &amp; Routing: <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> ·
+        Karte: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+      </div>
     </div>
 
     <!-- ===================== AUSGABE ===================== -->
@@ -1381,26 +1385,28 @@ function selectedEmployees(){
 }
 
 /* ================================================================
-   ORS – Key-Check / Geocoding
+   Geoapify – Key-Check / Geocoding
    ================================================================ */
 function checkKey(){
-  if(!ORS_KEY || ORS_KEY==="HIER_MEIN_KEY"){ document.getElementById("keyhint").classList.add("show"); return false; }
+  if(!GEOAPIFY_KEY || GEOAPIFY_KEY==="HIER_MEIN_KEY"){ document.getElementById("keyhint").classList.add("show"); return false; }
   return true;
 }
 async function geocode(text){
-  const url = "https://api.openrouteservice.org/geocode/search"+
-    "?api_key="+encodeURIComponent(ORS_KEY)+"&text="+encodeURIComponent(text)+
-    "&boundary.country=DE&size=6&focus.point.lon="+START_DEFAULT.lon+"&focus.point.lat="+START_DEFAULT.lat;
+  const url = "https://api.geoapify.com/v1/geocode/autocomplete"+
+    "?text="+encodeURIComponent(text)+
+    "&lang=de&limit=6&filter=countrycode:de"+
+    "&bias=proximity:"+START_DEFAULT.lon+","+START_DEFAULT.lat+
+    "&format=json&apiKey="+encodeURIComponent(GEOAPIFY_KEY);
   const res = await fetch(url);
-  if(res.status===403) throw {type:"key"};
+  if(res.status===401) throw {type:"key"};
   if(res.status===429) throw {type:"quota"};
   if(!res.ok) throw {type:"http",status:res.status};
   const data = await res.json();
-  return (data.features||[]).map(f=>({ label:f.properties.label, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0] }));
+  return (data.results||[]).map(f=>({ label:f.formatted, lat:f.lat, lon:f.lon }));
 }
 function errText(e){
   if(!e) return "Fehler.";
-  if(e.type==="key") return "ORS-Key fehlt oder ist ungültig.";
+  if(e.type==="key") return "Geoapify-Key fehlt oder ist ungültig.";
   if(e.type==="quota") return "Tageslimit (Quota) erreicht – später erneut versuchen.";
   if(e.type==="offline") return "Keine Internetverbindung.";
   if(e.type==="notfound") return "Adresse nicht gefunden.";
@@ -1441,47 +1447,60 @@ function wireAutocomplete(inputId, suggestId, handlers){
 }
 
 /* ================================================================
-   ORS – Directions (Start -> [Zwischenstopps] -> Ziel)
+   Geoapify – Routing (Start -> [Zwischenstopps] -> Ziel)
    ================================================================ */
-function profile(){ return document.getElementById("profile").value || "driving-car"; }
+/* Geoapify-Modus: PKW = "drive", Transporter/LKW = "truck" */
+function profile(){ return document.getElementById("profile").value || "drive"; }
 
+/* Geoapify – Routing (Start -> [Zwischenstopps] -> Ziel). Wegpunkte als lat,lon|lat,lon */
 async function getRoute(points){
-  const res = await fetch("https://api.openrouteservice.org/v2/directions/"+profile()+"/geojson",{
-    method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ coordinates: points.map(p=>[p.lon,p.lat]) })
-  });
-  if(res.status===403) throw {type:"key"};
+  const wp = points.map(p=>p.lat+","+p.lon).join("|");
+  const url = "https://api.geoapify.com/v1/routing?waypoints="+wp+"&mode="+profile()+
+    "&apiKey="+encodeURIComponent(GEOAPIFY_KEY);
+  const res = await fetch(url);
+  if(res.status===401) throw {type:"key"};
   if(res.status===429) throw {type:"quota"};
   if(!res.ok) throw {type:"http",status:res.status};
   const data=await res.json(); const f=(data.features||[])[0];
-  if(!f) throw {type:"notfound"};
-  return { coords:f.geometry.coordinates.map(c=>[c[1],c[0]]),
-           distance:f.properties.summary.distance, duration:f.properties.summary.duration };
+  if(!f || !f.geometry) throw {type:"notfound"};
+  // Geometrie -> [lat,lon] flachziehen (LineString oder MultiLineString)
+  const coords=[]; const g=f.geometry;
+  if(g.type==="MultiLineString") g.coordinates.forEach(seg=>seg.forEach(c=>coords.push([c[1],c[0]])));
+  else g.coordinates.forEach(c=>coords.push([c[1],c[0]]));
+  return { coords, distance:f.properties.distance, duration:f.properties.time };
 }
 
-/* ORS – Matrix: EIN Call, locations[0]=Start,[1]=Ziel,[2..]=Mitarbeiter.
-   full=true -> komplette N×N-Matrix (für Reihenfolgen-Optimierung), sonst schlanker Call. */
+/* Geoapify – Route-Matrix (EIN POST-Call).
+   full=true -> komplette N×N-Matrix (für Reihenfolgen-Optimierung), sonst nur Mitarbeiter->[Start,Ziel]. */
 async function getMatrix(emps, full){
-  const locations=[[start.lon,start.lat],[ziel.lon,ziel.lat],...emps.map(m=>[m.lon,m.lat])];
-  const body = full
-    ? { locations, metrics:["distance","duration"], units:"m" }
-    : { locations, sources:emps.map((_,i)=>i+2), destinations:[0,1], metrics:["distance","duration"], units:"m" };
-  const res = await fetch("https://api.openrouteservice.org/v2/matrix/"+profile(),{
-    method:"POST", headers:{ "Authorization":ORS_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify(body)
+  const S={location:[start.lon,start.lat]}, Z={location:[ziel.lon,ziel.lat]};
+  const E=emps.map(m=>({location:[m.lon,m.lat]}));
+  let sources, targets;
+  if(full){ const all=[S,Z,...E]; sources=all; targets=all; }
+  else     { sources=E; targets=[S,Z]; }
+  const res = await fetch("https://api.geoapify.com/v1/routematrix?apiKey="+encodeURIComponent(GEOAPIFY_KEY),{
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ mode:profile(), sources, targets })
   });
-  if(res.status===403) throw {type:"key"};
+  if(res.status===401) throw {type:"key"};
   if(res.status===429) throw {type:"quota"};
   if(!res.ok) throw {type:"http",status:res.status};
   const data=await res.json();
+  const M=data.sources_to_targets;                 // M[i][j] = {distance, time, ...}
+  if(!M) throw {type:"notfound"};
+  const v=(i,j,k)=> (M[i]&&M[i][j]&&M[i][j][k]!=null)? M[i][j][k] : null;
   if(full){
-    // Zeilen aus voller Matrix ableiten: Mitarbeiter-Index gi = i+2, Start=0, Ziel=1
-    const rows = emps.map((m,i)=>({ id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, lat:m.lat, lon:m.lon,
-      distStart:data.distances[i+2][0], distZiel:data.distances[i+2][1], durZiel:data.durations[i+2][1] }));
-    return { rows, durations:data.durations };
+    // sources/targets = [Start(0), Ziel(1), Mitarbeiter(2..)]
+    const rows = emps.map((m,i)=>{ const gi=i+2;
+      return { id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, lat:m.lat, lon:m.lon,
+        distStart:v(gi,0,"distance"), distZiel:v(gi,1,"distance"), durZiel:v(gi,1,"time") }; });
+    const N=2+emps.length, durations=[];
+    for(let i=0;i<N;i++){ durations[i]=[]; for(let j=0;j<N;j++) durations[i][j]=v(i,j,"time")||0; }
+    return { rows, durations };
   }
+  // sources=Mitarbeiter, targets=[Start(0),Ziel(1)]
   return emps.map((m,i)=>({ id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, lat:m.lat, lon:m.lon,
-    distStart:data.distances[i][0], distZiel:data.distances[i][1], durZiel:data.durations[i][1] }));
+    distStart:v(i,0,"distance"), distZiel:v(i,1,"distance"), durZiel:v(i,1,"time") }));
 }
 
 /* Offene Rundreise (TSP): von Start(0) über alle Mitarbeiter(2..N-1) zum Ziel(1),
@@ -1583,7 +1602,7 @@ function drawResult(route,rows,collect){
   const sum=document.getElementById("summary"); sum.style.display="flex";
   const label = collect ? "Einsammel-Route" : "Gesamtstrecke";
   const eta = arrivalTime(document.getElementById("departTime").value, route.duration);
-  const profLabel = profile()==="driving-hgv" ? "Transporter/LKW" : "PKW";
+  const profLabel = profile()==="truck" ? "Transporter/LKW" : "PKW";
   let html =
     '<div class="box"><div class="k">'+label+' · '+profLabel+'</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
     '<div class="box"><div class="k">Fahrzeit'+(eta?' · Ankunft '+eta:'')+'</div><div class="v">'+fmtDauer(route.duration)+'</div></div>';
@@ -1662,7 +1681,7 @@ function exportCSV(){
   lines.push("");
   lines.push('"Start"'+sep+'"'+start.label+'"');
   lines.push('"Ziel"'+sep+'"'+(ziel?ziel.label:'')+'"');
-  lines.push('"Fahrzeug"'+sep+'"'+(profile()==="driving-hgv"?"Transporter/LKW":"PKW")+'"');
+  lines.push('"Fahrzeug"'+sep+'"'+(profile()==="truck"?"Transporter/LKW":"PKW")+'"');
   if(showCost){ const r=costRates(); lines.push('"Kostensatz"'+sep+'"'+euroPlain(r.km)+" €/km"+(r.h>0?", "+euroPlain(r.h)+" €/Std.":"")+'"'); }
   downloadBlob("﻿"+lines.join("\r\n"),"text/csv;charset=utf-8;","Wibbelt_Routing_"+new Date().toISOString().slice(0,10)+".csv");
 }
