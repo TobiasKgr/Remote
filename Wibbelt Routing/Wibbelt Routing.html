@@ -980,7 +980,7 @@ const MERKMALE = ["Solvay", "Wiederholt"];
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v13 · Geoapify</div>
+  <div class="ver">v14 · Geoapify</div>
 </header>
 
 <div class="wrap">
@@ -1486,15 +1486,20 @@ function renderEmployees(){
     return;
   }
 
+  // Doppelte Namen erkennen (zum Aufräumen)
+  const nameCount={}; mitarbeiter.forEach(m=>{ const k=(m.name||"").toLowerCase().trim(); nameCount[k]=(nameCount[k]||0)+1; });
+
   const rowHtml = m=>{
     const dist = ziel ? " · "+kmPlain(haversine(m,ziel))+" km Luftlinie z. Ziel" : "";
+    const dup = nameCount[(m.name||"").toLowerCase().trim()]>1
+      ? '<span class="rl" style="color:#b91c1c;background:#fee2e2" title="Name mehrfach vorhanden – ggf. Duplikat löschen">doppelt</span>' : "";
     const toggle = m.aktiv
       ? '<button class="iconbtn" title="Ausblenden" data-toggle="'+m.id+'">👁</button>'
       : '<button class="iconbtn" title="Einblenden" data-toggle="'+m.id+'" style="color:#2563eb">↺</button>';
     return '<div class="emp'+(m.aktiv?"":" inactive")+'">'+
       '<input type="checkbox" class="cbx" data-id="'+m.id+'" '+(m.aktiv?"":"disabled")+' '+(m._checked?"checked":"")+'>'+
       '<div class="info" data-edit="'+m.id+'">'+
-        '<div class="nm">'+escapeHtml(m.name)+roleBadge(m.rolle)+tagBadges(m.tags)+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</div>'+
+        '<div class="nm">'+escapeHtml(m.name)+roleBadge(m.rolle)+tagBadges(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</div>'+
         '<div class="ad">'+escapeHtml(m.adresse)+dist+'</div>'+
       '</div>'+
       '<div class="rowbtns">'+
@@ -2025,6 +2030,9 @@ async function saveModal(){
   const adresse=document.getElementById("mAdresse").value.trim();
   if(!name){ modalError("Bitte einen Namen eingeben."); return; }
   if(!adresse){ modalError("Bitte eine Adresse eingeben."); return; }
+  if(!editId && mitarbeiter.some(m=>(m.name||"").toLowerCase().trim()===name.toLowerCase().trim())){
+    if(!confirm("„"+name+"“ ist bereits in der Liste vorhanden. Trotzdem als weiteren (doppelten) Eintrag hinzufügen?")) return;
+  }
 
   const saveBtn=document.getElementById("modalSave");
   saveBtn.disabled=true; saveBtn.textContent="Speichere …";
