@@ -861,6 +861,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .cp-box .big{font-size:16px; font-weight:800; color:#1e293b}
   .cp-box .ln{font-size:13px; color:#475569; margin-top:3px}
   .cp-box .tag-rec{font-size:10px; font-weight:700; color:#166534; background:#dcfce7; padding:1px 6px; border-radius:20px; margin-left:6px}
+  .cp-text{background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:11px 13px; font-size:14px; line-height:1.55; margin-bottom:14px; color:#1e293b}
   .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle}
   .dot.b{background:var(--blue)}
   .badge{display:inline-block; font-size:10px; font-weight:700; color:#166534; background:#dcfce7;
@@ -980,7 +981,7 @@ const MERKMALE = ["Solvay", "Wiederholt"];
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v14 · Geoapify</div>
+  <div class="ver">v15 · Geoapify</div>
 </header>
 
 <div class="wrap">
@@ -1227,6 +1228,7 @@ function stdFahrer(meters){ if(meters==null||isNaN(meters)) return 0; return Mat
 function stdBeifahrer(meters){ if(meters==null||isNaN(meters)) return 0; return Math.ceil((meters/1000)/KM_BEIFAHRER); }
 function fmtStd(n){ return n+" Std."; }
 function seatsPerCar(){ return Math.max(1, parseInt(document.getElementById("seats").value)||2); }
+function listNames(arr){ arr=arr.map(escapeHtml); if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
 
 /* Distanz der optimierten Einsammel-Route Rieckstraße -> alle -> Ziel (aus voller Distanzmatrix) */
 function collectRouteDist(){
@@ -1869,11 +1871,12 @@ function renderCarpool(){
   const anfahrt1=lastRows.reduce((s,r)=>s+((r.distStart||0)/1000)*ANFAHRT_EUR_KM,0);
   const fahrt1=drivers*stdFahrer(dRZ)+passengers*stdBeifahrer(dRZ);
   const crd=collectRouteDist();
+  const fahrer2 = crd==null? null : stdFahrer(crd);
+  const beif2   = crd==null? null : lastRows.reduce((s,r)=>s+stdBeifahrer(r.distZiel),0);
   let fall2Html;
   if(crd==null){
     fall2Html='<div class="ln">Für den Einsammel-Vergleich bitte neu berechnen (bei aktivem Mitfahr-Modus).</div>';
   }else{
-    const fahrer2=stdFahrer(crd), beif2=lastRows.reduce((s,r)=>s+stdBeifahrer(r.distZiel),0);
     const passt = N<=seats-1;
     fall2Html='<div class="big">'+fmtStd(fahrer2+beif2)+'</div>'+
       '<div class="ln">1 Fahrzeug ab Startpunkt, Route '+nfKm(crd)+'</div>'+
@@ -1881,6 +1884,28 @@ function renderCarpool(){
       '<div class="ln" style="color:'+(passt?'#166534':'#b45309')+'">'+
         (passt?'✓ passt in 1 Fahrzeug ('+seats+' Sitze)':'⚠️ '+N+' Mitfahrer > '+(seats-1)+' freie Sitze – mehrere Fahrten nötig')+'</div>';
   }
+
+  // ---- Klartext-Vorschlag ----
+  const names=lastRows.map(r=>r.name);
+  const driverNames=names.slice(0,cars), passengerNames=names.slice(cars);
+  let text1;
+  if(N===0){
+    text1="Keine Mitarbeiter ausgewählt.";
+  }else if(N===1){
+    text1="<b>"+escapeHtml(names[0])+"</b> fährt allein zum Ziel (Anfahrt "+fmtEuro(anfahrt1)+", Fahrt "+fmtStd(fahrt1)+").";
+  }else{
+    const drV=(driverNames.length===1?"es fährt ":"es fahren ")+"<b>"+listNames(driverNames)+"</b>";
+    const paV=passengerNames.length?((passengerNames.length===1?"; mit fährt ":"; mit fahren ")+"<b>"+listNames(passengerNames)+"</b>"):"";
+    text1="<b>Alle treffen sich an der Rieckstraße</b> (Anfahrt gesamt "+fmtEuro(anfahrt1)+"). Von dort "+
+      (cars>1?cars+" Autos, ":"1 Auto, ")+drV+paV+". Gemeinsame Fahrt zum Ziel: <b>"+fmtStd(fahrt1)+
+      "</b> <span style=\"color:#64748b\">(Wer fährt, ist frei wählbar.)</span>";
+  }
+  let text2="";
+  if(crd!=null && N>1){
+    text2='<div style="margin-top:6px; color:#475569"><b>Alternativ (Einsammeln):</b> ein Fahrzeug sammelt '+
+      listNames(names)+' ein und fährt ab Rieckstraße zum Ziel – Gesamt '+fmtStd(fahrer2+beif2)+'</div>';
+  }
+
   const vorschlag=
     '<div class="cp-boxes">'+
       '<div class="cp-box rec">'+
@@ -1893,7 +1918,8 @@ function renderCarpool(){
         '<h4>Fall 2 · Einsammeln <span style="font-size:11px;color:#64748b;font-weight:600">(Alternative)</span></h4>'+
         fall2Html+
       '</div>'+
-    '</div>';
+    '</div>'+
+    '<div class="cp-text">'+text1+text2+'</div>';
 
   const rows=carpoolRows();
   const cell=(v,best)=> '<td class="num'+(v!=null&&v===best?' cp-best':'')+'">'+(v==null?"–":fmtStd(v))+'</td>';
