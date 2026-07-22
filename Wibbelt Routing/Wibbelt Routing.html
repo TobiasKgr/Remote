@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v22 (Geoapify) -->
+<!-- App-Version: v23 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1086,7 +1086,11 @@ const MERKMALE = ["Solvay", "Wiederholt"];
               <label class="chk"><input type="checkbox" id="onlyActive"> nur aktive anzeigen</label>
               <label class="chk radius-box">
                 <input type="checkbox" id="radiusOn"> im Umkreis
-                <input type="number" id="radiusKm" value="50" min="1" step="5"> km um Ziel
+                <input type="number" id="radiusKm" value="50" min="1" step="5"> km um
+                <select id="radiusRef" style="padding:5px 6px">
+                  <option value="ziel">Ziel</option>
+                  <option value="start">Rieckstraße</option>
+                </select>
               </label>
             </div>
             <div class="row">
@@ -1440,7 +1444,8 @@ function visibleEmployees(){
   const onlyActive = document.getElementById("onlyActive").checked;
   const role = document.getElementById("roleFilter").value;
   const wantTags = selectedTags("tagFilter");
-  const radiusOn = document.getElementById("radiusOn").checked && ziel;
+  const radiusRefPoint = document.getElementById("radiusRef").value==="start" ? start : ziel;
+  const radiusOn = document.getElementById("radiusOn").checked && radiusRefPoint;
   const radiusM = (parseFloat(document.getElementById("radiusKm").value)||0)*1000;
   const list = mitarbeiter.filter(m=>{
     if(onlyActive && !m.aktiv) return false;
@@ -1452,7 +1457,7 @@ function visibleEmployees(){
       if(!hay.includes(q)) return false;
     }
     if(radiusOn && radiusM>0){
-      if(haversine(m,ziel) > radiusM) return false;
+      if(haversine(m,radiusRefPoint) > radiusM) return false;
     }
     return true;
   });
@@ -1493,13 +1498,16 @@ function renderEmployees(){
   // Rückmeldung zum Umkreis-Filter
   const rh = document.getElementById("radiusHint");
   const radiusOn = document.getElementById("radiusOn").checked;
-  if(radiusOn && !ziel){
+  const refIsStart = document.getElementById("radiusRef").value==="start";
+  const refPoint = refIsStart ? start : ziel;
+  const refName = refIsStart ? "die Rieckstraße" : "das Ziel";
+  if(radiusOn && !refPoint){
     rh.style.display="block";
-    rh.innerHTML = "⚠️ Umkreis-Filter aktiv, aber noch <b>kein Ziel</b> gewählt – der Umkreis wird um das Ziel gemessen. Bitte zuerst eine Zieladresse auswählen.";
-  }else if(radiusOn && ziel){
+    rh.innerHTML = "⚠️ Umkreis-Filter aktiv, aber noch <b>kein Ziel</b> gewählt – bitte zuerst eine Zieladresse auswählen (oder den Umkreis auf Rieckstraße beziehen).";
+  }else if(radiusOn && refPoint){
     const km = parseFloat(document.getElementById("radiusKm").value)||0;
     rh.style.display="block";
-    rh.innerHTML = "Umkreis-Filter aktiv: nur Mitarbeiter ≤ <b>"+km.toLocaleString("de-DE")+" km</b> (Luftlinie) um das Ziel.";
+    rh.innerHTML = "Umkreis-Filter aktiv: nur Mitarbeiter ≤ <b>"+km.toLocaleString("de-DE")+" km</b> (Luftlinie) um "+refName+".";
   }else{
     rh.style.display="none"; rh.innerHTML="";
   }
@@ -1649,6 +1657,23 @@ async function getRoute(points){
   return { coords, distance:f.properties.distance, duration:f.properties.time };
 }
 
+/* Treffpunkt-Ansicht: echte Straßen-Routen jedes Mitarbeiters zur Rieckstraße (grün),
+   in kleinen Paketen, um das Ratenlimit zu schonen. */
+let treffRunId=0;
+async function drawTreffRoutes(rows){
+  if(!map) return;
+  const myRun=++treffRunId;         // veraltete Läufe verwerfen (z.B. bei erneuter Berechnung)
+  const batch=4;
+  for(let i=0;i<rows.length;i+=batch){
+    const slice=rows.slice(i,i+batch);
+    let rts;
+    try{ rts=await Promise.all(slice.map(r=>getRoute([{lat:r.lat,lon:r.lon}, start]).catch(()=>null))); }
+    catch(e){ rts=[]; }
+    if(myRun!==treffRunId || !map) return;   // abgebrochen
+    rts.forEach(rt=>{ if(rt) L.polyline(rt.coords,{ color:"#16a34a", weight:3, opacity:.75 }).addTo(layerGroup); });
+  }
+}
+
 /* Geoapify – Route-Matrix (EIN POST-Call).
    full=true -> komplette N×N-Matrix (für Reihenfolgen-Optimierung), sonst nur Mitarbeiter->[Start,Ziel]. */
 async function getMatrix(emps, full){
@@ -1761,6 +1786,8 @@ async function calculate(){
 
     lastRows=rows;
     drawResult(route,rows,!!collect);
+    if(!collect && rows.length) drawTreffRoutes(rows);   // echte Wege zur Rieckstraße (asynchron)
+    else treffRunId++;                                    // evtl. laufende Treff-Routen abbrechen
     renderCarpool();
     buildSummaryText();
     pushHistory(ziel);
@@ -1782,11 +1809,6 @@ function drawResult(route,rows,collect){
   // Kartenteil nur, wenn Leaflet/Karte verfügbar sind
   if(map){
     layerGroup.clearLayers();
-    // Treffpunkt-Ansicht: Linien von jedem Mitarbeiter zur Rieckstraße
-    if(!collect){
-      rows.forEach(r=> L.polyline([[r.lat,r.lon],[start.lat,start.lon]],
-        { color:"#16a34a", weight:2, opacity:.55, dashArray:"5,6" }).addTo(layerGroup));
-    }
     L.polyline(route.coords,{ color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
     L.marker([start.lat,start.lon],{icon:markerIcon("start","S")}).bindPopup("<b>Start</b><br>"+escapeHtml(start.label)).addTo(layerGroup);
     L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")}).bindPopup("<b>Ziel</b><br>"+escapeHtml(ziel.label)).addTo(layerGroup);
@@ -1992,14 +2014,9 @@ function buildSummaryText(){
   if(N===0){
     t="(keine Mitarbeiter ausgewählt)";
   }else if(collect){
-    t="Einsammeln: ein Fahrzeug fährt ab Rieckstraße über "+listNamesPlain(names)+" zum Ziel.";
-  }else if(N===1){
-    t=names[0]+" fährt zum Ziel.";
+    t="Einsammeln ab Rieckstraße: "+listNamesPlain(names)+".";
   }else{
-    const cars=Math.ceil(N/seatsPerCar());
-    const drivers=names.slice(0,cars), passengers=names.slice(cars);
-    t="Treffpunkt Rieckstraße – es "+(drivers.length===1?"fährt ":"fahren ")+listNamesPlain(drivers)+
-      (passengers.length?("; mit "+(passengers.length===1?"fährt ":"fahren ")+listNamesPlain(passengers)):"")+".";
+    t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".";
   }
   ta.value = "Ziel: "+ziel.label+"\n"+t;
   card.style.display="block";
@@ -2191,6 +2208,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("tagFilter").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("radiusOn").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("radiusKm").addEventListener("input",()=>{ if(document.getElementById("radiusOn").checked){ syncCheckedState(); renderEmployees(); }});
+  document.getElementById("radiusRef").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("empSort").addEventListener("change",()=>{
     syncCheckedState(); renderEmployees();
     if(document.getElementById("empSort").value==="near" && !ziel)
