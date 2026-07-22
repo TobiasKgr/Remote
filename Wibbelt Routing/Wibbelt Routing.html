@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v23 (Geoapify) -->
+<!-- App-Version: v24 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1141,9 +1141,10 @@ const MERKMALE = ["Solvay", "Wiederholt"];
       <button class="primary" id="calcBtn">Route berechnen</button>
 
       <div class="exports">
-        <button id="pdfBtn" disabled>Als PDF drucken</button>
+        <button id="pdfBtn">Als PDF drucken</button>
         <button id="csvBtn" disabled>Tabelle als CSV</button>
       </div>
+      <div class="hint no-print" style="margin-top:4px">„Als PDF drucken“ öffnet den Druckdialog – dort als Ziel „Als PDF speichern“ wählen.</div>
 
       <div class="status no-print" id="status"></div>
     </div>
@@ -2014,7 +2015,7 @@ function buildSummaryText(){
   if(N===0){
     t="(keine Mitarbeiter ausgewählt)";
   }else if(collect){
-    t="Einsammeln ab Rieckstraße: "+listNamesPlain(names)+".";
+    t="Einsammeln: "+listNamesPlain(names)+" werden abgeholt.";
   }else{
     t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".";
   }
@@ -2256,7 +2257,12 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   // Berechnung / Export
   document.getElementById("calcBtn").addEventListener("click",calculate);
-  document.getElementById("pdfBtn").addEventListener("click",()=>window.print());
+  document.getElementById("pdfBtn").addEventListener("click",()=>{
+    if(map){ try{ map.invalidateSize(); }catch(e){} }
+    setTimeout(()=>window.print(), 150);   // Karte vor dem Druck neu aufbauen
+  });
+  // Karte auch beim direkten Strg+P korrekt rendern
+  window.addEventListener("beforeprint",()=>{ if(map){ try{ map.invalidateSize(); }catch(e){} } });
   document.getElementById("csvBtn").addEventListener("click",exportCSV);
 
   // Offline
