@@ -49,6 +49,9 @@ WAS IST DAS?
   - In der App unter "Mitarbeiter" können Einträge hinzugefügt, bearbeitet,
     aus-/eingeblendet (Auge-Symbol) und gelöscht werden. Die Adresse wird
     automatisch in Koordinaten umgewandelt.
+  - Jeder Mitarbeiter kann eine ROLLE haben (Projektleiter oder Monteur).
+    Danach lässt sich oben filtern und sortieren (praktisch bei vielen
+    Personen). Zusätzlich gibt es Freitext-Suche und einen Umkreis-Filter.
   - Solange Änderungen nur lokal sind, erscheint der Hinweis
     "Lokale Änderungen".
   - Damit ALLE Kollegen die Änderung sehen:
