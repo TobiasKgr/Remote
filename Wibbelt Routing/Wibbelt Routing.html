@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v21 (Geoapify) -->
+<!-- App-Version: v22 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -865,7 +865,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .cp-box .ln{font-size:13px; color:#475569; margin-top:3px}
   .cp-box .tag-rec{font-size:10px; font-weight:700; color:#166534; background:#dcfce7; padding:1px 6px; border-radius:20px; margin-left:6px}
   .cp-text{background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:11px 13px; font-size:14px; line-height:1.55; margin-bottom:14px; color:#1e293b}
-  #summaryText{width:100%; min-height:180px; resize:vertical; border:1px solid #cbd5e1; border-radius:8px;
+  #summaryText{width:100%; min-height:80px; resize:vertical; border:1px solid #cbd5e1; border-radius:8px;
     padding:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5; color:#0f172a; background:#f8fafc}
   .copybtn{border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:13px; font-weight:600;
     padding:6px 12px; border-radius:8px; cursor:pointer}
@@ -1247,6 +1247,7 @@ function stdBeifahrer(meters){ if(meters==null||isNaN(meters)) return 0; return 
 function fmtStd(n){ return n+" Std."; }
 function seatsPerCar(){ return Math.max(1, parseInt(document.getElementById("seats").value)||2); }
 function listNames(arr){ arr=arr.map(escapeHtml); if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
+function listNamesPlain(arr){ if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
 
 /* Distanz der optimierten Einsammel-Route Rieckstraße -> alle -> Ziel (aus voller Distanzmatrix) */
 function collectRouteDist(){
@@ -1985,18 +1986,22 @@ function renderCarpool(){
 function buildSummaryText(){
   const card=document.getElementById("summaryCard"), ta=document.getElementById("summaryText");
   if(!ziel || !lastRoute){ card.style.display="none"; return; }
-  const L=[];
-  L.push("Wibbelt Routing – "+nowStr());
-  L.push("Start: "+start.label);
-  L.push("Ziel:  "+ziel.label);
-  L.push((lastRouteMeta.profLabel||"PKW")+" · "+(lastRouteMeta.label||"Strecke")+": "+nfKm(lastRoute.distance)+
-    " · Fahrzeit: "+fmtDauer(lastRoute.duration)+(lastRouteMeta.eta?" · Ankunft "+lastRouteMeta.eta:""));
-  if(lastRows.length){
-    L.push(""); L.push("Mitarbeiter (Entfernung Start / Ziel / Fahrzeit):");
-    sortedRows().forEach(r=> L.push("  - "+r.name+": "+nfKm(r.distStart)+" / "+nfKm(r.distZiel)+" / "+fmtDauer(r.durZiel)));
+  const names=lastRows.map(r=>r.name), N=names.length;
+  const collect=(document.querySelector('input[name="routeMode"]:checked')||{}).value==="collect";
+  let t;
+  if(N===0){
+    t="(keine Mitarbeiter ausgewählt)";
+  }else if(collect){
+    t="Einsammeln: ein Fahrzeug fährt ab Rieckstraße über "+listNamesPlain(names)+" zum Ziel.";
+  }else if(N===1){
+    t=names[0]+" fährt zum Ziel.";
+  }else{
+    const cars=Math.ceil(N/seatsPerCar());
+    const drivers=names.slice(0,cars), passengers=names.slice(cars);
+    t="Treffpunkt Rieckstraße – es "+(drivers.length===1?"fährt ":"fahren ")+listNamesPlain(drivers)+
+      (passengers.length?("; mit "+(passengers.length===1?"fährt ":"fahren ")+listNamesPlain(passengers)):"")+".";
   }
-  if(lastCarpoolText){ L.push(""); L.push("Fahrgemeinschaft:"); L.push(lastCarpoolText); }
-  ta.value=L.join("\n");
+  ta.value = "Ziel: "+ziel.label+"\n"+t;
   card.style.display="block";
 }
 
