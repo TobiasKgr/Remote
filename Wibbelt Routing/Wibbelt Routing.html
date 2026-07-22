@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v19 (Geoapify) -->
+<!-- App-Version: v20 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1116,10 +1116,16 @@ const MERKMALE = ["Solvay", "Wiederholt"];
 
       <!-- Routing-Optionen -->
       <div class="subgroup">
+        <div class="fld" style="margin:0 0 6px">Kartenansicht</div>
         <label class="opt-row">
-          <input type="checkbox" id="collectMode">
-          <span><b>Mitarbeiter einsammeln</b> – Route führt vom Start über alle markierten Mitarbeiter zum Ziel
-          (statt direkt). Die <b>Reihenfolge wird automatisch optimiert</b> (kürzeste Gesamt-Fahrzeit).</span>
+          <input type="radio" name="routeMode" value="treff" checked>
+          <span><b>Treffpunkt Rieckstraße</b> – jeder fährt mit seiner Entfernung zur Rieckstraße;
+          von dort eine Strecke zum Ziel. (Linien laufen bei der Rieckstraße zusammen.)</span>
+        </label>
+        <label class="opt-row" style="margin-top:8px">
+          <input type="radio" name="routeMode" value="collect">
+          <span><b>Einsammeln</b> – eine Route vom Start über alle markierten Mitarbeiter zum Ziel,
+          Reihenfolge automatisch optimiert (kürzeste Gesamt-Fahrzeit).</span>
         </label>
       </div>
 
@@ -1708,7 +1714,7 @@ async function calculate(){
     if(!ziel){ setStatus("Bitte zuerst eine gültige Zieladresse auswählen.","err"); return; }
   }
   const emps=selectedEmployees();
-  const collect=document.getElementById("collectMode").checked && emps.length>0;
+  const collect=(document.querySelector('input[name="routeMode"]:checked')||{}).value==="collect" && emps.length>0;
   const btn=document.getElementById("calcBtn");
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Berechne …'; clearStatus();
 
@@ -1761,6 +1767,11 @@ function drawResult(route,rows,collect){
   // Kartenteil nur, wenn Leaflet/Karte verfügbar sind
   if(map){
     layerGroup.clearLayers();
+    // Treffpunkt-Ansicht: Linien von jedem Mitarbeiter zur Rieckstraße
+    if(!collect){
+      rows.forEach(r=> L.polyline([[r.lat,r.lon],[start.lat,start.lon]],
+        { color:"#16a34a", weight:2, opacity:.55, dashArray:"5,6" }).addTo(layerGroup));
+    }
     L.polyline(route.coords,{ color:"#2563eb", weight:5, opacity:.85 }).addTo(layerGroup);
     L.marker([start.lat,start.lon],{icon:markerIcon("start","S")}).bindPopup("<b>Start</b><br>"+escapeHtml(start.label)).addTo(layerGroup);
     L.marker([ziel.lat,ziel.lon],{icon:markerIcon("ziel","Z")}).bindPopup("<b>Ziel</b><br>"+escapeHtml(ziel.label)).addTo(layerGroup);
