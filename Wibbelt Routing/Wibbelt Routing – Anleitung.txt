@@ -77,8 +77,14 @@ WAS IST DAS?
   - Ergebnis: Karte, Kopfzeile mit Gesamtstrecke/Fahrzeit, Tabelle.
   - Export: "Als PDF drucken" oder "Tabelle als CSV" (für Excel).
 
-  Suche/Filter über der Liste: Textsuche, "nur aktive", sowie
+  Suche/Filter über der Liste: Textsuche, "nur aktive", Rolle sowie
   "im Umkreis X km um Ziel".
+
+  MITFAHR-KOSTEN (Fahrgemeinschaft): In den Fahrt-Optionen aktivierbar.
+  Zeigt je Mitarbeiter die bezahlten Stunden für "selbst direkt fahren",
+  "selbst über den Startpunkt fahren" und "ab Startpunkt mitfahren"
+  (Fahrer = 1 Std. je angefangene 70 km, Beifahrer = 1 Std. je 100 km) und
+  empfiehlt die günstigste Variante samt Ersparnis.
 
 
 -------------------------------------------------------

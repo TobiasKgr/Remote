@@ -838,6 +838,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   tbody tr.nearest{background:#f0fdf4}
   tbody tr.nearest:hover{background:#dcfce7}
   td.num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+  td.cp-best{background:#dcfce7; font-weight:700; color:#166534}
   .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle}
   .dot.b{background:var(--blue)}
   .badge{display:inline-block; font-size:10px; font-weight:700; color:#166534; background:#dcfce7;
@@ -954,7 +955,7 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v8 · Geoapify</div>
+  <div class="ver">v9 · Geoapify</div>
 </header>
 
 <div class="wrap">
@@ -1009,6 +1010,12 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
             </div>
           </div>
           <div class="hint">Kosten optional – nur gefüllte Felder fließen ein. Profil wirkt auf Route und Entfernungen.</div>
+          <label class="opt-row" style="margin-top:10px">
+            <input type="checkbox" id="carpoolMode">
+            <span><b>Mitfahr-Kosten (Fahrgemeinschaft)</b> – bezahlte Stunden je Mitarbeiter vergleichen:
+            Fahrer = 1 Std. je angef. 70 km, Beifahrer = 1 Std. je angef. 100 km. Zeigt, ob sich
+            „selbst fahren“ oder „ab Startpunkt mitfahren“ lohnt.</span>
+          </label>
         </div>
       </div>
 
@@ -1108,6 +1115,12 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
           <div class="result-empty">Noch keine Berechnung – wähle ein Ziel und Mitarbeiter und klicke auf „Route berechnen“.</div>
         </div>
       </div>
+
+      <div class="card" id="carpoolCard" style="margin-top:20px; display:none">
+        <h2>Fahrgemeinschaft – bezahlte Stunden</h2>
+        <div class="hint" id="carpoolInfo" style="margin-bottom:10px"></div>
+        <div id="carpoolWrap"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1169,6 +1182,12 @@ function costRates(){
 function costEnabled(){ const r=costRates(); return r.km>0||r.h>0; }
 function calcCost(meters,sec){ const r=costRates(); return (meters/1000)*r.km + (sec/3600)*r.h; }
 
+/* Fahrgemeinschaft: bezahlte Stunden nach angefangenen km-Blöcken (Fahrer 70 km, Beifahrer 100 km) */
+const KM_FAHRER=70, KM_BEIFAHRER=100;
+function stdFahrer(meters){ return Math.ceil((meters/1000)/KM_FAHRER); }
+function stdBeifahrer(meters){ return Math.ceil((meters/1000)/KM_BEIFAHRER); }
+function fmtStd(n){ return n+" Std."; }
+
 /* Ankunftszeit = Abfahrt + Fahrdauer */
 function arrivalTime(departStr,durSec){
   if(!departStr) return null;
@@ -1201,12 +1220,14 @@ const SETTING_IDS=["profile","departTime","costKm","costH"];
 function loadSettings(){
   let s={}; try{ s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}"); }catch(e){}
   SETTING_IDS.forEach(id=>{ if(s[id]!=null && s[id]!=="") document.getElementById(id).value=s[id]; });
+  if(s.carpool) document.getElementById("carpoolMode").checked=true;
   if(!document.getElementById("departTime").value){
     document.getElementById("departTime").value=new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
   }
 }
 function saveSettings(){
   const s={}; SETTING_IDS.forEach(id=>s[id]=document.getElementById(id).value);
+  s.carpool=document.getElementById("carpoolMode").checked;
   try{ localStorage.setItem(SETTINGS_KEY,JSON.stringify(s)); }catch(e){}
 }
 
@@ -1239,6 +1260,7 @@ let ziel  = null;
 let mitarbeiter = [];              // [{id,name,adresse,lat,lon,gruppe,aktiv}]
 let map, baseLayers, layerGroup, empLayer;
 let lastRows = [];
+let startZielDist = null;          // Distanz Startpunkt (Rieckstraße) -> Ziel, für Mitfahr-Kosten
 let orderMap = null;               // Einsammel-Reihenfolge: {employeeId: Positionsnummer}
 let sortState = { key:"distZiel", dir:1 };
 let editId = null;                 // Modal: null=neu, sonst id
@@ -1528,7 +1550,7 @@ async function getMatrix(emps, full){
         distStart:v(gi,0,"distance"), distZiel:v(gi,1,"distance"), durZiel:v(gi,1,"time") }; });
     const N=2+emps.length, durations=[];
     for(let i=0;i<N;i++){ durations[i]=[]; for(let j=0;j<N;j++) durations[i][j]=v(i,j,"time")||0; }
-    return { rows, durations };
+    return { rows, durations, startZiel:v(0,1,"distance") };   // Start(0)->Ziel(1) Distanz
   }
   // sources=Mitarbeiter, targets=[Start(0),Ziel(1)]
   return emps.map((m,i)=>({ id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, rolle:m.rolle, lat:m.lat, lon:m.lon,
@@ -1589,10 +1611,11 @@ async function calculate(){
     orderMap=null;
     let route, rows, orderedEmps=null;
 
+    startZielDist=null;
     if(collect){
       // Voller Matrix-Call -> Tabelle + optimale Reihenfolge; dann Route in optimierter Folge
-      const { rows:r, durations } = await getMatrix(emps, true);
-      rows=r;
+      const { rows:r, durations, startZiel } = await getMatrix(emps, true);
+      rows=r; startZielDist=startZiel;
       const order = solveOrder(durations, emps.length);      // Indizes in optimaler Folge
       orderedEmps = order.map(i=>emps[i]);
       orderMap={}; orderedEmps.forEach((m,i)=>orderMap[m.id]=i+1);
@@ -1601,10 +1624,12 @@ async function calculate(){
       const routeP  = getRoute([start,ziel]);
       const matrixP = emps.length ? getMatrix(emps,false) : Promise.resolve([]);
       [route,rows] = await Promise.all([routeP,matrixP]);
+      startZielDist=route.distance;                          // direkte Route Start->Ziel
     }
 
     lastRows=rows;
     drawResult(route,rows,!!collect);
+    renderCarpool();
     pushHistory(ziel);
     document.getElementById("pdfBtn").disabled=false;
     document.getElementById("csvBtn").disabled=rows.length===0;
@@ -1692,6 +1717,65 @@ function renderTable(){
     if(sortState.key===k) sortState.dir*=-1; else { sortState.key=k; sortState.dir=1; }
     renderTable();
   }));
+}
+
+/* ================================================================
+   Fahrgemeinschaft – bezahlte Stunden je Mitarbeiter
+   Varianten:  A) selbst direkt (Heim->Ziel, Fahrer)
+               B) selbst über Startpunkt (Heim->Start + Start->Ziel, beide Fahrer)
+               C) mitfahren (Heim->Start als Fahrer + Start->Ziel als Beifahrer)
+   ================================================================ */
+function carpoolRows(){
+  const kmRZ = startZielDist;   // Start(Rieckstraße) -> Ziel (gemeinsam für alle)
+  return lastRows.map(r=>{
+    const toStart = stdFahrer(r.distStart);
+    const a = stdFahrer(r.distZiel);                          // selbst direkt
+    const b = (toStart!=null? toStart:0) + stdFahrer(kmRZ);   // selbst über Start
+    const c = (toStart!=null? toStart:0) + stdBeifahrer(kmRZ);// mitfahren
+    const bestSelf = Math.min(a??Infinity, b??Infinity);
+    const best = Math.min(bestSelf, c??Infinity);
+    let label, cls;
+    if(c<=bestSelf){ label="Mitnehmen"; cls="mo"; }
+    else if(a<=b){ label="Selbst · direkt"; cls="pl"; }
+    else { label="Selbst · über Start"; cls="pl"; }
+    const ersparnis = (bestSelf===Infinity||c==null)? null : bestSelf - c;   // + = spart durch Mitfahren
+    return { r, a, b, c, best, bestSelf, label, cls, ersparnis };
+  });
+}
+function renderCarpool(){
+  const card=document.getElementById("carpoolCard");
+  const on=document.getElementById("carpoolMode").checked;
+  if(!on || lastRows.length===0 || startZielDist==null){ card.style.display="none"; return; }
+  card.style.display="block";
+
+  document.getElementById("carpoolInfo").innerHTML =
+    "Startpunkt = <b>"+escapeHtml(start.label)+"</b>. Fahrer: 1 Std. je angefangene "+KM_FAHRER+" km · "+
+    "Beifahrer: 1 Std. je angefangene "+KM_BEIFAHRER+" km. Strecke Startpunkt→Ziel: <b>"+nfKm(startZielDist)+"</b> "+
+    "(als Fahrer "+fmtStd(stdFahrer(startZielDist))+", als Beifahrer "+fmtStd(stdBeifahrer(startZielDist))+").";
+
+  const rows=carpoolRows();
+  const cell=(v,best)=> '<td class="num'+(v!=null&&v===best?' cp-best':'')+'">'+(v==null?"–":fmtStd(v))+'</td>';
+  let html='<div style="overflow-x:auto"><table><thead><tr>'+
+    '<th>Mitarbeiter</th><th>Selbst · direkt</th><th>Selbst · über Start</th><th>Mitfahren</th>'+
+    '<th>Empfehlung</th></tr></thead><tbody>';
+  let sumSelf=0, sumBest=0, anyNull=false;
+  rows.forEach(x=>{
+    if(x.bestSelf===Infinity||x.best===Infinity){ anyNull=true; } else { sumSelf+=x.bestSelf; sumBest+=x.best; }
+    const badge='<span class="rl '+x.cls+'">'+x.label+'</span>';
+    const ers = (x.ersparnis!=null && x.ersparnis>0)? ' <span style="color:#166534;font-weight:700">−'+x.ersparnis+' Std.</span>':'';
+    html+='<tr>'+
+      '<td>'+escapeHtml(x.r.name)+roleBadge(x.r.rolle)+'</td>'+
+      cell(x.a,x.best)+cell(x.b,x.best)+cell(x.c,x.best)+
+      '<td>'+badge+ers+'</td></tr>';
+  });
+  const saved=sumSelf-sumBest;
+  html+='</tbody><tfoot><tr style="font-weight:700; background:#f8fafc">'+
+    '<td>Summe (empfohlen)</td><td class="num" colspan="3">'+fmtStd(sumBest)+' statt '+fmtStd(sumSelf)+' bei „alle selbst“</td>'+
+    '<td class="num" style="color:#166534">−'+saved+' Std.</td></tr></tfoot>';
+  html+='</table></div>';
+  html+='<div class="hint" style="margin-top:8px">„Mitnehmen" = zum Startpunkt fahren und ab dort als Beifahrer mitgenommen werden. '+
+    'Grün hinterlegt = günstigste Variante je Mitarbeiter.'+(anyNull?' Für „–“ lag keine Entfernung vor.':'')+'</div>';
+  document.getElementById("carpoolWrap").innerHTML=html;
 }
 
 /* ================================================================
@@ -1897,6 +1981,7 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   // Fahrt-Optionen merken
   SETTING_IDS.forEach(id=>document.getElementById(id).addEventListener("change",saveSettings));
+  document.getElementById("carpoolMode").addEventListener("change",()=>{ saveSettings(); renderCarpool(); });
 
   // Ziel-Historie: Chip anklicken übernimmt Ziel, × entfernt Eintrag
   document.getElementById("zielHistory").addEventListener("click",e=>{
