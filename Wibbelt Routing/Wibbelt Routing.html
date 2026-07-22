@@ -955,7 +955,7 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v10 · Geoapify</div>
+  <div class="ver">v11 · Geoapify</div>
 </header>
 
 <div class="wrap">
@@ -1055,6 +1055,7 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
               </select>
             </div>
           </div>
+          <div class="hint" id="radiusHint" style="margin-top:2px; display:none"></div>
         </div>
       </div>
 
@@ -1400,6 +1401,20 @@ function renderEmployees(){
   const total = mitarbeiter.length, aktiv = mitarbeiter.filter(m=>m.aktiv).length;
   document.getElementById("maCount").textContent = aktiv+" aktiv / "+total+" gesamt";
 
+  // Rückmeldung zum Umkreis-Filter
+  const rh = document.getElementById("radiusHint");
+  const radiusOn = document.getElementById("radiusOn").checked;
+  if(radiusOn && !ziel){
+    rh.style.display="block";
+    rh.innerHTML = "⚠️ Umkreis-Filter aktiv, aber noch <b>kein Ziel</b> gewählt – der Umkreis wird um das Ziel gemessen. Bitte zuerst eine Zieladresse auswählen.";
+  }else if(radiusOn && ziel){
+    const km = parseFloat(document.getElementById("radiusKm").value)||0;
+    rh.style.display="block";
+    rh.innerHTML = "Umkreis-Filter aktiv: nur Mitarbeiter ≤ <b>"+km.toLocaleString("de-DE")+" km</b> (Luftlinie) um das Ziel.";
+  }else{
+    rh.style.display="none"; rh.innerHTML="";
+  }
+
   if(list.length===0){
     box.innerHTML = '<div class="emp-empty">Keine Mitarbeiter passen zum Filter.</div>';
     return;
@@ -1631,6 +1646,7 @@ async function calculate(){
     drawResult(route,rows,!!collect);
     renderCarpool();
     pushHistory(ziel);
+    renderEmployees();   // Liste/Umkreis-Filter an ggf. neu gesetztes Ziel anpassen
     document.getElementById("pdfBtn").disabled=false;
     document.getElementById("csvBtn").disabled=rows.length===0;
     setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (optimierte Einsammel-Route)":"")+".","ok");
