@@ -49,9 +49,15 @@ WAS IST DAS?
   - In der App unter "Mitarbeiter" können Einträge hinzugefügt, bearbeitet,
     aus-/eingeblendet (Auge-Symbol) und gelöscht werden. Die Adresse wird
     automatisch in Koordinaten umgewandelt.
-  - Jeder Mitarbeiter kann eine ROLLE haben (Projektleiter oder Monteur).
-    Danach lässt sich oben filtern und sortieren (praktisch bei vielen
-    Personen). Zusätzlich gibt es Freitext-Suche und einen Umkreis-Filter.
+  - Jeder Mitarbeiter kann eine ROLLE haben (Projektleiter oder Monteur)
+    und beliebige MERKMALE (z. B. Solvay, Wiederholt). Nach beidem lässt
+    sich oben filtern und sortieren (praktisch bei vielen Personen).
+    Zusätzlich gibt es Freitext-Suche und einen Umkreis-Filter.
+    Ausgeblendete Mitarbeiter sammeln sich im eingeklappten Bereich
+    "Ausgeblendet (N)" unten in der Liste und lassen sich dort wieder
+    einblenden.
+  - Weitere Merkmale kannst du im Quelltext oben bei
+    'const MERKMALE = [...]' ergänzen.
   - Solange Änderungen nur lokal sind, erscheint der Hinweis
     "Lokale Änderungen".
   - Damit ALLE Kollegen die Änderung sehen:
