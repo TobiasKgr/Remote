@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v20 (Geoapify) -->
+<!-- App-Version: v21 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -865,6 +865,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .cp-box .ln{font-size:13px; color:#475569; margin-top:3px}
   .cp-box .tag-rec{font-size:10px; font-weight:700; color:#166534; background:#dcfce7; padding:1px 6px; border-radius:20px; margin-left:6px}
   .cp-text{background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:11px 13px; font-size:14px; line-height:1.55; margin-bottom:14px; color:#1e293b}
+  #summaryText{width:100%; min-height:180px; resize:vertical; border:1px solid #cbd5e1; border-radius:8px;
+    padding:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5; color:#0f172a; background:#f8fafc}
+  .copybtn{border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:13px; font-weight:600;
+    padding:6px 12px; border-radius:8px; cursor:pointer}
+  .copybtn:hover{background:#f1f5f9; border-color:#94a3b8}
   .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle}
   .dot.b{background:var(--blue)}
   .badge{display:inline-block; font-size:10px; font-weight:700; color:#166534; background:#dcfce7;
@@ -1168,6 +1173,11 @@ const MERKMALE = ["Solvay", "Wiederholt"];
       </div>
     </div>
   </div>
+
+  <div class="card" id="summaryCard" style="display:none; margin-top:20px">
+    <h2>Zusammenfassung (kopierbar) <button id="copyBtn" class="copybtn no-print">📋 Kopieren</button></h2>
+    <textarea id="summaryText" readonly></textarea>
+  </div>
 </div>
 
 <!-- ===================== MODAL: Mitarbeiter ===================== -->
@@ -1321,6 +1331,9 @@ let map, baseLayers, layerGroup, empLayer;
 let lastRows = [];
 let startZielDist = null;          // Distanz Startpunkt (Rieckstraße) -> Ziel, für Mitfahr-Kosten
 let carpoolData = null;            // {emps, order, dist} für Einsammel-Vergleich (Fall 2)
+let lastRoute = null;              // {distance,duration} der aktuellen Route
+let lastRouteMeta = null;          // {label,eta} für die Zusammenfassung
+let lastCarpoolText = "";          // Klartext-Vorschlag für die Zusammenfassung
 let hiddenGroupOpen = false;       // Bereich "Ausgeblendet" auf-/zugeklappt
 let orderMap = null;               // Einsammel-Reihenfolge: {employeeId: Positionsnummer}
 let sortState = { key:"distZiel", dir:1 };
@@ -1748,6 +1761,7 @@ async function calculate(){
     lastRows=rows;
     drawResult(route,rows,!!collect);
     renderCarpool();
+    buildSummaryText();
     pushHistory(ziel);
     renderEmployees();   // Liste/Umkreis-Filter an ggf. neu gesetztes Ziel anpassen
     document.getElementById("pdfBtn").disabled=false;
@@ -1797,6 +1811,9 @@ function drawResult(route,rows,collect){
     ", Fahrzeit "+fmtDauer(route.duration)+(eta?", Ankunft "+eta:"")+
     (costEnabled()?", Kosten "+fmtEuro(calcCost(route.distance,route.duration)):"")+
     "   |   erstellt "+nowStr();
+
+  lastRoute={distance:route.distance, duration:route.duration};
+  lastRouteMeta={label, eta, profLabel};
 
   renderTable();
 }
@@ -1869,7 +1886,7 @@ function carpoolRows(){
 function renderCarpool(){
   const card=document.getElementById("carpoolCard");
   const on=document.getElementById("carpoolMode").checked;
-  if(!on || lastRows.length===0 || startZielDist==null){ card.style.display="none"; return; }
+  if(!on || lastRows.length===0 || startZielDist==null){ card.style.display="none"; lastCarpoolText=""; return; }
   card.style.display="block";
   card.classList.add("collapsed");   // Kosten-Ansicht startet immer minimiert
 
@@ -1918,6 +1935,8 @@ function renderCarpool(){
     text2='<div style="margin-top:6px; color:#475569"><b>Alternativ (Einsammeln):</b> ein Fahrzeug sammelt '+
       listNames(names)+' ein und fährt ab Rieckstraße zum Ziel – Gesamt '+fmtStd(fahrer2+beif2)+'</div>';
   }
+  const strip=s=>s.replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim();
+  lastCarpoolText = strip(text1) + (text2? "\n"+strip(text2) : "");
 
   const vorschlag=
     '<div class="cp-boxes">'+
@@ -1958,6 +1977,27 @@ function renderCarpool(){
   html+='<div class="hint" style="margin-top:8px">„Mitnehmen" = zum Startpunkt fahren und ab dort als Beifahrer mitgenommen werden. '+
     'Grün hinterlegt = günstigste Variante je Mitarbeiter.'+(anyNull?' Für „–“ lag keine Entfernung vor.':'')+'</div>';
   document.getElementById("carpoolWrap").innerHTML=html;
+}
+
+/* ================================================================
+   Zusammenfassung als kopierbarer Klartext
+   ================================================================ */
+function buildSummaryText(){
+  const card=document.getElementById("summaryCard"), ta=document.getElementById("summaryText");
+  if(!ziel || !lastRoute){ card.style.display="none"; return; }
+  const L=[];
+  L.push("Wibbelt Routing – "+nowStr());
+  L.push("Start: "+start.label);
+  L.push("Ziel:  "+ziel.label);
+  L.push((lastRouteMeta.profLabel||"PKW")+" · "+(lastRouteMeta.label||"Strecke")+": "+nfKm(lastRoute.distance)+
+    " · Fahrzeit: "+fmtDauer(lastRoute.duration)+(lastRouteMeta.eta?" · Ankunft "+lastRouteMeta.eta:""));
+  if(lastRows.length){
+    L.push(""); L.push("Mitarbeiter (Entfernung Start / Ziel / Fahrzeit):");
+    sortedRows().forEach(r=> L.push("  - "+r.name+": "+nfKm(r.distStart)+" / "+nfKm(r.distZiel)+" / "+fmtDauer(r.durZiel)));
+  }
+  if(lastCarpoolText){ L.push(""); L.push("Fahrgemeinschaft:"); L.push(lastCarpoolText); }
+  ta.value=L.join("\n");
+  card.style.display="block";
 }
 
 /* ================================================================
@@ -2174,6 +2214,14 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("carpoolMode").addEventListener("change",()=>{ saveSettings(); renderCarpool(); });
   document.getElementById("seats").addEventListener("input",()=>{ saveSettings(); renderCarpool(); });
   document.getElementById("carpoolHead").addEventListener("click",()=>document.getElementById("carpoolCard").classList.toggle("collapsed"));
+  document.getElementById("copyBtn").addEventListener("click",async()=>{
+    const ta=document.getElementById("summaryText"), btn=document.getElementById("copyBtn");
+    ta.focus(); ta.select(); let ok=false;
+    try{ await navigator.clipboard.writeText(ta.value); ok=true; }
+    catch(e){ try{ ok=document.execCommand("copy"); }catch(_){ } }
+    const t=btn.textContent; btn.textContent = ok? "✓ Kopiert" : "Bitte manuell kopieren";
+    setTimeout(()=>btn.textContent=t, 1600);
+  });
 
   // Ziel-Historie: Chip anklicken übernimmt Ziel, × entfernt Eintrag
   document.getElementById("zielHistory").addEventListener("click",e=>{

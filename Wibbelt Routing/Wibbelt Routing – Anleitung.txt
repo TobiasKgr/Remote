@@ -89,6 +89,8 @@ WAS IST DAS?
         Ziel, Reihenfolge automatisch optimiert.
   - Ergebnis: Karte, Kopfzeile mit Gesamtstrecke/Fahrzeit, Tabelle.
   - Export: "Als PDF drucken" oder "Tabelle als CSV" (für Excel).
+  - Ganz unten: "Zusammenfassung (kopierbar)" – der gesamte Vorschlag als
+    Klartext mit Knopf "Kopieren" (z. B. für E-Mail oder Nachricht).
 
   Suche/Filter über der Liste: Textsuche, "nur aktive", Rolle sowie
   "im Umkreis X km um Ziel".
