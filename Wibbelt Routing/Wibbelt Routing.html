@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v24 (Geoapify) -->
+<!-- App-Version: v25 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1253,6 +1253,14 @@ function fmtStd(n){ return n+" Std."; }
 function seatsPerCar(){ return Math.max(1, parseInt(document.getElementById("seats").value)||2); }
 function listNames(arr){ arr=arr.map(escapeHtml); if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
 function listNamesPlain(arr){ if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
+/* "Vorname Nachname" -> "Nachname, Vorname" (letztes Wort = Nachname). Enthält der Name schon ein Komma, bleibt er. */
+function formatName(name){
+  name=(name||"").trim();
+  if(!name || name.indexOf(",")>=0) return name;
+  const parts=name.split(/\s+/);
+  if(parts.length<2) return name;
+  return parts[parts.length-1]+", "+parts.slice(0,-1).join(" ");
+}
 
 /* Distanz der optimierten Einsammel-Route Rieckstraße -> alle -> Ziel (aus voller Distanzmatrix) */
 function collectRouteDist(){
@@ -1428,7 +1436,7 @@ function renderMapEmployees(){
   visibleEmployees().filter(m=>m.aktiv).forEach(m=>{
     const row = lastRows.find(r=>r.name===m.name);
     const meta=[m.rolle,m.gruppe].filter(Boolean).map(escapeHtml).join(" · ");
-    let tip = "<b>"+escapeHtml(m.name)+"</b>"+(meta?" ("+meta+")":"")+"<br>"+escapeHtml(m.adresse);
+    let tip = "<b>"+escapeHtml(formatName(m.name))+"</b>"+(meta?" ("+meta+")":"")+"<br>"+escapeHtml(m.adresse);
     if(row) tip += "<br>Entf. Start: "+nfKm(row.distStart)+"<br>Entf. Ziel: "+nfKm(row.distZiel)+"<br>Fahrzeit Ziel: "+fmtDauer(row.durZiel);
     tip += '<br><i>'+(m._checked?"✓ ausgewählt":"nicht ausgewählt")+' – klicken zum Umschalten</i>';
     const mk = L.marker([m.lat,m.lon],{icon:iconForEmp(m)}).bindTooltip(tip,{direction:"top",offset:[0,-24]});
@@ -1465,10 +1473,10 @@ function visibleEmployees(){
   // Sortierung der Auswahlliste
   const sort = document.getElementById("empSort").value;
   if(sort==="name"){
-    list.sort((a,b)=>a.name.localeCompare(b.name,"de"));
+    list.sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de"));
   }else if(sort==="role"){
     const rk=r=>({Projektleiter:0, Monteur:1}[r] ?? 2);   // Projektleiter, Monteur, dann ohne Rolle
-    list.sort((a,b)=> rk(a.rolle)-rk(b.rolle) || a.name.localeCompare(b.name,"de"));
+    list.sort((a,b)=> rk(a.rolle)-rk(b.rolle) || formatName(a.name).localeCompare(formatName(b.name),"de"));
   }else if(sort==="near" && ziel){
     list.sort((a,b)=>haversine(a,ziel)-haversine(b,ziel));
   }
@@ -1532,7 +1540,7 @@ function renderEmployees(){
     return '<div class="emp'+(m.aktiv?"":" inactive")+'">'+
       '<input type="checkbox" class="cbx" data-id="'+m.id+'" '+(m.aktiv?"":"disabled")+' '+(m._checked?"checked":"")+'>'+
       '<div class="info" data-edit="'+m.id+'">'+
-        '<div class="nm">'+escapeHtml(m.name)+roleBadge(m.rolle)+tagBadges(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</div>'+
+        '<div class="nm">'+escapeHtml(formatName(m.name))+roleBadge(m.rolle)+tagBadges(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</div>'+
         '<div class="ad">'+escapeHtml(m.adresse)+dist+'</div>'+
       '</div>'+
       '<div class="rowbtns">'+
@@ -1848,7 +1856,7 @@ function rowVal(r,k){
 function sortedRows(){
   return [...lastRows].sort((a,b)=>{
     const k=sortState.key;
-    if(k==="name") return sortState.dir*a.name.localeCompare(b.name,"de");
+    if(k==="name") return sortState.dir*formatName(a.name).localeCompare(formatName(b.name),"de");
     return sortState.dir*((rowVal(a,k)??Infinity)-(rowVal(b,k)??Infinity));
   });
 }
@@ -1870,7 +1878,7 @@ function renderTable(){
   rows.forEach(r=>{
     const near=(r.distZiel===minZiel);
     html+='<tr class="'+(near?'nearest':'')+'">'+
-      '<td><span class="dot b"></span>'+escapeHtml(r.name)+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
+      '<td><span class="dot b"></span>'+escapeHtml(formatName(r.name))+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
       '<td class="num">'+nfKm(r.distStart)+'</td><td class="num">'+nfKm(r.distZiel)+'</td>'+
       '<td class="num">'+fmtDauer(r.durZiel)+'</td>'+
       (showCost?'<td class="num">'+fmtEuro(calcCost(r.distZiel,r.durZiel))+'</td>':'')+'</tr>';
@@ -1989,7 +1997,7 @@ function renderCarpool(){
     const badge='<span class="rl '+x.cls+'">'+x.label+'</span>';
     const ers = (x.ersparnis!=null && x.ersparnis>0)? ' <span style="color:#166534;font-weight:700">−'+x.ersparnis+' Std.</span>':'';
     html+='<tr>'+
-      '<td>'+escapeHtml(x.r.name)+roleBadge(x.r.rolle)+'</td>'+
+      '<td>'+escapeHtml(formatName(x.r.name))+roleBadge(x.r.rolle)+'</td>'+
       cell(x.a,x.best)+cell(x.b,x.best)+cell(x.c,x.best)+
       '<td>'+badge+ers+'</td></tr>';
   });
@@ -2034,7 +2042,7 @@ function exportCSV(){
   if(showCost) head.push("Fahrtkosten Ziel (€)");
   const lines=[head.join(sep)];
   sortedRows().forEach(r=>{
-    const cells=['"'+r.name+'"','"'+(r.rolle||"")+'"','"'+((r.tags||[]).join(", "))+'"','"'+(r.gruppe||"")+'"','"'+r.adresse+'"',
+    const cells=['"'+formatName(r.name)+'"','"'+(r.rolle||"")+'"','"'+((r.tags||[]).join(", "))+'"','"'+(r.gruppe||"")+'"','"'+r.adresse+'"',
       kmPlain(r.distStart),kmPlain(r.distZiel),'"'+fmtDauer(r.durZiel)+'"'];
     if(showCost) cells.push(euroPlain(calcCost(r.distZiel,r.durZiel)));
     lines.push(cells.join(sep));
