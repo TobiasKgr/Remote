@@ -955,7 +955,7 @@ const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v9 · Geoapify</div>
+  <div class="ver">v10 · Geoapify</div>
 </header>
 
 <div class="wrap">
@@ -1447,8 +1447,8 @@ function checkKey(){
 async function geocode(text){
   const url = "https://api.geoapify.com/v1/geocode/autocomplete"+
     "?text="+encodeURIComponent(text)+
-    "&lang=de&limit=6&filter=countrycode:de"+
-    "&bias=proximity:"+START_DEFAULT.lon+","+START_DEFAULT.lat+
+    "&lang=de&limit=6"+                                     // keine Länderbeschränkung (auch AT/CH/… möglich)
+    "&bias=proximity:"+START_DEFAULT.lon+","+START_DEFAULT.lat+  // Treffer nahe Startpunkt zuerst
     "&format=json&apiKey="+encodeURIComponent(GEOAPIFY_KEY);
   const res = await fetch(url);
   if(res.status===401) throw {type:"key"};
