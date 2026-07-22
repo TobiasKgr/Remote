@@ -86,11 +86,15 @@ WAS IST DAS?
   Suche/Filter über der Liste: Textsuche, "nur aktive", Rolle sowie
   "im Umkreis X km um Ziel".
 
-  MITFAHR-KOSTEN (Fahrgemeinschaft): In den Fahrt-Optionen aktivierbar.
-  Zeigt je Mitarbeiter die bezahlten Stunden für "selbst direkt fahren",
-  "selbst über den Startpunkt fahren" und "ab Startpunkt mitfahren"
-  (Fahrer = 1 Std. je angefangene 70 km, Beifahrer = 1 Std. je 100 km) und
-  empfiehlt die günstigste Variante samt Ersparnis.
+  MITFAHR-KOSTEN (Fahrgemeinschaft): In den Fahrt-Optionen aktivierbar
+  (mit Feld "Sitzplätze je Fahrzeug"). Zeigt einen Vorschlag mit zwei Fällen:
+   - Fall 1 (Empfehlung): Treffpunkt Rieckstraße. Alle fahren selbst hin
+     (0,30 €/km Anfahrt), dann gemeinsam zum Ziel. Anzahl Autos ergibt sich
+     aus den Sitzplätzen; Fahrt = Fahrer/Beifahrer-Stunden.
+   - Fall 2 (Alternative): einer sammelt ein und fährt die Route zum Ziel.
+  Darunter je Mitarbeiter die Stunden für "selbst direkt", "selbst über den
+  Startpunkt" und "mitfahren" (Fahrer = 1 Std./70 km, Beifahrer = 1 Std./100 km),
+  günstigste Variante markiert. Die Kosten-Ansicht startet eingeklappt.
 
 
 -------------------------------------------------------

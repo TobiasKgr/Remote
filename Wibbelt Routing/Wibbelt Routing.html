@@ -854,6 +854,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #carpoolHead .chev{display:inline-block; transition:transform .2s; font-size:11px; color:#94a3b8}
   #carpoolCard.collapsed #carpoolHead .chev{transform:rotate(-90deg)}
   #carpoolCard.collapsed #carpoolBody{display:none}
+  .cp-boxes{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+  .cp-box{flex:1; min-width:230px; border:1px solid var(--line); border-radius:10px; padding:12px 14px}
+  .cp-box.rec{border-color:#bbf7d0; background:#f0fdf4}
+  .cp-box h4{margin:0 0 6px; font-size:14px; display:flex; align-items:center}
+  .cp-box .big{font-size:16px; font-weight:800; color:#1e293b}
+  .cp-box .ln{font-size:13px; color:#475569; margin-top:3px}
+  .cp-box .tag-rec{font-size:10px; font-weight:700; color:#166534; background:#dcfce7; padding:1px 6px; border-radius:20px; margin-left:6px}
   .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle}
   .dot.b{background:var(--blue)}
   .badge{display:inline-block; font-size:10px; font-weight:700; color:#166534; background:#dcfce7;
@@ -973,7 +980,7 @@ const MERKMALE = ["Solvay", "Wiederholt"];
     <h1>Wibbelt&nbsp;Routing</h1>
     <div class="sub">Route vom Startpunkt zur Zieladresse – inkl. Entfernungen der Mitarbeiter</div>
   </div>
-  <div class="ver">v12 · Geoapify</div>
+  <div class="ver">v13 · Geoapify</div>
 </header>
 
 <div class="wrap">
@@ -1032,8 +1039,12 @@ const MERKMALE = ["Solvay", "Wiederholt"];
             <input type="checkbox" id="carpoolMode">
             <span><b>Mitfahr-Kosten (Fahrgemeinschaft)</b> – bezahlte Stunden je Mitarbeiter vergleichen:
             Fahrer = 1 Std. je angef. 70 km, Beifahrer = 1 Std. je angef. 100 km. Zeigt, ob sich
-            „selbst fahren“ oder „ab Startpunkt mitfahren“ lohnt.</span>
+            „selbst fahren“ oder „ab Startpunkt mitfahren“ lohnt, plus Fahrgemeinschafts-Vorschlag.</span>
           </label>
+          <div class="row" style="margin-top:8px; gap:8px; align-items:center">
+            <span class="mini" style="flex:none">Sitzplätze je Fahrzeug (inkl. Fahrer):</span>
+            <input type="number" id="seats" value="2" min="1" max="9" style="width:70px; padding:6px 8px">
+          </div>
         </div>
       </div>
 
@@ -1211,9 +1222,20 @@ function calcCost(meters,sec){ const r=costRates(); return (meters/1000)*r.km + 
 
 /* Fahrgemeinschaft: bezahlte Stunden nach angefangenen km-Blöcken (Fahrer 70 km, Beifahrer 100 km) */
 const KM_FAHRER=70, KM_BEIFAHRER=100;
-function stdFahrer(meters){ return Math.ceil((meters/1000)/KM_FAHRER); }
-function stdBeifahrer(meters){ return Math.ceil((meters/1000)/KM_BEIFAHRER); }
+const ANFAHRT_EUR_KM=0.30;        // Kilometergeld Heim -> Rieckstraße
+function stdFahrer(meters){ if(meters==null||isNaN(meters)) return 0; return Math.ceil((meters/1000)/KM_FAHRER); }
+function stdBeifahrer(meters){ if(meters==null||isNaN(meters)) return 0; return Math.ceil((meters/1000)/KM_BEIFAHRER); }
 function fmtStd(n){ return n+" Std."; }
+function seatsPerCar(){ return Math.max(1, parseInt(document.getElementById("seats").value)||2); }
+
+/* Distanz der optimierten Einsammel-Route Rieckstraße -> alle -> Ziel (aus voller Distanzmatrix) */
+function collectRouteDist(){
+  if(!carpoolData || !carpoolData.dist) return null;
+  const seq=[0, ...carpoolData.order.map(i=>i+2), 1];   // 0=Start, 1=Ziel, Mitarbeiter=Index+2
+  let total=0;
+  for(let k=0;k<seq.length-1;k++) total += carpoolData.dist[seq[k]][seq[k+1]];
+  return total;
+}
 
 /* Ankunftszeit = Abfahrt + Fahrdauer */
 function arrivalTime(departStr,durSec){
@@ -1243,7 +1265,7 @@ function renderHistory(){
 
 /* Fahrt-Einstellungen (Profil, Abfahrt, Kostensätze) im Browser merken */
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
-const SETTING_IDS=["profile","departTime","costKm","costH"];
+const SETTING_IDS=["profile","departTime","costKm","costH","seats"];
 function loadSettings(){
   let s={}; try{ s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}"); }catch(e){}
   SETTING_IDS.forEach(id=>{ if(s[id]!=null && s[id]!=="") document.getElementById(id).value=s[id]; });
@@ -1288,6 +1310,7 @@ let mitarbeiter = [];              // [{id,name,adresse,lat,lon,gruppe,aktiv}]
 let map, baseLayers, layerGroup, empLayer;
 let lastRows = [];
 let startZielDist = null;          // Distanz Startpunkt (Rieckstraße) -> Ziel, für Mitfahr-Kosten
+let carpoolData = null;            // {emps, order, dist} für Einsammel-Vergleich (Fall 2)
 let hiddenGroupOpen = false;       // Bereich "Ausgeblendet" auf-/zugeklappt
 let orderMap = null;               // Einsammel-Reihenfolge: {employeeId: Positionsnummer}
 let sortState = { key:"distZiel", dir:1 };
@@ -1621,9 +1644,10 @@ async function getMatrix(emps, full){
     const rows = emps.map((m,i)=>{ const gi=i+2;
       return { id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, rolle:m.rolle, tags:m.tags, lat:m.lat, lon:m.lon,
         distStart:v(gi,0,"distance"), distZiel:v(gi,1,"distance"), durZiel:v(gi,1,"time") }; });
-    const N=2+emps.length, durations=[];
-    for(let i=0;i<N;i++){ durations[i]=[]; for(let j=0;j<N;j++) durations[i][j]=v(i,j,"time")||0; }
-    return { rows, durations, startZiel:v(0,1,"distance") };   // Start(0)->Ziel(1) Distanz
+    const N=2+emps.length, durations=[], distances=[];
+    for(let i=0;i<N;i++){ durations[i]=[]; distances[i]=[];
+      for(let j=0;j<N;j++){ durations[i][j]=v(i,j,"time")||0; distances[i][j]=v(i,j,"distance")||0; } }
+    return { rows, durations, distances, startZiel:v(0,1,"distance") };   // Start(0)->Ziel(1)
   }
   // sources=Mitarbeiter, targets=[Start(0),Ziel(1)]
   return emps.map((m,i)=>({ id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, rolle:m.rolle, tags:m.tags, lat:m.lat, lon:m.lon,
@@ -1684,15 +1708,21 @@ async function calculate(){
     orderMap=null;
     let route, rows, orderedEmps=null;
 
-    startZielDist=null;
-    if(collect){
-      // Voller Matrix-Call -> Tabelle + optimale Reihenfolge; dann Route in optimierter Folge
-      const { rows:r, durations, startZiel } = await getMatrix(emps, true);
+    startZielDist=null; carpoolData=null;
+    const carpoolOn = document.getElementById("carpoolMode").checked && emps.length>0;
+    if(collect || carpoolOn){
+      // Volle Matrix -> Tabelle, optimale Reihenfolge, Distanzen für Einsammel-Vergleich
+      const { rows:r, durations, distances, startZiel } = await getMatrix(emps, true);
       rows=r; startZielDist=startZiel;
       const order = solveOrder(durations, emps.length);      // Indizes in optimaler Folge
-      orderedEmps = order.map(i=>emps[i]);
-      orderMap={}; orderedEmps.forEach((m,i)=>orderMap[m.id]=i+1);
-      route = await getRoute([start,...orderedEmps,ziel]);
+      carpoolData = { emps, order, dist:distances };
+      if(collect){
+        orderedEmps = order.map(i=>emps[i]);
+        orderMap={}; orderedEmps.forEach((m,i)=>orderMap[m.id]=i+1);
+        route = await getRoute([start,...orderedEmps,ziel]);
+      }else{
+        route = await getRoute([start,ziel]);                // direkte Route zur Anzeige
+      }
     }else{
       const routeP  = getRoute([start,ziel]);
       const matrixP = emps.length ? getMatrix(emps,false) : Promise.resolve([]);
@@ -1828,9 +1858,42 @@ function renderCarpool(){
     "Beifahrer: 1 Std. je angefangene "+KM_BEIFAHRER+" km. Strecke Startpunkt→Ziel: <b>"+nfKm(startZielDist)+"</b> "+
     "(als Fahrer "+fmtStd(stdFahrer(startZielDist))+", als Beifahrer "+fmtStd(stdBeifahrer(startZielDist))+").";
 
+  // ---- Vorschlags-Block: Fall 1 (Treffpunkt) vs. Fall 2 (Einsammeln) ----
+  const N=lastRows.length, seats=seatsPerCar(), dRZ=startZielDist;
+  const cars=Math.ceil(N/seats), drivers=cars, passengers=N-cars;
+  const anfahrt1=lastRows.reduce((s,r)=>s+((r.distStart||0)/1000)*ANFAHRT_EUR_KM,0);
+  const fahrt1=drivers*stdFahrer(dRZ)+passengers*stdBeifahrer(dRZ);
+  const crd=collectRouteDist();
+  let fall2Html;
+  if(crd==null){
+    fall2Html='<div class="ln">Für den Einsammel-Vergleich bitte neu berechnen (bei aktivem Mitfahr-Modus).</div>';
+  }else{
+    const fahrer2=stdFahrer(crd), beif2=lastRows.reduce((s,r)=>s+stdBeifahrer(r.distZiel),0);
+    const passt = N<=seats-1;
+    fall2Html='<div class="big">'+fmtStd(fahrer2+beif2)+'</div>'+
+      '<div class="ln">1 Fahrzeug ab Startpunkt, Route '+nfKm(crd)+'</div>'+
+      '<div class="ln">Fahrer '+fmtStd(fahrer2)+' + Beifahrer '+fmtStd(beif2)+' · Anfahrt 0 €</div>'+
+      '<div class="ln" style="color:'+(passt?'#166534':'#b45309')+'">'+
+        (passt?'✓ passt in 1 Fahrzeug ('+seats+' Sitze)':'⚠️ '+N+' Mitfahrer > '+(seats-1)+' freie Sitze – mehrere Fahrten nötig')+'</div>';
+  }
+  const vorschlag=
+    '<div class="cp-boxes">'+
+      '<div class="cp-box rec">'+
+        '<h4>Fall 1 · Treffpunkt Rieckstraße <span class="tag-rec">Empfehlung</span></h4>'+
+        '<div class="big">'+fmtStd(fahrt1)+' + '+fmtEuro(anfahrt1)+' Anfahrt</div>'+
+        '<div class="ln">'+cars+' Auto'+(cars>1?'s':'')+' · '+drivers+' Fahrer, '+passengers+' Mitfahrer ('+seats+' Sitze/Auto)</div>'+
+        '<div class="ln">Alle fahren zur Rieckstraße ('+fmtEuro(anfahrt1)+'), dann gemeinsam zum Ziel.</div>'+
+      '</div>'+
+      '<div class="cp-box">'+
+        '<h4>Fall 2 · Einsammeln <span style="font-size:11px;color:#64748b;font-weight:600">(Alternative)</span></h4>'+
+        fall2Html+
+      '</div>'+
+    '</div>';
+
   const rows=carpoolRows();
   const cell=(v,best)=> '<td class="num'+(v!=null&&v===best?' cp-best':'')+'">'+(v==null?"–":fmtStd(v))+'</td>';
-  let html='<div style="overflow-x:auto"><table><thead><tr>'+
+  let html=vorschlag+'<div style="font-size:13px;font-weight:700;color:#334155;margin:4px 0 6px">Details je Mitarbeiter</div>'+
+    '<div style="overflow-x:auto"><table><thead><tr>'+
     '<th>Mitarbeiter</th><th>Selbst · direkt</th><th>Selbst · über Start</th><th>Mitfahren</th>'+
     '<th>Empfehlung</th></tr></thead><tbody>';
   let sumSelf=0, sumBest=0, anyNull=false;
@@ -2062,6 +2125,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   // Fahrt-Optionen merken
   SETTING_IDS.forEach(id=>document.getElementById(id).addEventListener("change",saveSettings));
   document.getElementById("carpoolMode").addEventListener("change",()=>{ saveSettings(); renderCarpool(); });
+  document.getElementById("seats").addEventListener("input",()=>{ saveSettings(); renderCarpool(); });
   document.getElementById("carpoolHead").addEventListener("click",()=>document.getElementById("carpoolCard").classList.toggle("collapsed"));
 
   // Ziel-Historie: Chip anklicken übernimmt Ziel, × entfernt Eintrag
