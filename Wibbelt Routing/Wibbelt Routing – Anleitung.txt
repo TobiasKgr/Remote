@@ -36,6 +36,10 @@ WAS IST DAS?
         Wibbelt Routing.html      (das Programm)
         mitarbeiter.js            (die gemeinsame Mitarbeiter-Liste)
 
+  Optional: eine Bilddatei "logo.png" in denselben Ordner legen -> sie
+  erscheint automatisch oben im Kopf und im PDF-Ausdruck. Fehlt sie, bleibt
+  der Kopf ohne Logo.
+
   Jeder Kollege öffnet einfach die "Wibbelt Routing.html" per Doppelklick
   (öffnet im Standard-Browser). Es ist KEIN Server und KEINE Installation
   nötig – nur eine bestehende Internet-Verbindung (für Karte und Routing).
