@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v28 (Geoapify) -->
+<!-- App-Version: v29 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -769,7 +769,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .radius-box{display:flex; align-items:center; gap:6px; font-size:12px; color:#334155}
   .radius-box input[type=number]{width:64px; padding:6px 8px}
 
-  .emp-list{display:flex; flex-direction:column; gap:2px; max-height:340px; overflow:auto; margin-top:4px;
+  .emp-list{display:flex; flex-direction:column; gap:2px; max-height:46vh; overflow:auto; margin-top:4px;
             border:1px solid #f1f5f9; border-radius:8px; padding:4px}
   .emp{
     display:flex; align-items:center; gap:9px; padding:7px 8px; border-radius:8px;
@@ -915,6 +915,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .modal{background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.3);
          width:100%; max-width:440px; padding:22px}
   .modal h3{margin:0 0 14px; font-size:18px}
+  .modal.wide{max-width:960px}
+  #stammWrap table{width:100%; border-collapse:collapse; font-size:13px}
+  #stammWrap th{position:sticky; top:0; background:#f1f5f9; text-align:left; padding:8px 8px; font-size:11px;
+    text-transform:uppercase; letter-spacing:.3px; color:#475569; border-bottom:2px solid var(--line); white-space:nowrap}
+  #stammWrap td{padding:6px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle}
+  #stammWrap tr.inactive{opacity:.5}
+  #stammWrap td.ctr{text-align:center}
+  #stammWrap select{padding:4px 6px; font-size:12px}
+  #stammWrap input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
+  #stammWrap .nm{font-weight:600}
+  #stammWrap .ad{color:var(--muted); font-size:12px}
   .modal .actions{display:flex; gap:10px; margin-top:18px}
   .modal .actions button{flex:1; padding:11px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; border:none}
   .modal .save{background:var(--accent); color:#fff}
@@ -974,7 +985,7 @@ const MITARBEITER_SEED = [
 const STORAGE_KEY = "wibbelt.mitarbeiter.v1";
 
 /* Merkmale/Tags pro Mitarbeiter (Mehrfachauswahl, filterbar). Hier erweiterbar. */
-const MERKMALE = ["Solvay", "Wiederholt"];
+const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
 </script>
 
 <!-- ============================================================= -->
@@ -1119,6 +1130,9 @@ const MERKMALE = ["Solvay", "Wiederholt"];
       <div class="emp-list" id="empList"></div>
 
       <div class="data-btns">
+        <button type="button" id="stammBtn" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">🗂 Stammdaten verwalten</button>
+      </div>
+      <div class="data-btns">
         <button type="button" id="saveServer" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af">💾 Für Server speichern</button>
         <button type="button" id="importJson">Datei laden</button>
         <input type="file" id="importFile" accept=".js,.json,application/json,text/javascript" style="display:none">
@@ -1232,6 +1246,22 @@ const MERKMALE = ["Solvay", "Wiederholt"];
       <button class="save" id="importAdd" style="background:var(--green)">Hinzufügen</button>
       <button class="save" id="importReplace">Ersetzen</button>
     </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: Stammdaten verwalten ===================== -->
+<div class="modal-bg" id="stammBg">
+  <div class="modal wide">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+      <h3 style="margin:0">Stammdaten verwalten <span id="stammCount" style="font-size:13px;color:#64748b;font-weight:600"></span></h3>
+      <div style="display:flex; gap:8px">
+        <button class="linkbtn add" id="stammAdd">＋ Mitarbeiter</button>
+        <button class="cancel" id="stammClose" style="padding:6px 14px">Schließen</button>
+      </div>
+    </div>
+    <input type="text" id="stammSearch" placeholder="🔍 Suchen …" style="margin:10px 0">
+    <div class="hint" style="margin-bottom:6px">Rolle und Merkmale direkt per Klick ändern – wird sofort gespeichert. Name/Adresse über ✏️.</div>
+    <div id="stammWrap" style="overflow:auto; max-height:60vh"></div>
   </div>
 </div>
 
@@ -2175,6 +2205,34 @@ async function runImport(replace){
   setDataHint(ok+" Mitarbeiter importiert"+(fail?" · "+fail+" ohne Treffer übersprungen ("+failed.slice(0,3).join(", ")+(failed.length>3?" …":"")+")":"")+".");
 }
 
+/* ---- Stammdaten verwalten (große Tabelle, Inline-Pflege) ---- */
+function openStamm(){ document.getElementById("stammSearch").value=""; renderStamm(); document.getElementById("stammBg").classList.add("open"); }
+function closeStamm(){ document.getElementById("stammBg").classList.remove("open"); }
+function renderStamm(){
+  const q=document.getElementById("stammSearch").value.trim().toLowerCase();
+  const list=[...mitarbeiter]
+    .filter(m=>!q || (m.name+" "+m.adresse+" "+(m.rolle||"")+" "+(m.tags||[]).join(" ")+" "+(m.gruppe||"")).toLowerCase().includes(q))
+    .sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de"));
+  document.getElementById("stammCount").textContent="("+mitarbeiter.length+" gesamt)";
+  const roleOpts=v=>['','Projektleiter','Monteur'].map(o=>'<option value="'+o+'"'+(o===(v||"")?' selected':'')+'>'+(o||'– keine –')+'</option>').join("");
+  let html='<table><thead><tr><th>Name</th><th>Adresse</th><th>Rolle</th>'+
+    MERKMALE.map(t=>'<th class="ctr">'+escapeHtml(t)+'</th>').join("")+'<th class="ctr">Aktiv</th><th></th></tr></thead><tbody>';
+  if(list.length===0) html+='<tr><td colspan="'+(5+MERKMALE.length)+'" style="text-align:center;color:#64748b;padding:16px">Keine Treffer.</td></tr>';
+  list.forEach(m=>{
+    html+='<tr class="'+(m.aktiv?"":"inactive")+'">'+
+      '<td class="nm">'+escapeHtml(formatName(m.name))+'</td>'+
+      '<td class="ad">'+escapeHtml(m.adresse)+'</td>'+
+      '<td><select data-id="'+m.id+'" data-field="rolle">'+roleOpts(m.rolle)+'</select></td>'+
+      MERKMALE.map(t=>'<td class="ctr"><input type="checkbox" data-id="'+m.id+'" data-tag="'+escapeHtml(t)+'"'+((m.tags||[]).includes(t)?' checked':'')+'></td>').join("")+
+      '<td class="ctr"><input type="checkbox" data-id="'+m.id+'" data-field="aktiv"'+(m.aktiv?' checked':'')+'></td>'+
+      '<td style="white-space:nowrap"><button class="iconbtn" title="Name/Adresse bearbeiten" data-edit="'+m.id+'">✏️</button>'+
+        '<button class="iconbtn del" title="Löschen" data-del="'+m.id+'">🗑</button></td>'+
+    '</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById("stammWrap").innerHTML=html;
+}
+
 function markPending(){ if(sharedFileActive){ pendingChanges=true; updateShareState(); } }
 function updateShareState(){
   const el=document.getElementById("shareState");
@@ -2321,6 +2379,27 @@ window.addEventListener("DOMContentLoaded",()=>{
   // CRUD / Daten
   document.getElementById("addBtn").addEventListener("click",()=>openModal(null));
   document.getElementById("excelBtn").addEventListener("click",openImport);
+  // Stammdaten-Verwaltung
+  document.getElementById("stammBtn").addEventListener("click",openStamm);
+  document.getElementById("stammClose").addEventListener("click",closeStamm);
+  document.getElementById("stammAdd").addEventListener("click",()=>{ closeStamm(); openModal(null); });
+  document.getElementById("stammSearch").addEventListener("input",renderStamm);
+  document.getElementById("stammBg").addEventListener("click",e=>{ if(e.target.id==="stammBg") closeStamm(); });
+  const sw=document.getElementById("stammWrap");
+  sw.addEventListener("change",e=>{
+    const el=e.target, id=el.dataset&&el.dataset.id; if(!id) return;
+    const m=mitarbeiter.find(x=>x.id===id); if(!m) return;
+    if(el.dataset.tag){ m.tags=m.tags||[]; const t=el.dataset.tag; if(el.checked){ if(!m.tags.includes(t)) m.tags.push(t); } else m.tags=m.tags.filter(x=>x!==t); }
+    else if(el.dataset.field==="rolle") m.rolle=el.value;
+    else if(el.dataset.field==="aktiv"){ m.aktiv=el.checked; if(!m.aktiv) m._checked=false; const tr=el.closest("tr"); if(tr) tr.classList.toggle("inactive",!m.aktiv); }
+    saveMitarbeiter(); markPending(); renderEmployees();
+  });
+  sw.addEventListener("click",e=>{
+    const ed=e.target.closest("[data-edit]"); if(ed){ closeStamm(); openModal(ed.dataset.edit); return; }
+    const del=e.target.closest("[data-del]");
+    if(del){ const m=mitarbeiter.find(x=>x.id===del.dataset.del);
+      if(m && confirm("„"+m.name+"“ wirklich löschen?")){ mitarbeiter=mitarbeiter.filter(x=>x.id!==del.dataset.del); saveMitarbeiter(); markPending(); renderEmployees(); renderStamm(); } }
+  });
   document.getElementById("importCancel").addEventListener("click",closeImport);
   document.getElementById("importAdd").addEventListener("click",()=>runImport(false));
   document.getElementById("importReplace").addEventListener("click",()=>{ if(confirm("Alle bestehenden Mitarbeiter durch den Import ersetzen?")) runImport(true); });

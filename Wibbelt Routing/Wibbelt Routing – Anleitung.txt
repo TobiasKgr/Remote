@@ -53,8 +53,13 @@ WAS IST DAS?
   - In der App unter "Mitarbeiter" können Einträge hinzugefügt, bearbeitet,
     aus-/eingeblendet (Auge-Symbol) und gelöscht werden. Die Adresse wird
     automatisch in Koordinaten umgewandelt.
+  - STAMMDATEN VERWALTEN: Knopf "🗂 Stammdaten verwalten" öffnet eine große
+    Tabelle mit allen Mitarbeitern. Dort Rolle und Merkmale (Solvay,
+    Wiederholt, Werkstatt) direkt per Klick/Häkchen pflegen (wird sofort
+    gespeichert); Name/Adresse über das Stift-Symbol. Mit Suche und
+    Aktiv-Schalter. Praktisch bei vielen Mitarbeitern.
   - Jeder Mitarbeiter kann eine ROLLE haben (Projektleiter oder Monteur)
-    und beliebige MERKMALE (z. B. Solvay, Wiederholt). Nach beidem lässt
+    und beliebige MERKMALE (z. B. Solvay, Wiederholt, Werkstatt). Nach beidem lässt
     sich oben filtern und sortieren (praktisch bei vielen Personen).
     Zusätzlich gibt es Freitext-Suche und einen Umkreis-Filter.
     Ausgeblendete Mitarbeiter sammeln sich im eingeklappten Bereich
