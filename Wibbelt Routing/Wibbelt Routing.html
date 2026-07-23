@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v37 (Geoapify) -->
+<!-- App-Version: v38 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1128,7 +1128,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
             <div class="filt-wrap" id="tagFilter"></div>
             <div class="hint" style="margin-top:-2px">Chip anklicken: 1× <b style="color:#166534">nur mit</b> · 2× <b style="color:#991b1b">ohne</b> · 3× egal (kein Filter).</div>
             <div class="row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
-              <label class="chk"><input type="checkbox" id="onlyActive"> nur aktive anzeigen</label>
+              <label class="chk"><input type="checkbox" id="onlyActive" checked> nur aktive anzeigen</label>
               <label class="chk radius-box">
                 <input type="checkbox" id="radiusOn"> im Umkreis
                 <input type="number" id="radiusKm" value="50" min="1" step="5"> km um
@@ -1152,11 +1152,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         </div>
       </div>
 
-      <div class="exports">
-        <button id="pdfBtn">Als PDF drucken</button>
-        <button id="csvBtn" disabled>Tabelle als CSV</button>
-      </div>
-      <div class="hint no-print" style="margin-top:4px">„Als PDF drucken“ öffnet den Druckdialog – dort als Ziel „Als PDF speichern“ wählen.</div>
       <div class="status no-print" id="status"></div>
     </div>
 
@@ -1182,6 +1177,12 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       </div>
       <div class="hint" id="dataHint"></div>
       <div class="hint" id="shareState" style="display:none"></div>
+
+      <div class="exports" style="margin-top:14px; border-top:1px solid #f1f5f9; padding-top:12px">
+        <button id="pdfBtn">Als PDF drucken</button>
+        <button id="csvBtn" disabled>Tabelle als CSV</button>
+      </div>
+      <div class="hint no-print" style="margin-top:4px">„Als PDF drucken“ öffnet den Druckdialog – dort als Ziel „Als PDF speichern“ wählen.</div>
     </div>
 
     <!-- Spalte 3: Karte -->
@@ -2156,17 +2157,25 @@ function buildSummaryText(){
   const mode=(document.querySelector('input[name="routeMode"]:checked')||{}).value || "treff";
   let t;
   if(N===0){
-    t="(keine Mitarbeiter ausgewählt)";
+    t="Keine Mitarbeiter ausgewählt.";
   }else if(mode==="collect"){
-    t="Einsammeln: "+listNamesPlain(names)+" werden abgeholt.";
+    // Reihenfolge aus der optimierten Einsammel-Route (orderMap: id -> Position)
+    const ordered = orderMap
+      ? [...lastRows].sort((a,b)=>(orderMap[a.id]||0)-(orderMap[b.id]||0)).map(r=>r.name)
+      : names;
+    t="Einsammeln – ein Fahrzeug fährt ab Rieckstraße und holt in dieser Reihenfolge ab:\n"+
+      "Rieckstraße → "+ordered.join(" → ")+" → Ziel.";
   }else if(mode==="direct"){
     const one=nearestToStart(lastRows).name;
     const rest=names.filter(n=>n!==one);
-    t="Nur "+one+" fährt zur Rieckstraße"+(rest.length?", direkt zur Baustelle: "+listNamesPlain(rest):"")+".";
+    t=one+" fährt zur Rieckstraße und von dort zum Ziel.\n"+
+      (rest.length? "Direkt zur Baustelle: "+listNamesPlain(rest)+"." : "Sonst fährt niemand direkt.");
   }else{
-    t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".";
+    t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".\n"+
+      "Alle fahren zunächst zur Rieckstraße, von dort gemeinsam zum Ziel.";
   }
-  ta.value = "Ziel: "+ziel.label+"\n"+t;
+  const strecke = lastRouteMeta ? "\n"+lastRouteMeta.label+": "+nfKm(lastRoute.distance)+", Fahrzeit "+fmtDauer(lastRoute.duration)+(lastRouteMeta.eta?", Ankunft "+lastRouteMeta.eta:"") : "";
+  ta.value = "Ziel: "+ziel.label+"\n"+t+strecke;
   card.style.display="block";
 }
 
