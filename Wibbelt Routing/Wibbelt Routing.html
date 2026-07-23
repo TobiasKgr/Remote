@@ -704,9 +704,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
   header.app .sub{opacity:.85; font-size:13px; margin-top:2px}
   header.app .ver{font-size:11px; opacity:.6}
 
-  .wrap{max-width:1320px; margin:0 auto; padding:20px}
+  .wrap{max-width:2200px; margin:0 auto; padding:20px}
   .grid{display:grid; grid-template-columns:390px 1fr; gap:20px; align-items:start}
   @media(max-width:920px){ .grid{grid-template-columns:1fr} }
+  /* 3-Spalten-Layout: Ziel/Filter | Mitarbeiter | Karte (breit) */
+  .grid3{display:grid; grid-template-columns:330px 340px minmax(0,1fr); gap:20px; align-items:start}
+  #colMap{min-width:0}
+  #colMap .card{padding:14px}
+  .results{margin-top:20px}
+  .results>.card{margin-bottom:20px}
+  @media(max-width:1300px){ .grid3{grid-template-columns:330px minmax(0,1fr)} #colMap{grid-column:1 / -1} }
+  @media(max-width:820px){ .grid3{grid-template-columns:1fr} #colMap{grid-column:auto} }
 
   .card{
     background:var(--panel); border:1px solid var(--line);
@@ -830,7 +838,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .exports button:disabled{opacity:.5; cursor:not-allowed}
   .data-btns{display:flex; gap:8px; margin-top:8px}
 
-  #map{height:480px; border-radius:12px; border:1px solid var(--line); background:#e2e8f0}
+  #map{height:640px; border-radius:12px; border:1px solid var(--line); background:#e2e8f0}
 
   .summary{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px}
   .summary .box{flex:1; min-width:150px; background:linear-gradient(135deg,#eff6ff,#dbeafe);
@@ -1014,25 +1022,22 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
     geoapify.com ein, sonst funktionieren Suche und Routenberechnung nicht.
   </div>
 
-  <div class="grid">
-    <!-- ===================== EINGABE ===================== -->
-    <div class="card no-print" id="inputCard">
-      <h2>Eingabe</h2>
-
+  <div class="grid3">
+    <!-- Spalte 1: Ziel & Optionen (+ Filter) -->
+    <div class="card no-print" id="colControls">
+      <h2>Ziel &amp; Optionen</h2>
       <label class="fld" for="startInput">Startpunkt</label>
       <div class="autoc">
         <input type="text" id="startInput" autocomplete="off" placeholder="Startadresse …">
         <div class="suggest" id="startSuggest"></div>
       </div>
       <div class="hint">Vorbelegt mit dem Firmenstandort – bei Bedarf überschreibbar.</div>
-
       <label class="fld" for="zielInput">Zieladresse</label>
       <div class="autoc">
         <input type="text" id="zielInput" autocomplete="off" placeholder="Zieladresse eingeben (ab 3 Zeichen) …">
         <div class="suggest" id="zielSuggest"></div>
       </div>
       <div class="chips" id="zielHistory"></div>
-
       <!-- Fahrt-Optionen (auf-/zuklappbar) -->
       <div class="panel" id="panel-fahrt">
         <button type="button" class="panel-head" data-toggle-panel="fahrt">🚗 Fahrt-Optionen <span class="chev">▾</span></button>
@@ -1071,10 +1076,20 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           </div>
         </div>
       </div>
-
-      <!-- Mitarbeiter -->
-      <h2 style="margin-top:18px">Mitarbeiter <span class="count" id="maCount"></span></h2>
-
+      <!-- Routing-Optionen -->
+      <div class="subgroup">
+        <div class="fld" style="margin:0 0 6px">Kartenansicht</div>
+        <label class="opt-row">
+          <input type="radio" name="routeMode" value="treff" checked>
+          <span><b>Treffpunkt Rieckstraße</b> – jeder fährt mit seiner Entfernung zur Rieckstraße;
+          von dort eine Strecke zum Ziel. (Linien laufen bei der Rieckstraße zusammen.)</span>
+        </label>
+        <label class="opt-row" style="margin-top:8px">
+          <input type="radio" name="routeMode" value="collect">
+          <span><b>Einsammeln</b> – eine Route vom Start über alle markierten Mitarbeiter zum Ziel,
+          Reihenfolge automatisch optimiert (kürzeste Gesamt-Fahrzeit).</span>
+        </label>
+      </div>
       <div class="panel" id="panel-filter">
         <button type="button" class="panel-head" data-toggle-panel="filter">🔍 Filter &amp; Sortierung <span class="chev">▾</span></button>
         <div class="panel-body">
@@ -1119,7 +1134,19 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <div class="hint" id="radiusHint" style="margin-top:2px; display:none"></div>
         </div>
       </div>
+      <button class="primary" id="calcBtn">Route berechnen</button>
 
+      <div class="exports">
+        <button id="pdfBtn">Als PDF drucken</button>
+        <button id="csvBtn" disabled>Tabelle als CSV</button>
+      </div>
+      <div class="hint no-print" style="margin-top:4px">„Als PDF drucken“ öffnet den Druckdialog – dort als Ziel „Als PDF speichern“ wählen.</div>
+      <div class="status no-print" id="status"></div>
+    </div>
+
+    <!-- Spalte 2: Mitarbeiter -->
+    <div class="card no-print" id="colEmps">
+      <h2 style="margin-top:18px">Mitarbeiter <span class="count" id="maCount"></span></h2>
       <div class="emp-actions">
         <button type="button" class="linkbtn" id="selAll">Alle markieren</button>
         <button type="button" class="linkbtn" id="selNone">Keine</button>
@@ -1128,7 +1155,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       </div>
 
       <div class="emp-list" id="empList"></div>
-
       <div class="data-btns">
         <button type="button" id="stammBtn" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">🗂 Stammdaten verwalten</button>
       </div>
@@ -1139,35 +1165,10 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       </div>
       <div class="hint" id="dataHint"></div>
       <div class="hint" id="shareState" style="display:none"></div>
-
-      <!-- Routing-Optionen -->
-      <div class="subgroup">
-        <div class="fld" style="margin:0 0 6px">Kartenansicht</div>
-        <label class="opt-row">
-          <input type="radio" name="routeMode" value="treff" checked>
-          <span><b>Treffpunkt Rieckstraße</b> – jeder fährt mit seiner Entfernung zur Rieckstraße;
-          von dort eine Strecke zum Ziel. (Linien laufen bei der Rieckstraße zusammen.)</span>
-        </label>
-        <label class="opt-row" style="margin-top:8px">
-          <input type="radio" name="routeMode" value="collect">
-          <span><b>Einsammeln</b> – eine Route vom Start über alle markierten Mitarbeiter zum Ziel,
-          Reihenfolge automatisch optimiert (kürzeste Gesamt-Fahrzeit).</span>
-        </label>
-      </div>
-
-      <button class="primary" id="calcBtn">Route berechnen</button>
-
-      <div class="exports">
-        <button id="pdfBtn">Als PDF drucken</button>
-        <button id="csvBtn" disabled>Tabelle als CSV</button>
-      </div>
-      <div class="hint no-print" style="margin-top:4px">„Als PDF drucken“ öffnet den Druckdialog – dort als Ziel „Als PDF speichern“ wählen.</div>
-
-      <div class="status no-print" id="status"></div>
     </div>
 
-    <!-- ===================== AUSGABE ===================== -->
-    <div>
+    <!-- Spalte 3: Karte -->
+    <div id="colMap">
       <div class="print-only print-head">
         <img class="print-logo" src="logo.png" alt="" onerror="this.style.display='none'">
         <h2>Wibbelt Routing</h2>
@@ -1178,22 +1179,24 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <div id="summary" class="summary" style="display:none"></div>
         <div id="map"></div>
       </div>
+    </div>
+  </div>
 
-      <div class="card">
+  <!-- Ergebnisse (volle Breite) -->
+  <div class="results">
+    <div class="card">
         <h2>Mitarbeiter &amp; Entfernungen</h2>
         <div id="tableWrap">
           <div class="result-empty">Noch keine Berechnung – wähle ein Ziel und Mitarbeiter und klicke auf „Route berechnen“.</div>
         </div>
       </div>
-
-      <div class="card" id="carpoolCard" style="margin-top:20px; display:none">
+    <div class="card" id="carpoolCard" style="margin-top:20px; display:none">
         <h2 id="carpoolHead" style="cursor:pointer; user-select:none">Fahrgemeinschaft – bezahlte Stunden <span class="chev">▾</span></h2>
         <div id="carpoolBody">
           <div class="hint" id="carpoolInfo" style="margin-bottom:10px"></div>
           <div id="carpoolWrap"></div>
         </div>
       </div>
-    </div>
   </div>
 
   <div class="card" id="summaryCard" style="display:none; margin-top:20px">
