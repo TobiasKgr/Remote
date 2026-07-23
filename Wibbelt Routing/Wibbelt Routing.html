@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v29 (Geoapify) -->
+<!-- App-Version: v31 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -699,7 +699,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     color:#fff; padding:18px 24px; box-shadow:var(--shadow);
     display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
   }
-  header.app h1{margin:0; font-size:22px; font-weight:700; letter-spacing:.2px}
+  header.app h1{margin:0; font-size:24px; letter-spacing:.2px;
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; font-weight:bold; font-style:oblique}
   .app-logo{height:44px; width:auto; max-width:200px; display:block; background:#fff; padding:5px 8px; border-radius:8px}
   header.app .sub{opacity:.85; font-size:13px; margin-top:2px}
   header.app .ver{font-size:11px; opacity:.6}
@@ -777,7 +778,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .radius-box{display:flex; align-items:center; gap:6px; font-size:12px; color:#334155}
   .radius-box input[type=number]{width:64px; padding:6px 8px}
 
-  .emp-list{display:flex; flex-direction:column; gap:2px; max-height:46vh; overflow:auto; margin-top:4px;
+  .emp-list{display:flex; flex-direction:column; gap:2px; max-height:78vh; overflow:auto; margin-top:4px;
             border:1px solid #f1f5f9; border-radius:8px; padding:4px}
   .emp{
     display:flex; align-items:center; gap:9px; padding:7px 8px; border-radius:8px;
@@ -2140,7 +2141,7 @@ function importStammdaten(file){
     }
     if(!Array.isArray(arr)){ setDataHint("⚠️ Datei nicht lesbar (erwartet mitarbeiter.js oder JSON-Array)."); return; }
     mitarbeiter=normalizeList(arr);
-    mitarbeiter.forEach(m=>m._checked=m.aktiv);
+    mitarbeiter.forEach(m=>m._checked=false);
     saveMitarbeiter(); renderEmployees();
     pendingChanges=false; updateShareState();
     setDataHint(mitarbeiter.length+" Mitarbeiter geladen.");
@@ -2193,7 +2194,7 @@ async function runImport(replace){
       const slice=rows.slice(i,i+4);
       const geos=await Promise.all(slice.map(r=>geocode(r.adresse).then(g=>g&&g[0]||null).catch(()=>null)));
       slice.forEach((r,k)=>{ const g=geos[k];
-        if(g){ created.push({ id:uid(), name:r.name, rolle:"", tags:[], gruppe:"", adresse:r.adresse, lat:g.lat, lon:g.lon, aktiv:true, _checked:true }); ok++; }
+        if(g){ created.push({ id:uid(), name:r.name, rolle:"", tags:[], gruppe:"", adresse:r.adresse, lat:g.lat, lon:g.lon, aktiv:true, _checked:false }); ok++; }
         else { fail++; failed.push(r.name); } });
       prog.textContent="Geokodiere … "+Math.min(i+4,rows.length)+" / "+rows.length;
       await new Promise(res=>setTimeout(res,200));
@@ -2320,7 +2321,7 @@ async function saveModal(){
 window.addEventListener("DOMContentLoaded",()=>{
   checkKey();
   loadMitarbeiter();
-  mitarbeiter.forEach(m=>m._checked = m.aktiv);   // aktive standardmäßig markiert
+  mitarbeiter.forEach(m=>m._checked = false);      // standardmäßig niemand vorausgewählt
   try{ initMap(); }catch(e){ console.error("Karte konnte nicht initialisiert werden:",e); }
   buildTagChecks();
   renderEmployees();
