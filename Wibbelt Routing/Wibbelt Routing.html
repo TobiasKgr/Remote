@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v33 (Geoapify) -->
+<!-- App-Version: v34 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -788,7 +788,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .emp.inactive{opacity:.5}
   .emp .cbx{width:17px; height:17px; accent-color:var(--accent); cursor:pointer; flex:none}
   .emp .info{flex:1; min-width:0; cursor:pointer}
-  .emp .nm{font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px}
+  .emp .nm{font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden}
+  .emp .nmtext{flex:0 0 auto}                                   /* Name hat Vorrang, bleibt lesbar */
+  .emp .nmbadges{flex:0 1 auto; min-width:0; overflow:hidden; display:flex; align-items:center; gap:4px}  /* Badges werden bei Platzmangel abgeschnitten */
   .emp .ad{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .emp .grp{font-size:10px; font-weight:700; color:#3730a3; background:#e0e7ff; padding:1px 6px; border-radius:20px}
   .rl{font-size:10px; font-weight:700; padding:1px 6px; border-radius:20px; white-space:nowrap}
@@ -1594,7 +1596,8 @@ function renderEmployees(){
     return '<div class="emp'+(m.aktiv?"":" inactive")+'">'+
       '<input type="checkbox" class="cbx" data-id="'+m.id+'" '+(m.aktiv?"":"disabled")+' '+(m._checked?"checked":"")+'>'+
       '<div class="info" data-edit="'+m.id+'">'+
-        '<div class="nm">'+escapeHtml(formatName(m.name))+roleBadge(m.rolle)+tagBadges(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</div>'+
+        '<div class="nm"><span class="nmtext">'+escapeHtml(formatName(m.name))+'</span>'+
+          '<span class="nmbadges">'+roleBadge(m.rolle)+tagBadges(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</span></div>'+
         (distTxt ? '<div class="ad">'+distTxt+'</div>' : '')+
       '</div>'+
       '<div class="rowbtns">'+
