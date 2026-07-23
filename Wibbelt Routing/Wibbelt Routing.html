@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v26 (Geoapify) -->
+<!-- App-Version: v27 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1222,9 +1222,9 @@ const MERKMALE = ["Solvay", "Wiederholt"];
 <div class="modal-bg" id="importBg">
   <div class="modal" style="max-width:560px">
     <h3>Aus Excel importieren</h3>
-    <div class="hint">In Excel die Spalten <b>Nachname · Vorname · Anschrift</b> markieren, kopieren (Strg+C) und hier
-      einfügen (Strg+V). Auch CSV mit Semikolon geht. Eine Kopfzeile wird automatisch erkannt.</div>
-    <textarea id="importText" placeholder="Krüger	Tobias	Konrad-Adenauer-Ring 18, 59269 Beckum&#10;Batt	Egor	Steinbrink 8, 32049 Herford"></textarea>
+    <div class="hint">In Excel die Spalten <b>Name · Vorname · Straße · PLZ · Wohnort</b> markieren, kopieren (Strg+C) und
+      hier einfügen (Strg+V). Auch CSV mit Semikolon geht. Eine Kopfzeile wird automatisch erkannt.</div>
+    <textarea id="importText" placeholder="Krüger	Tobias	Konrad-Adenauer-Ring 18	59269	Beckum&#10;Batt	Egor	Steinbrink 8	32049	Herford"></textarea>
     <div class="err" id="importErr"></div>
     <div class="hint" id="importProgress"></div>
     <div class="actions">
@@ -2128,9 +2128,16 @@ function parseImport(text){
     const delim = line.indexOf("\t")>=0 ? "\t" : (line.indexOf(";")>=0 ? ";" : ",");
     const cells = line.split(delim).map(c=>c.trim());
     if(idx===0 && /^(name|nachname)$/i.test(cells[0]||"")) return;   // Kopfzeile
-    const nach=cells[0]||"", vor=cells[1]||"", anschrift=cells.slice(2).join(", ").replace(/^,\s*/,"").trim();
-    if(!nach || !anschrift) return;
-    out.push({ name: vor ? (nach+", "+vor) : nach, adresse: anschrift });
+    const nach=cells[0]||"", vor=cells[1]||"";
+    let adresse;
+    if(cells.length>=5){                         // Name, Vorname, Straße, PLZ, Wohnort
+      const strasse=cells[2]||"", plz=cells[3]||"", ort=cells[4]||"";
+      adresse=[strasse, [plz,ort].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    }else{                                        // Fallback: alles ab Spalte 3 als Anschrift
+      adresse=cells.slice(2).join(", ").replace(/^,\s*/,"").trim();
+    }
+    if(!nach || !adresse) return;
+    out.push({ name: vor ? (nach+", "+vor) : nach, adresse });
   });
   return out;
 }
