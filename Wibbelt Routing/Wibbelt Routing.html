@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v25 (Geoapify) -->
+<!-- App-Version: v26 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -869,6 +869,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     padding:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5; color:#0f172a; background:#f8fafc}
   .copybtn{border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:13px; font-weight:600;
     padding:6px 12px; border-radius:8px; cursor:pointer}
+  #importText{width:100%; min-height:150px; resize:vertical; border:1px solid #cbd5e1; border-radius:8px;
+    padding:10px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; margin-top:8px; white-space:pre}
   .copybtn:hover{background:#f1f5f9; border-color:#94a3b8}
   .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle}
   .dot.b{background:var(--blue)}
@@ -1111,6 +1113,7 @@ const MERKMALE = ["Solvay", "Wiederholt"];
         <button type="button" class="linkbtn" id="selAll">Alle markieren</button>
         <button type="button" class="linkbtn" id="selNone">Keine</button>
         <button type="button" class="linkbtn add" id="addBtn">＋ Mitarbeiter hinzufügen</button>
+        <button type="button" class="linkbtn" id="excelBtn">⭱ Aus Excel importieren</button>
       </div>
 
       <div class="emp-list" id="empList"></div>
@@ -1211,6 +1214,23 @@ const MERKMALE = ["Solvay", "Wiederholt"];
     <div class="actions">
       <button class="cancel" id="modalCancel">Abbrechen</button>
       <button class="save" id="modalSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: Excel-Import ===================== -->
+<div class="modal-bg" id="importBg">
+  <div class="modal" style="max-width:560px">
+    <h3>Aus Excel importieren</h3>
+    <div class="hint">In Excel die Spalten <b>Nachname · Vorname · Anschrift</b> markieren, kopieren (Strg+C) und hier
+      einfügen (Strg+V). Auch CSV mit Semikolon geht. Eine Kopfzeile wird automatisch erkannt.</div>
+    <textarea id="importText" placeholder="Krüger	Tobias	Konrad-Adenauer-Ring 18, 59269 Beckum&#10;Batt	Egor	Steinbrink 8, 32049 Herford"></textarea>
+    <div class="err" id="importErr"></div>
+    <div class="hint" id="importProgress"></div>
+    <div class="actions">
+      <button class="cancel" id="importCancel">Abbrechen</button>
+      <button class="save" id="importAdd" style="background:var(--green)">Hinzufügen</button>
+      <button class="save" id="importReplace">Ersetzen</button>
     </div>
   </div>
 </div>
@@ -2089,6 +2109,60 @@ function importStammdaten(file){
   };
   reader.readAsText(file);
 }
+/* ---- Excel/CSV-Import (Nachname · Vorname · Anschrift) ---- */
+function openImport(){
+  document.getElementById("importText").value="";
+  document.getElementById("importErr").className="err";
+  document.getElementById("importProgress").textContent="";
+  document.getElementById("importBg").classList.add("open");
+  setTimeout(()=>document.getElementById("importText").focus(),50);
+}
+function closeImport(){ document.getElementById("importBg").classList.remove("open"); }
+function importError(t){ const e=document.getElementById("importErr"); e.textContent=t; e.className="err show"; }
+
+/* Text aus Excel/CSV in Zeilen {name, adresse} zerlegen */
+function parseImport(text){
+  const lines=text.split(/\r?\n/).map(l=>l.replace(/\s+$/,"")).filter(l=>l.trim());
+  const out=[];
+  lines.forEach((line,idx)=>{
+    const delim = line.indexOf("\t")>=0 ? "\t" : (line.indexOf(";")>=0 ? ";" : ",");
+    const cells = line.split(delim).map(c=>c.trim());
+    if(idx===0 && /^(name|nachname)$/i.test(cells[0]||"")) return;   // Kopfzeile
+    const nach=cells[0]||"", vor=cells[1]||"", anschrift=cells.slice(2).join(", ").replace(/^,\s*/,"").trim();
+    if(!nach || !anschrift) return;
+    out.push({ name: vor ? (nach+", "+vor) : nach, adresse: anschrift });
+  });
+  return out;
+}
+
+async function runImport(replace){
+  const rows=parseImport(document.getElementById("importText").value);
+  if(rows.length===0){ importError("Keine gültigen Zeilen erkannt (erwartet: Nachname, Vorname, Anschrift)."); return; }
+  if(!checkKey()){ importError("Geoapify-Key fehlt – bitte oben eintragen."); return; }
+  const btnA=document.getElementById("importAdd"), btnR=document.getElementById("importReplace");
+  btnA.disabled=btnR.disabled=true;
+  const prog=document.getElementById("importProgress");
+  const created=[]; let ok=0, fail=0; const failed=[];
+  try{
+    for(let i=0;i<rows.length;i+=4){
+      const slice=rows.slice(i,i+4);
+      const geos=await Promise.all(slice.map(r=>geocode(r.adresse).then(g=>g&&g[0]||null).catch(()=>null)));
+      slice.forEach((r,k)=>{ const g=geos[k];
+        if(g){ created.push({ id:uid(), name:r.name, rolle:"", tags:[], gruppe:"", adresse:r.adresse, lat:g.lat, lon:g.lon, aktiv:true, _checked:true }); ok++; }
+        else { fail++; failed.push(r.name); } });
+      prog.textContent="Geokodiere … "+Math.min(i+4,rows.length)+" / "+rows.length;
+      await new Promise(res=>setTimeout(res,200));
+    }
+  }catch(e){ importError(errText(e instanceof TypeError?{type:"offline"}:e)); btnA.disabled=btnR.disabled=false; return; }
+
+  if(created.length===0){ importError("Keine Adresse konnte geokodiert werden. Bitte Anschriften prüfen."); btnA.disabled=btnR.disabled=false; return; }
+  if(replace) mitarbeiter=created; else mitarbeiter=mitarbeiter.concat(created);
+  saveMitarbeiter(); renderEmployees(); markPending();
+  btnA.disabled=btnR.disabled=false;
+  closeImport();
+  setDataHint(ok+" Mitarbeiter importiert"+(fail?" · "+fail+" ohne Treffer übersprungen ("+failed.slice(0,3).join(", ")+(failed.length>3?" …":"")+")":"")+".");
+}
+
 function markPending(){ if(sharedFileActive){ pendingChanges=true; updateShareState(); } }
 function updateShareState(){
   const el=document.getElementById("shareState");
@@ -2234,6 +2308,11 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   // CRUD / Daten
   document.getElementById("addBtn").addEventListener("click",()=>openModal(null));
+  document.getElementById("excelBtn").addEventListener("click",openImport);
+  document.getElementById("importCancel").addEventListener("click",closeImport);
+  document.getElementById("importAdd").addEventListener("click",()=>runImport(false));
+  document.getElementById("importReplace").addEventListener("click",()=>{ if(confirm("Alle bestehenden Mitarbeiter durch den Import ersetzen?")) runImport(true); });
+  document.getElementById("importBg").addEventListener("click",e=>{ if(e.target.id==="importBg") closeImport(); });
   document.getElementById("modalSave").addEventListener("click",saveModal);
   document.getElementById("modalCancel").addEventListener("click",closeModal);
   document.getElementById("modalBg").addEventListener("click",e=>{ if(e.target.id==="modalBg") closeModal(); });

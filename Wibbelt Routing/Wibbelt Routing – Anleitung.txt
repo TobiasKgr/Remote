@@ -62,6 +62,11 @@ WAS IST DAS?
     einblenden.
   - Weitere Merkmale kannst du im Quelltext oben bei
     'const MERKMALE = [...]' ergänzen.
+  - AUS EXCEL IMPORTIEREN: Knopf "⭱ Aus Excel importieren". In Excel die
+    Spalten Nachname / Vorname / Anschrift markieren, kopieren (Strg+C) und
+    im Dialog einfügen (Strg+V) - auch CSV mit Semikolon geht. Dann
+    "Hinzufügen" oder "Ersetzen". Die Anschriften werden automatisch in
+    Koordinaten umgewandelt (Adressen ohne Treffer werden übersprungen).
   - Solange Änderungen nur lokal sind, erscheint der Hinweis
     "Lokale Änderungen".
   - Damit ALLE Kollegen die Änderung sehen:
