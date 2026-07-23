@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v35 (Geoapify) -->
+<!-- App-Version: v36 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1044,6 +1044,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <div class="suggest" id="zielSuggest"></div>
       </div>
       <div class="chips" id="zielHistory"></div>
+      <button class="primary" id="calcBtn" style="margin-top:10px">Route berechnen</button>
       <!-- Fahrt-Optionen (auf-/zuklappbar) -->
       <div class="panel" id="panel-fahrt">
         <button type="button" class="panel-head" data-toggle-panel="fahrt">🚗 Fahrt-Optionen <span class="chev">▾</span></button>
@@ -1136,7 +1137,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <div class="hint" id="radiusHint" style="margin-top:2px; display:none"></div>
         </div>
       </div>
-      <button class="primary" id="calcBtn">Route berechnen</button>
 
       <div class="exports">
         <button id="pdfBtn">Als PDF drucken</button>
