@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v36 (Geoapify) -->
+<!-- App-Version: v37 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -778,6 +778,22 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .radius-box{display:flex; align-items:center; gap:6px; font-size:12px; color:#334155}
   .radius-box input[type=number]{width:64px; padding:6px 8px}
 
+  /* Filter-Chips (3 Zustände: neutral / nur mit / nur ohne) */
+  .filt-wrap{display:flex; flex-direction:column; gap:8px}
+  .filt-group{display:flex; align-items:center; flex-wrap:wrap; gap:6px}
+  .filt-group .filt-lbl{flex:0 0 66px; font-size:12px; font-weight:700; color:#334155}
+  .fchip{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#475569;
+         background:#fff; border:1.5px solid #e2e8f0; border-radius:20px; padding:4px 10px; cursor:pointer;
+         user-select:none; transition:background .12s, border-color .12s, color .12s; white-space:nowrap}
+  .fchip:hover{border-color:#cbd5e1}
+  .fchip .fdot{width:9px; height:9px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+  .fchip .fst{font-size:10px; font-weight:700; opacity:.85}
+  .fchip[data-state="mit"]{background:#dcfce7; border-color:#16a34a; color:#166534}
+  .fchip[data-state="ohne"]{background:#fee2e2; border-color:#dc2626; color:#991b1b}
+  .fchip[data-state="ohne"] .flabel{text-decoration:line-through; text-decoration-thickness:1.5px}
+  .filt-reset{font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; padding:2px 4px; text-decoration:underline}
+  .filt-reset:hover{color:#334155}
+
   .emp-list{display:flex; flex-direction:column; gap:2px; max-height:78vh; overflow:auto; margin-top:4px;
             border:1px solid #f1f5f9; border-radius:8px; padding:4px}
   .emp{
@@ -1109,10 +1125,8 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
             <div class="row">
               <input type="text" id="maSearch" placeholder="🔍 Suchen (Name, Adresse, Gruppe) …">
             </div>
-            <div class="row" style="flex-wrap:wrap; gap:6px 12px">
-              <label class="chk" style="flex:none">Filter:</label>
-              <div id="tagFilter" style="display:flex; flex-wrap:wrap; gap:6px 12px"></div>
-            </div>
+            <div class="filt-wrap" id="tagFilter"></div>
+            <div class="hint" style="margin-top:-2px">Chip anklicken: 1× <b style="color:#166534">nur mit</b> · 2× <b style="color:#991b1b">ohne</b> · 3× egal (kein Filter).</div>
             <div class="row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
               <label class="chk"><input type="checkbox" id="onlyActive"> nur aktive anzeigen</label>
               <label class="chk radius-box">
@@ -1507,14 +1521,15 @@ function renderMapEmployees(){
 function visibleEmployees(){
   const q = document.getElementById("maSearch").value.trim().toLowerCase();
   const onlyActive = document.getElementById("onlyActive").checked;
-  const catFilters = [...document.querySelectorAll('#tagFilter select')].map(s=>({cat:s.dataset.cat, val:s.value}));
+  const catFilters = [...document.querySelectorAll('#tagFilter .fchip')]
+    .filter(c=>c.dataset.state).map(c=>({cat:c.dataset.cat, val:c.dataset.state}));
   const radiusRefPoint = document.getElementById("radiusRef").value==="start" ? start : ziel;
   const radiusOn = document.getElementById("radiusOn").checked && radiusRefPoint;
   const radiusM = (parseFloat(document.getElementById("radiusKm").value)||0)*1000;
   const list = mitarbeiter.filter(m=>{
     if(onlyActive && !m.aktiv) return false;
     for(const f of catFilters){
-      const has = f.cat==="Projektleiter" ? (m.rolle==="Projektleiter") : (m.tags||[]).includes(f.cat);
+      const has = isRoleCat(f.cat) ? (m.rolle===f.cat) : (m.tags||[]).includes(f.cat);
       if(f.val==="mit" && !has) return false; if(f.val==="ohne" && has) return false;
     }
     if(q){
@@ -1555,17 +1570,42 @@ function dotColor(cat){
 function roleDot(rolle){ return rolle? '<span class="pt" style="background:'+dotColor(rolle)+'" title="'+escapeHtml(rolle)+'"></span>' : ""; }
 function tagDots(tags){ return (tags||[]).map(t=>'<span class="pt" style="background:'+dotColor(t)+'" title="'+escapeHtml(t)+'"></span>').join(""); }
 
-/* Baut die Merkmale-Bedienelemente: Modal = Checkboxen (setzen), Filter = egal/mit/ohne */
+/* Rolle-Kategorien (auf m.rolle geprüft) vs. Merkmale (auf m.tags geprüft) */
+const ROLLEN = ["Projektleiter", "Monteur"];
+function isRoleCat(cat){ return ROLLEN.includes(cat); }
+
+/* Baut die Merkmale-Bedienelemente:
+   Modal = Checkboxen (setzen); Filter = 3-Zustand-Chips (neutral / nur mit / nur ohne). */
 function buildTagChecks(){
   document.getElementById("mTags").innerHTML = MERKMALE.map(t=>
     '<label class="chk"><input type="checkbox" data-tag="'+escapeHtml(t)+'"> '+escapeHtml(t)+'</label>').join("");
-  document.getElementById("tagFilter").innerHTML = ["Projektleiter", ...MERKMALE].map(t=>
-    '<label class="chk" style="gap:4px">'+escapeHtml(t)+':'+
-    '<select data-cat="'+escapeHtml(t)+'" style="padding:4px 6px">'+
-      '<option value="mit">mit</option><option value="ohne" selected>ohne</option>'+
-    '</select></label>').join("");
-  document.getElementById("empLegend").innerHTML = ["Projektleiter","Monteur",...MERKMALE].map(c=>
+
+  const chip = c =>
+    '<button type="button" class="fchip" data-cat="'+escapeHtml(c)+'" data-state="" '+
+      'title="'+escapeHtml(c)+' – klicken: nur mit → ohne → egal">'+
+      '<span class="fdot" style="background:'+dotColor(c)+'"></span>'+
+      '<span class="flabel">'+escapeHtml(c)+'</span>'+
+      '<span class="fst"></span>'+
+    '</button>';
+  document.getElementById("tagFilter").innerHTML =
+    '<div class="filt-group"><span class="filt-lbl">Rolle</span>'+
+      ROLLEN.map(chip).join("")+'</div>'+
+    '<div class="filt-group"><span class="filt-lbl">Merkmale</span>'+
+      MERKMALE.map(chip).join("")+
+      '<button type="button" class="filt-reset" id="filtReset" title="Alle Filter auf egal">zurücksetzen</button>'+
+    '</div>';
+
+  document.getElementById("empLegend").innerHTML = [...ROLLEN,...MERKMALE].map(c=>
     '<span><span class="pt" style="background:'+dotColor(c)+'"></span>'+escapeHtml(c)+'</span>').join("");
+}
+/* Chip weiterschalten: "" -> "mit" -> "ohne" -> "" */
+function cycleChip(chip){
+  const next = { "":"mit", "mit":"ohne", "ohne":"" }[chip.dataset.state||""];
+  chip.dataset.state = next;
+  chip.querySelector(".fst").textContent = next==="mit" ? "✓" : next==="ohne" ? "✕" : "";
+}
+function resetFilters(){
+  document.querySelectorAll('#tagFilter .fchip').forEach(c=>{ c.dataset.state=""; c.querySelector(".fst").textContent=""; });
 }
 function selectedTags(containerId){
   return [...document.querySelectorAll('#'+containerId+' input:checked')].map(c=>c.dataset.tag);
@@ -2401,7 +2441,11 @@ window.addEventListener("DOMContentLoaded",()=>{
   // Suche / Filter
   document.getElementById("maSearch").addEventListener("input",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("onlyActive").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
-  document.getElementById("tagFilter").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
+  document.getElementById("tagFilter").addEventListener("click",e=>{
+    if(e.target.closest("#filtReset")){ resetFilters(); syncCheckedState(); renderEmployees(); return; }
+    const chip=e.target.closest(".fchip");
+    if(chip){ cycleChip(chip); syncCheckedState(); renderEmployees(); }
+  });
   document.getElementById("radiusOn").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("radiusKm").addEventListener("input",()=>{ if(document.getElementById("radiusOn").checked){ syncCheckedState(); renderEmployees(); }});
   document.getElementById("radiusRef").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
