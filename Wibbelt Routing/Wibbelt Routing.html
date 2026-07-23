@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v38 (Geoapify) -->
+<!-- App-Version: v39 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -2163,8 +2163,10 @@ function buildSummaryText(){
     const ordered = orderMap
       ? [...lastRows].sort((a,b)=>(orderMap[a.id]||0)-(orderMap[b.id]||0)).map(r=>r.name)
       : names;
-    t="Einsammeln – ein Fahrzeug fährt ab Rieckstraße und holt in dieser Reihenfolge ab:\n"+
-      "Rieckstraße → "+ordered.join(" → ")+" → Ziel.";
+    const liste = ordered.map((n,i)=>"  "+(i+1)+". "+n).join("\n");
+    t="Einsammeln: Ein Fahrzeug fährt ab der Rieckstraße und holt der Reihe nach ab:\n"+
+      liste+"\n"+
+      "→ danach weiter zur Baustelle.";
   }else if(mode==="direct"){
     const one=nearestToStart(lastRows).name;
     const rest=names.filter(n=>n!==one);
