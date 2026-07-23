@@ -97,6 +97,8 @@ WAS IST DAS?
         Rieckstraße, von dort eine Strecke zum Ziel (Linien laufen zusammen).
       * "Einsammeln": eine Route vom Start über alle gewählten Mitarbeiter zum
         Ziel, Reihenfolge automatisch optimiert.
+      * "Einer zur Rieckstraße, Rest direkt": ein Mitarbeiter (der nächste zur
+        Rieckstraße) fährt zur Rieckstraße, alle weiteren direkt zur Baustelle.
   - Ergebnis: Karte, Kopfzeile mit Gesamtstrecke/Fahrzeit, Tabelle.
   - Export: "Als PDF drucken" oder "Tabelle als CSV" (für Excel).
   - Ganz unten: "Zusammenfassung (kopierbar)" – der gesamte Vorschlag als

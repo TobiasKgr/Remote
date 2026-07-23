@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v32 (Geoapify) -->
+<!-- App-Version: v33 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1090,6 +1090,11 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <span><b>Einsammeln</b> – eine Route vom Start über alle markierten Mitarbeiter zum Ziel,
           Reihenfolge automatisch optimiert (kürzeste Gesamt-Fahrzeit).</span>
         </label>
+        <label class="opt-row" style="margin-top:8px">
+          <input type="radio" name="routeMode" value="direct">
+          <span><b>Einer zur Rieckstraße, Rest direkt</b> – ein Mitarbeiter (der nächste zur Rieckstraße)
+          fährt zur Rieckstraße, alle weiteren fahren direkt zur Baustelle.</span>
+        </label>
       </div>
       <div class="panel" id="panel-filter">
         <button type="button" class="panel-head" data-toggle-panel="filter">🔍 Filter &amp; Sortierung <span class="chev">▾</span></button>
@@ -1580,7 +1585,7 @@ function renderEmployees(){
   const nameCount={}; mitarbeiter.forEach(m=>{ const k=(m.name||"").toLowerCase().trim(); nameCount[k]=(nameCount[k]||0)+1; });
 
   const rowHtml = m=>{
-    const dist = ziel ? " · "+kmPlain(haversine(m,ziel))+" km Luftlinie z. Ziel" : "";
+    const distTxt = ziel ? kmPlain(haversine(m,ziel))+" km Luftlinie z. Ziel" : "";
     const dup = nameCount[(m.name||"").toLowerCase().trim()]>1
       ? '<span class="rl" style="color:#b91c1c;background:#fee2e2" title="Name mehrfach vorhanden – ggf. Duplikat löschen">doppelt</span>' : "";
     const toggle = m.aktiv
@@ -1590,7 +1595,7 @@ function renderEmployees(){
       '<input type="checkbox" class="cbx" data-id="'+m.id+'" '+(m.aktiv?"":"disabled")+' '+(m._checked?"checked":"")+'>'+
       '<div class="info" data-edit="'+m.id+'">'+
         '<div class="nm">'+escapeHtml(formatName(m.name))+roleBadge(m.rolle)+tagBadges(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</div>'+
-        '<div class="ad">'+escapeHtml(m.adresse)+dist+'</div>'+
+        (distTxt ? '<div class="ad">'+distTxt+'</div>' : '')+
       '</div>'+
       '<div class="rowbtns">'+
         toggle+
@@ -1732,6 +1737,26 @@ async function drawTreffRoutes(rows){
   }
 }
 
+/* Einer (der nächste zur Rieckstraße) fährt zur Rieckstraße, alle anderen direkt zur Baustelle (Ziel).
+   Echte Straßen-Routen, grün. */
+function nearestToStart(rows){
+  let d=rows[0]; rows.forEach(r=>{ if((r.distStart??Infinity)<(d.distStart??Infinity)) d=r; }); return d;
+}
+async function drawDirectRoutes(rows){
+  if(!map || !rows.length) return;
+  const myRun=++treffRunId;
+  const designated=nearestToStart(rows);
+  const batch=4;
+  for(let i=0;i<rows.length;i+=batch){
+    const slice=rows.slice(i,i+batch);
+    let rts;
+    try{ rts=await Promise.all(slice.map(r=>getRoute([{lat:r.lat,lon:r.lon}, r===designated? start : ziel]).catch(()=>null))); }
+    catch(e){ rts=[]; }
+    if(myRun!==treffRunId || !map) return;
+    rts.forEach(rt=>{ if(rt) L.polyline(rt.coords,{ color:"#16a34a", weight:3, opacity:.75 }).addTo(layerGroup); });
+  }
+}
+
 /* Geoapify – Route-Matrix (EIN POST-Call).
    full=true -> komplette N×N-Matrix (für Reihenfolgen-Optimierung), sonst nur Mitarbeiter->[Start,Ziel]. */
 async function getMatrix(emps, full){
@@ -1811,7 +1836,8 @@ async function calculate(){
     if(!ziel){ setStatus("Bitte zuerst eine gültige Zieladresse auswählen.","err"); return; }
   }
   const emps=selectedEmployees();
-  const collect=(document.querySelector('input[name="routeMode"]:checked')||{}).value==="collect" && emps.length>0;
+  const mode=(document.querySelector('input[name="routeMode"]:checked')||{}).value || "treff";
+  const collect=mode==="collect" && emps.length>0;
   const btn=document.getElementById("calcBtn");
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Berechne …'; clearStatus();
 
@@ -1844,8 +1870,9 @@ async function calculate(){
 
     lastRows=rows;
     drawResult(route,rows,!!collect);
-    if(!collect && rows.length) drawTreffRoutes(rows);   // echte Wege zur Rieckstraße (asynchron)
-    else treffRunId++;                                    // evtl. laufende Treff-Routen abbrechen
+    treffRunId++;                                         // evtl. laufende Wege-Zeichnungen abbrechen
+    if(rows.length && mode==="treff") drawTreffRoutes(rows);        // echte Wege zur Rieckstraße
+    else if(rows.length && mode==="direct") drawDirectRoutes(rows); // einer zur Rieckstraße, Rest direkt
     renderCarpool();
     buildSummaryText();
     pushHistory(ziel);
@@ -2067,12 +2094,16 @@ function buildSummaryText(){
   const card=document.getElementById("summaryCard"), ta=document.getElementById("summaryText");
   if(!ziel || !lastRoute){ card.style.display="none"; return; }
   const names=lastRows.map(r=>r.name), N=names.length;
-  const collect=(document.querySelector('input[name="routeMode"]:checked')||{}).value==="collect";
+  const mode=(document.querySelector('input[name="routeMode"]:checked')||{}).value || "treff";
   let t;
   if(N===0){
     t="(keine Mitarbeiter ausgewählt)";
-  }else if(collect){
+  }else if(mode==="collect"){
     t="Einsammeln: "+listNamesPlain(names)+" werden abgeholt.";
+  }else if(mode==="direct"){
+    const one=nearestToStart(lastRows).name;
+    const rest=names.filter(n=>n!==one);
+    t="Nur "+one+" fährt zur Rieckstraße"+(rest.length?", direkt zur Baustelle: "+listNamesPlain(rest):"")+".";
   }else{
     t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".";
   }
