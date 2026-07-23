@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v34 (Geoapify) -->
+<!-- App-Version: v35 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -790,7 +790,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .emp .info{flex:1; min-width:0; cursor:pointer}
   .emp .nm{font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden}
   .emp .nmtext{flex:0 0 auto}                                   /* Name hat Vorrang, bleibt lesbar */
-  .emp .nmbadges{flex:0 1 auto; min-width:0; overflow:hidden; display:flex; align-items:center; gap:4px}  /* Badges werden bei Platzmangel abgeschnitten */
+  .emp .nmbadges{flex:0 1 auto; min-width:0; overflow:hidden; display:flex; align-items:center; gap:5px}  /* Badges/Punkte werden bei Platzmangel abgeschnitten */
+  .pt{display:inline-block; width:10px; height:10px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+  .dot-legend{display:flex; flex-wrap:wrap; gap:6px 12px; margin:2px 0 8px; font-size:11px; color:var(--muted)}
+  .dot-legend span{display:inline-flex; align-items:center; gap:5px}
   .emp .ad{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .emp .grp{font-size:10px; font-weight:700; color:#3730a3; background:#e0e7ff; padding:1px 6px; border-radius:20px}
   .rl{font-size:10px; font-weight:700; padding:1px 6px; border-radius:20px; white-space:nowrap}
@@ -1153,6 +1156,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <button type="button" class="linkbtn" id="excelBtn">⭱ Aus Excel importieren</button>
       </div>
 
+      <div class="dot-legend" id="empLegend"></div>
       <div class="emp-list" id="empList"></div>
       <div class="data-btns">
         <button type="button" id="stammBtn" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">🗂 Stammdaten verwalten</button>
@@ -1541,6 +1545,16 @@ function roleBadge(rolle){
 }
 function tagBadges(tags){ return (tags||[]).map(t=>'<span class="rl tg">'+escapeHtml(t)+'</span>').join(""); }
 
+/* Farbige Punkte statt Text-Badges (Rolle + Merkmale) */
+const DOTCOLORS = { "Projektleiter":"#ea580c", "Monteur":"#16a34a", "Solvay":"#0891b2", "Wiederholt":"#7c3aed", "Werkstatt":"#ca8a04" };
+function dotColor(cat){
+  if(DOTCOLORS[cat]) return DOTCOLORS[cat];
+  let h=0; for(let i=0;i<cat.length;i++) h=(h*31+cat.charCodeAt(i))>>>0;   // Fallback-Farbe für neue Merkmale
+  return "hsl("+(h%360)+",60%,45%)";
+}
+function roleDot(rolle){ return rolle? '<span class="pt" style="background:'+dotColor(rolle)+'" title="'+escapeHtml(rolle)+'"></span>' : ""; }
+function tagDots(tags){ return (tags||[]).map(t=>'<span class="pt" style="background:'+dotColor(t)+'" title="'+escapeHtml(t)+'"></span>').join(""); }
+
 /* Baut die Merkmale-Bedienelemente: Modal = Checkboxen (setzen), Filter = egal/mit/ohne */
 function buildTagChecks(){
   document.getElementById("mTags").innerHTML = MERKMALE.map(t=>
@@ -1550,6 +1564,8 @@ function buildTagChecks(){
     '<select data-cat="'+escapeHtml(t)+'" style="padding:4px 6px">'+
       '<option value="mit">mit</option><option value="ohne" selected>ohne</option>'+
     '</select></label>').join("");
+  document.getElementById("empLegend").innerHTML = ["Projektleiter","Monteur",...MERKMALE].map(c=>
+    '<span><span class="pt" style="background:'+dotColor(c)+'"></span>'+escapeHtml(c)+'</span>').join("");
 }
 function selectedTags(containerId){
   return [...document.querySelectorAll('#'+containerId+' input:checked')].map(c=>c.dataset.tag);
@@ -1597,7 +1613,7 @@ function renderEmployees(){
       '<input type="checkbox" class="cbx" data-id="'+m.id+'" '+(m.aktiv?"":"disabled")+' '+(m._checked?"checked":"")+'>'+
       '<div class="info" data-edit="'+m.id+'">'+
         '<div class="nm"><span class="nmtext">'+escapeHtml(formatName(m.name))+'</span>'+
-          '<span class="nmbadges">'+roleBadge(m.rolle)+tagBadges(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</span></div>'+
+          '<span class="nmbadges">'+roleDot(m.rolle)+tagDots(m.tags)+dup+(m.gruppe?'<span class="grp">'+escapeHtml(m.gruppe)+'</span>':'')+'</span></div>'+
         (distTxt ? '<div class="ad">'+distTxt+'</div>' : '')+
       '</div>'+
       '<div class="rowbtns">'+
