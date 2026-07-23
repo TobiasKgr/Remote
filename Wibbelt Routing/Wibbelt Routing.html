@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v27 (Geoapify) -->
+<!-- App-Version: v28 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1472,7 +1472,7 @@ function visibleEmployees(){
   const q = document.getElementById("maSearch").value.trim().toLowerCase();
   const onlyActive = document.getElementById("onlyActive").checked;
   const role = document.getElementById("roleFilter").value;
-  const wantTags = selectedTags("tagFilter");
+  const tagFilters = [...document.querySelectorAll('#tagFilter select')].map(s=>({tag:s.dataset.tag, val:s.value})).filter(f=>f.val);
   const radiusRefPoint = document.getElementById("radiusRef").value==="start" ? start : ziel;
   const radiusOn = document.getElementById("radiusOn").checked && radiusRefPoint;
   const radiusM = (parseFloat(document.getElementById("radiusKm").value)||0)*1000;
@@ -1480,7 +1480,8 @@ function visibleEmployees(){
     if(onlyActive && !m.aktiv) return false;
     if(role==="__none__"){ if(m.rolle) return false; }
     else if(role && (m.rolle||"")!==role) return false;
-    if(wantTags.length && !wantTags.every(t=>(m.tags||[]).includes(t))) return false;
+    for(const f of tagFilters){ const has=(m.tags||[]).includes(f.tag);
+      if(f.val==="mit" && !has) return false; if(f.val==="ohne" && has) return false; }
     if(q){
       const hay = (m.name+" "+m.adresse+" "+(m.gruppe||"")+" "+(m.rolle||"")+" "+(m.tags||[]).join(" ")).toLowerCase();
       if(!hay.includes(q)) return false;
@@ -1509,11 +1510,15 @@ function roleBadge(rolle){
 }
 function tagBadges(tags){ return (tags||[]).map(t=>'<span class="rl tg">'+escapeHtml(t)+'</span>').join(""); }
 
-/* Baut die Merkmale-Checkboxen (Modal + Filter) aus MERKMALE */
+/* Baut die Merkmale-Bedienelemente: Modal = Checkboxen (setzen), Filter = egal/mit/ohne */
 function buildTagChecks(){
-  const html = MERKMALE.map(t=>'<label class="chk"><input type="checkbox" data-tag="'+escapeHtml(t)+'"> '+escapeHtml(t)+'</label>').join("");
-  document.getElementById("mTags").innerHTML = html;
-  document.getElementById("tagFilter").innerHTML = html;
+  document.getElementById("mTags").innerHTML = MERKMALE.map(t=>
+    '<label class="chk"><input type="checkbox" data-tag="'+escapeHtml(t)+'"> '+escapeHtml(t)+'</label>').join("");
+  document.getElementById("tagFilter").innerHTML = MERKMALE.map(t=>
+    '<label class="chk" style="gap:4px">'+escapeHtml(t)+':'+
+    '<select data-tag="'+escapeHtml(t)+'" style="padding:4px 6px">'+
+      '<option value="">egal</option><option value="mit">mit</option><option value="ohne">ohne</option>'+
+    '</select></label>').join("");
 }
 function selectedTags(containerId){
   return [...document.querySelectorAll('#'+containerId+' input:checked')].map(c=>c.dataset.tag);
