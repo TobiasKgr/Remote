@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v47 (Geoapify) -->
+<!-- App-Version: v48 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1080,6 +1080,18 @@ svg.leaflet-image-layer.leaflet-interactive path {
   body.theme-dark .cp-box,body.theme-dark .cp-text{ background:#172033; border-color:#334155 }
   body.theme-dark .exports button,body.theme-dark .data-btns button,body.theme-dark .linkbtn{
     background:#0f172a; color:#cbd5e1; border-color:#475569 }
+  /* schlecht lesbare, hell hinterlegte / dunkel eingefärbte Texte im Dark Mode aufhellen */
+  body.theme-dark .panel-head{ background:#172033; color:#e2e8f0 }
+  body.theme-dark .panel-head:hover{ background:#1e293b }
+  body.theme-dark .opt-row{ color:#cbd5e1 }
+  body.theme-dark .opt-row b{ color:#f8fafc }
+  body.theme-dark .filt-group .filt-lbl{ color:#cbd5e1 }
+  body.theme-dark .assign-row .an{ color:#e2e8f0 }
+  body.theme-dark .hidden-head:hover{ color:#e2e8f0; background:#1e293b }
+  body.theme-dark .emp .nm{ color:#e2e8f0 }
+  body.theme-dark .subgroup{ border-top-color:#334155 }
+  body.theme-dark .keyhint{ background:#3b2f14; color:#fde68a; border-color:#7c5e12 }
+  body.theme-dark .status.info{ background:#172033; color:#cbd5e1 }
 </style>
 </head>
 <body>
@@ -1190,7 +1202,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <label class="opt-row" style="margin-top:10px">
             <input type="checkbox" id="carpoolMode">
             <span><b>Mitfahr-Kosten (Fahrgemeinschaft)</b> – bezahlte Stunden je Mitarbeiter vergleichen:
-            Fahrer = 1 Std. je angef. 70 km, Beifahrer = 1 Std. je angef. 100 km. Zeigt, ob sich
+            Fahrer = 1 Std. je 70 km, Beifahrer = 1 Std. je 100 km, abgerechnet in 15-Min-Schritten. Zeigt, ob sich
             „selbst fahren“ oder „ab Startpunkt mitfahren“ lohnt, plus Fahrgemeinschafts-Vorschlag.</span>
           </label>
           <div class="row" style="margin-top:8px; gap:8px; align-items:center">
@@ -1442,9 +1454,11 @@ function calcCost(meters,sec){ const r=costRates(); return (meters/1000)*r.km + 
 /* Fahrgemeinschaft: bezahlte Stunden nach angefangenen km-Blöcken (Fahrer 70 km, Beifahrer 100 km) */
 const KM_FAHRER=70, KM_BEIFAHRER=100;
 const ANFAHRT_EUR_KM=0.30;        // Kilometergeld Heim -> Rieckstraße
-function stdFahrer(meters){ if(meters==null||isNaN(meters)) return 0; return Math.ceil((meters/1000)/KM_FAHRER); }
-function stdBeifahrer(meters){ if(meters==null||isNaN(meters)) return 0; return Math.ceil((meters/1000)/KM_BEIFAHRER); }
-function fmtStd(n){ return n+" Std."; }
+/* Bezahlte Zeit im 15-Minuten-Takt (0,25-Std.-Schritte), immer aufgerundet */
+function roundQuarter(h){ return Math.ceil((h-1e-9)/0.25)*0.25; }
+function stdFahrer(meters){ if(meters==null||isNaN(meters)) return 0; return roundQuarter((meters/1000)/KM_FAHRER); }
+function stdBeifahrer(meters){ if(meters==null||isNaN(meters)) return 0; return roundQuarter((meters/1000)/KM_BEIFAHRER); }
+function fmtStd(n){ const v=Math.round((n||0)*100)/100; return v.toLocaleString("de-DE",{minimumFractionDigits:0, maximumFractionDigits:2})+" Std."; }
 function seatsPerCar(){ return Math.max(1, parseInt(document.getElementById("seats").value)||2); }
 function listNames(arr){ arr=arr.map(escapeHtml); if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
 function listNamesPlain(arr){ if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
@@ -2319,8 +2333,8 @@ function renderCarpool(){
   card.classList.add("collapsed");   // Kosten-Ansicht startet immer minimiert
 
   document.getElementById("carpoolInfo").innerHTML =
-    "Startpunkt = <b>"+escapeHtml(start.label)+"</b>. Fahrer: 1 Std. je angefangene "+KM_FAHRER+" km · "+
-    "Beifahrer: 1 Std. je angefangene "+KM_BEIFAHRER+" km. Strecke Startpunkt→Ziel: <b>"+nfKm(startZielDist)+"</b> "+
+    "Startpunkt = <b>"+escapeHtml(start.label)+"</b>. Fahrer: 1 Std. je "+KM_FAHRER+" km · "+
+    "Beifahrer: 1 Std. je "+KM_BEIFAHRER+" km (abgerechnet in 15-Min-Schritten). Strecke Startpunkt→Ziel: <b>"+nfKm(startZielDist)+"</b> "+
     "(als Fahrer "+fmtStd(stdFahrer(startZielDist))+", als Beifahrer "+fmtStd(stdBeifahrer(startZielDist))+").";
 
   // ---- Vorschlags-Block: Fall 1 (Treffpunkt) vs. Fall 2 (Einsammeln) ----
@@ -2391,7 +2405,7 @@ function renderCarpool(){
   rows.forEach(x=>{
     if(x.bestSelf===Infinity||x.best===Infinity){ anyNull=true; } else { sumSelf+=x.bestSelf; sumBest+=x.best; }
     const badge='<span class="rl '+x.cls+'">'+x.label+'</span>';
-    const ers = (x.ersparnis!=null && x.ersparnis>0)? ' <span style="color:#166534;font-weight:700">−'+x.ersparnis+' Std.</span>':'';
+    const ers = (x.ersparnis!=null && x.ersparnis>0)? ' <span style="color:#166534;font-weight:700">−'+fmtStd(x.ersparnis)+'</span>':'';
     html+='<tr>'+
       '<td>'+escapeHtml(formatName(x.r.name))+roleBadge(x.r.rolle)+'</td>'+
       cell(x.a,x.best)+cell(x.b,x.best)+cell(x.c,x.best)+
@@ -2400,7 +2414,7 @@ function renderCarpool(){
   const saved=sumSelf-sumBest;
   html+='</tbody><tfoot><tr style="font-weight:700; background:#f8fafc">'+
     '<td>Summe (empfohlen)</td><td class="num" colspan="3">'+fmtStd(sumBest)+' statt '+fmtStd(sumSelf)+' bei „alle selbst“</td>'+
-    '<td class="num" style="color:#166534">−'+saved+' Std.</td></tr></tfoot>';
+    '<td class="num" style="color:#166534">−'+fmtStd(saved)+'</td></tr></tfoot>';
   html+='</table></div>';
   html+='<div class="hint" style="margin-top:8px">„Mitnehmen" = zum Startpunkt fahren und ab dort als Beifahrer mitgenommen werden. '+
     'Grün hinterlegt = günstigste Variante je Mitarbeiter.'+(anyNull?' Für „–“ lag keine Entfernung vor.':'')+'</div>';
@@ -2476,7 +2490,7 @@ function renderVariants(emps, mode){
       '<td style="font-size:12px;color:#64748b">'+escapeHtml(v.info)+'</td></tr>';
   });
   h+='</tbody></table></div>'+
-    '<div class="hint" style="margin-top:8px">Richtwert: Fahrer 1 Std./'+KM_FAHRER+' km, Beifahrer 1 Std./'+KM_BEIFAHRER+' km, Anfahrt '+
+    '<div class="hint" style="margin-top:8px">Richtwert: Fahrer 1 Std./'+KM_FAHRER+' km, Beifahrer 1 Std./'+KM_BEIFAHRER+' km (15-Min-Takt), Anfahrt '+
     fmtEuro(ANFAHRT_EUR_KM)+'/km. '+(hasH?'„Gesamt €“ = Stunden × '+fmtEuro(r.h)+'/Std. + Anfahrt.':'Für einen €-Gesamtwert „€ / Std.“ in den Fahrt-Optionen setzen.')+'</div>';
   wrap.innerHTML=h;
   best.textContent="Empfehlung: "+min.name;

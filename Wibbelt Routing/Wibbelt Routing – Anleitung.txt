@@ -114,7 +114,8 @@ WAS IST DAS?
      aus den Sitzplätzen; Fahrt = Fahrer/Beifahrer-Stunden.
    - Fall 2 (Alternative): einer sammelt ein und fährt die Route zum Ziel.
   Darunter je Mitarbeiter die Stunden für "selbst direkt", "selbst über den
-  Startpunkt" und "mitfahren" (Fahrer = 1 Std./70 km, Beifahrer = 1 Std./100 km),
+  Startpunkt" und "mitfahren" (Fahrer = 1 Std./70 km, Beifahrer = 1 Std./100 km,
+  abgerechnet in 15-Minuten-Schritten / 0,25-Std.-Takt),
   günstigste Variante markiert. Die Kosten-Ansicht startet eingeklappt.
 
 
