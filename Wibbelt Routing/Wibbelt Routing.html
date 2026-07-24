@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v41 (Geoapify) -->
+<!-- App-Version: v42 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -794,6 +794,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .filt-reset{font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; padding:2px 4px; text-decoration:underline}
   .filt-reset:hover{color:#334155}
 
+  /* Einzel-Zuteilung */
+  .assign-row{display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #f5f7fa}
+  .assign-row:last-child{border-bottom:none}
+  .assign-row .an{flex:1; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .assign-row select{flex:0 0 auto; padding:5px 6px; font-size:12px}
+  .assign-row select[data-val="rieck"]{border-color:#16a34a; color:#166534; background:#f0fdf4}
+  .assign-row select[data-val="bau"]{border-color:#ea580c; color:#9a3412; background:#fff7ed}
+
   .emp-list{display:flex; flex-direction:column; gap:2px; max-height:78vh; overflow:auto; margin-top:4px;
             border:1px solid #f1f5f9; border-radius:8px; padding:4px}
   .emp{
@@ -1120,6 +1128,22 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <span><b>Einer zur Rieckstraße, Rest direkt</b> – ein Mitarbeiter (der nächste zur Rieckstraße)
           fährt zur Rieckstraße, alle weiteren fahren direkt zur Baustelle.</span>
         </label>
+        <label class="opt-row" style="margin-top:8px">
+          <input type="radio" name="routeMode" value="mixed">
+          <span><b>Gemischt (Einzel-Zuteilung)</b> – für jeden markierten Mitarbeiter unten selbst festlegen:
+          zur Rieckstraße, direkt zur Baustelle oder einsammeln.</span>
+        </label>
+      </div>
+
+      <!-- Einzel-Zuteilung (optional) -->
+      <div class="panel collapsed" id="panel-zuteilung">
+        <button type="button" class="panel-head" data-toggle-panel="zuteilung">🧭 Einzel-Zuteilung (optional) <span class="chev">▾</span></button>
+        <div class="panel-body">
+          <div class="hint" style="margin-top:0">Je markiertem Mitarbeiter wählbar: <b>zur Rieckstraße</b> (grün),
+          <b>direkt zur Baustelle</b> (orange) oder leer = <b>einsammeln</b> (blaue Route). Wird eine Zuteilung
+          gesetzt, schaltet die Kartenansicht automatisch auf „Gemischt“. Kann auch leer bleiben.</div>
+          <div id="assignWrap" style="margin-top:6px"></div>
+        </div>
       </div>
       <div class="panel" id="panel-filter">
         <button type="button" class="panel-head" data-toggle-panel="filter">🔍 Filter &amp; Sortierung <span class="chev">▾</span></button>
@@ -1424,6 +1448,7 @@ let lastRouteMeta = null;          // {label,eta} für die Zusammenfassung
 let lastCarpoolText = "";          // Klartext-Vorschlag für die Zusammenfassung
 let hiddenGroupOpen = false;       // Bereich "Ausgeblendet" auf-/zugeklappt
 let orderMap = null;               // Einsammel-Reihenfolge: {employeeId: Positionsnummer}
+let manualAssign = {};             // Einzel-Zuteilung: {employeeId: "" | "rieck" | "bau"} ("" = einsammeln)
 let sortState = { key:"distZiel", dir:1 };
 let editId = null;                 // Modal: null=neu, sonst id
 let formGeo = null;                // Modal: {label,lat,lon} aus Autocomplete
@@ -1687,6 +1712,7 @@ function renderEmployees(){
   if(ht) ht.addEventListener("click",()=>{ hiddenGroupOpen=!hiddenGroupOpen; renderEmployees(); });
 
   if(empLayer) renderMapEmployees();   // Kartenmarker synchron halten
+  renderAssignPanel();                 // Einzel-Zuteilung an aktuelle Auswahl anpassen
 }
 function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
@@ -1825,6 +1851,56 @@ async function drawDirectRoutes(rows){
   }
 }
 
+/* ---- Einzel-Zuteilung („Gemischt") ------------------------------------ */
+/* Gruppiert die übergebenen Mitarbeiter nach manualAssign:
+   "rieck" -> R (zur Rieckstraße), "bau" -> B (direkt zur Baustelle),
+   sonst/leer -> S (einsammeln, Standard). */
+function assignGroups(list){
+  const R=[],B=[],S=[];
+  list.forEach(m=>{ const a=manualAssign[m.id]||"";
+    if(a==="rieck") R.push(m); else if(a==="bau") B.push(m); else S.push(m); });
+  return {R,B,S};
+}
+/* Teil-Distanzmatrix [Start, Ziel, ausgewählte Mitarbeiter] aus der vollen Matrix
+   (Konvention wie solveOrder: 0=Start, 1=Ziel, 2..=Mitarbeiter). */
+function subDurations(full, empIdxList){
+  const map=[0,1,...empIdxList.map(i=>i+2)];
+  return map.map(a=>map.map(b=>full[a][b]));
+}
+/* Zeichnet die Zuteilungs-Wege: R grün zur Rieckstraße, B orange zur Baustelle.
+   (Die S-Gruppe ist die blaue Haupt-Einsammelroute und wird separat gezeichnet.) */
+async function drawMixed(grp){
+  if(!map) return;
+  const items=[
+    ...grp.R.map(m=>({lat:m.lat,lon:m.lon,to:start,color:"#16a34a"})),
+    ...grp.B.map(m=>({lat:m.lat,lon:m.lon,to:ziel, color:"#ea580c"}))
+  ];
+  if(!items.length) return;
+  const myRun=++treffRunId;
+  const batch=4;
+  for(let i=0;i<items.length;i+=batch){
+    const slice=items.slice(i,i+batch);
+    let rts;
+    try{ rts=await Promise.all(slice.map(it=>getRoute([{lat:it.lat,lon:it.lon}, it.to]).catch(()=>null))); }
+    catch(e){ rts=[]; }
+    if(myRun!==treffRunId || !map) return;
+    rts.forEach((rt,j)=>{ if(rt) L.polyline(rt.coords,{ color:slice[j].color, weight:3, opacity:.75 }).addTo(layerGroup); });
+  }
+}
+/* Baut die Zuteilungs-Liste aus der aktuellen Mitarbeiter-Auswahl. */
+function renderAssignPanel(){
+  const wrap=document.getElementById("assignWrap"); if(!wrap) return;
+  const emps=selectedEmployees();
+  if(!emps.length){ wrap.innerHTML='<div class="hint">Noch keine Mitarbeiter markiert – rechts auswählen, dann erscheinen sie hier.</div>'; return; }
+  const LBL={ "":"einsammeln (Standard)", "rieck":"zur Rieckstraße", "bau":"direkt zur Baustelle" };
+  const optsFor=cur=>["","rieck","bau"].map(v=>'<option value="'+v+'"'+(v===cur?' selected':'')+'>'+LBL[v]+'</option>').join("");
+  wrap.innerHTML = emps.map(m=>{
+    const cur=manualAssign[m.id]||"";
+    return '<div class="assign-row"><span class="an" title="'+escapeHtml(formatName(m.name))+'">'+escapeHtml(formatName(m.name))+'</span>'+
+      '<select data-assign="'+m.id+'" data-val="'+cur+'">'+optsFor(cur)+'</select></div>';
+  }).join("");
+}
+
 /* Geoapify – Route-Matrix (EIN POST-Call).
    full=true -> komplette N×N-Matrix (für Reihenfolgen-Optimierung), sonst nur Mitarbeiter->[Start,Ziel]. */
 async function getMatrix(emps, full){
@@ -1906,6 +1982,7 @@ async function calculate(){
   const emps=selectedEmployees();
   const mode=(document.querySelector('input[name="routeMode"]:checked')||{}).value || "treff";
   const collect=mode==="collect" && emps.length>0;
+  const mixed=mode==="mixed" && emps.length>0;
   const btn=document.getElementById("calcBtn");
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Berechne …'; clearStatus();
 
@@ -1916,7 +1993,8 @@ async function calculate(){
 
     startZielDist=null; carpoolData=null;
     const carpoolOn = document.getElementById("carpoolMode").checked && emps.length>0;
-    if(collect || carpoolOn){
+    let mixedLabel=null;
+    if(collect || mixed || carpoolOn){
       // Volle Matrix -> Tabelle, optimale Reihenfolge, Distanzen für Einsammel-Vergleich
       const { rows:r, durations, distances, startZiel } = await getMatrix(emps, true);
       rows=r; startZielDist=startZiel;
@@ -1926,6 +2004,20 @@ async function calculate(){
         orderedEmps = order.map(i=>emps[i]);
         orderMap={}; orderedEmps.forEach((m,i)=>orderMap[m.id]=i+1);
         route = await getRoute([start,...orderedEmps,ziel]);
+      }else if(mixed){
+        // Nur die Einsammel-Gruppe (S) bildet die blaue Route; Reihenfolge in S optimieren
+        const grp=assignGroups(emps);
+        if(grp.S.length){
+          const idxList=grp.S.map(s=>emps.indexOf(s));
+          const ord=solveOrder(subDurations(durations, idxList), grp.S.length);
+          const orderedS=ord.map(k=>grp.S[k]);
+          orderMap={}; orderedS.forEach((m,i)=>orderMap[m.id]=i+1);
+          route = await getRoute([start,...orderedS,ziel]);
+          mixedLabel = "Einsammel-Route (gemischt)";
+        }else{
+          route = await getRoute([start,ziel]);
+          mixedLabel = "Strecke Rieckstraße→Ziel";
+        }
       }else{
         route = await getRoute([start,ziel]);                // direkte Route zur Anzeige
       }
@@ -1937,17 +2029,18 @@ async function calculate(){
     }
 
     lastRows=rows;
-    drawResult(route,rows,!!collect);
+    drawResult(route,rows,!!collect,mixedLabel);
     treffRunId++;                                         // evtl. laufende Wege-Zeichnungen abbrechen
     if(rows.length && mode==="treff") drawTreffRoutes(rows);        // echte Wege zur Rieckstraße
     else if(rows.length && mode==="direct") drawDirectRoutes(rows); // einer zur Rieckstraße, Rest direkt
+    else if(rows.length && mode==="mixed") drawMixed(assignGroups(rows)); // individuelle Zuteilung
     renderCarpool();
     buildSummaryText();
     pushHistory(ziel);
     renderEmployees();   // Liste/Umkreis-Filter an ggf. neu gesetztes Ziel anpassen
     document.getElementById("pdfBtn").disabled=false;
     document.getElementById("csvBtn").disabled=rows.length===0;
-    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (optimierte Einsammel-Route)":"")+".","ok");
+    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (optimierte Einsammel-Route)":mixed?" (gemischte Zuteilung)":"")+".","ok");
   }catch(e){
     console.error(e);
     if(e instanceof TypeError) setStatus(errText({type:"offline"}),"err");
@@ -1958,7 +2051,7 @@ async function calculate(){
 /* ================================================================
    Ergebnis zeichnen
    ================================================================ */
-function drawResult(route,rows,collect){
+function drawResult(route,rows,collect,labelOverride){
   // Kartenteil nur, wenn Leaflet/Karte verfügbar sind
   if(map){
     layerGroup.clearLayers();
@@ -1971,7 +2064,7 @@ function drawResult(route,rows,collect){
   }
 
   const sum=document.getElementById("summary"); sum.style.display="flex";
-  const label = collect ? "Einsammel-Route" : "Gesamtstrecke";
+  const label = labelOverride || (collect ? "Einsammel-Route" : "Gesamtstrecke");
   const eta = arrivalTime(document.getElementById("departTime").value, route.duration);
   const profLabel = profile()==="truck" ? "Transporter/LKW" : "PKW";
   let html =
@@ -2180,6 +2273,18 @@ function buildSummaryText(){
     const rest=names.filter(n=>n!==one);
     t=one+" fährt zur Rieckstraße und von dort zum Ziel.\n"+
       (rest.length? "Direkt zur Baustelle: "+listNamesPlain(rest)+"." : "Sonst fährt niemand direkt.");
+  }else if(mode==="mixed"){
+    const grp=assignGroups(lastRows);
+    const parts=[];
+    if(grp.S.length){
+      const ordered = orderMap
+        ? [...grp.S].sort((a,b)=>(orderMap[a.id]||0)-(orderMap[b.id]||0)).map(r=>r.name)
+        : grp.S.map(r=>r.name);
+      parts.push("Einsammeln ab Rieckstraße: "+ordered.join(" → ")+" → Baustelle.");
+    }
+    if(grp.R.length) parts.push("Zur Rieckstraße fahren: "+listNamesPlain(grp.R.map(r=>r.name))+".");
+    if(grp.B.length) parts.push("Direkt zur Baustelle fahren: "+listNamesPlain(grp.B.map(r=>r.name))+".");
+    t="Gemischte Zuteilung:\n"+parts.join("\n");
   }else{
     t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".\n"+
       "Alle fahren zunächst zur Rieckstraße, von dort gemeinsam zum Ziel.";
@@ -2470,7 +2575,7 @@ window.addEventListener("DOMContentLoaded",()=>{
     }
   });
   document.getElementById("empList").addEventListener("change",e=>{
-    if(e.target.classList.contains("cbx")){ const m=mitarbeiter.find(x=>x.id===e.target.dataset.id); if(m){ m._checked=e.target.checked; renderMapEmployees(); } }
+    if(e.target.classList.contains("cbx")){ const m=mitarbeiter.find(x=>x.id===e.target.dataset.id); if(m){ m._checked=e.target.checked; renderMapEmployees(); renderAssignPanel(); } }
   });
 
   // Suche / Filter
@@ -2496,6 +2601,16 @@ window.addEventListener("DOMContentLoaded",()=>{
   });
   document.getElementById("selNone").addEventListener("click",()=>{
     visibleEmployees().forEach(m=>m._checked=false); renderEmployees();
+  });
+
+  // Einzel-Zuteilung: Auswahl je Mitarbeiter
+  document.getElementById("assignWrap").addEventListener("change",e=>{
+    const s=e.target.closest("select[data-assign]"); if(!s) return;
+    manualAssign[s.dataset.assign]=s.value;
+    s.dataset.val=s.value;                                   // Farbe des Feldes aktualisieren
+    if(s.value){                                            // bei aktiver Zuteilung auf „Gemischt" schalten
+      const mx=document.querySelector('input[name="routeMode"][value="mixed"]'); if(mx) mx.checked=true;
+    }
   });
 
   // CRUD / Daten
