@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v45 (Geoapify) -->
+<!-- App-Version: v46 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -891,11 +891,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
   table{width:100%; border-collapse:collapse; font-size:14px}
   thead th{text-align:left; padding:10px 12px; background:#f8fafc; color:#475569; font-size:12px;
     text-transform:uppercase; letter-spacing:.3px; border-bottom:2px solid var(--line);
-    cursor:pointer; user-select:none; white-space:nowrap}
+    border-right:1px solid #dbe2ea; cursor:pointer; user-select:none; white-space:nowrap}
+  thead th:last-child{border-right:none}
   thead th:hover{background:#f1f5f9}
   thead th .arrow{opacity:.4; font-size:10px}
   thead th.sorted .arrow{opacity:1}
-  tbody td{padding:10px 12px; border-bottom:1px solid #f1f5f9}
+  tbody td{padding:10px 12px; border-bottom:1px solid #f1f5f9; border-right:1px solid #eef2f6}
+  tbody td:last-child{border-right:none}
+  tfoot td{border-right:1px solid #eef2f6}
+  tfoot td:last-child{border-right:none}
   tbody tr:hover{background:#f8fafc}
   tbody tr.nearest{background:#f0fdf4}
   tbody tr.nearest:hover{background:#dcfce7}
@@ -998,6 +1002,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
     .summary .box, thead th, tbody tr.nearest{-webkit-print-color-adjust:exact; print-color-adjust:exact}
     table{page-break-inside:auto} tr{page-break-inside:avoid}
     .print-only{display:block !important}
+    /* „PDF ohne Kosten": Fahrtkosten-Spalte/-Kacheln und Mitfahr-Kosten ausblenden */
+    body.pdf-no-cost .cst{display:none !important}
+    body.pdf-no-cost #carpoolCard{display:none !important}
   }
   .print-only{display:none}
   .print-head{margin-bottom:10px}
@@ -1204,10 +1211,12 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <div class="hint" id="shareState" style="display:none"></div>
 
       <div class="exports" style="margin-top:14px; border-top:1px solid #f1f5f9; padding-top:12px">
-        <button id="pdfBtn">Als PDF drucken</button>
+        <button id="pdfBtn">PDF mit Kosten</button>
+        <button id="pdfBtnNoCost">PDF ohne Kosten</button>
         <button id="csvBtn" disabled>Tabelle als CSV</button>
       </div>
-      <div class="hint no-print" style="margin-top:4px">„Als PDF drucken“ öffnet den Druckdialog – dort als Ziel „Als PDF speichern“ wählen.</div>
+      <div class="hint no-print" style="margin-top:4px">„PDF …“ öffnet den Druckdialog – dort als Ziel „Als PDF speichern“ wählen.
+      „ohne Kosten“ blendet Fahrtkosten und Mitfahr-Kosten für den Ausdruck aus.</div>
     </div>
 
     <!-- Spalte 3: Karte -->
@@ -2091,15 +2100,15 @@ function drawResult(route,rows,collect,labelOverride){
     '<div class="box"><div class="k">'+label+' · '+profLabel+'</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
     '<div class="box"><div class="k">Fahrzeit'+(eta?' · Ankunft '+eta:'')+'</div><div class="v">'+fmtDauer(route.duration)+'</div></div>';
   if(costEnabled())
-    html += '<div class="box"><div class="k">Fahrtkosten</div><div class="v">'+fmtEuro(calcCost(route.distance,route.duration))+'</div></div>';
+    html += '<div class="box cst"><div class="k">Fahrtkosten</div><div class="v">'+fmtEuro(calcCost(route.distance,route.duration))+'</div></div>';
   html += '<div class="box dest"><div class="k">Ziel</div><div class="v">'+escapeHtml(ziel.label)+'</div></div>';
   sum.innerHTML = html;
 
-  document.getElementById("printMeta").textContent =
-    "Start: "+start.label+"  →  Ziel: "+ziel.label+"   |   "+profLabel+" · "+label+" "+nfKm(route.distance)+
-    ", Fahrzeit "+fmtDauer(route.duration)+(eta?", Ankunft "+eta:"")+
-    (costEnabled()?", Kosten "+fmtEuro(calcCost(route.distance,route.duration)):"")+
-    "   |   erstellt "+nowStr();
+  document.getElementById("printMeta").innerHTML =
+    escapeHtml("Start: "+start.label+"  →  Ziel: "+ziel.label+"   |   "+profLabel+" · "+label+" "+nfKm(route.distance)+
+      ", Fahrzeit "+fmtDauer(route.duration)+(eta?", Ankunft "+eta:""))+
+    (costEnabled()?'<span class="cst">'+escapeHtml(", Kosten "+fmtEuro(calcCost(route.distance,route.duration)))+'</span>':"")+
+    escapeHtml("   |   erstellt "+nowStr());
 
   lastRoute={distance:route.distance, duration:route.duration};
   lastRouteMeta={label, eta, profLabel};
@@ -2130,7 +2139,7 @@ function renderTable(){
     '<th class="'+cls('distStart')+'" data-sort="distStart">Entfernung Start <span class="arrow">'+arrow('distStart')+'</span></th>'+
     '<th class="'+cls('distZiel')+'" data-sort="distZiel">Entfernung Ziel <span class="arrow">'+arrow('distZiel')+'</span></th>'+
     '<th class="'+cls('durZiel')+'" data-sort="durZiel">Fahrzeit Ziel <span class="arrow">'+arrow('durZiel')+'</span></th>'+
-    (showCost?'<th class="'+cls('cost')+'" data-sort="cost">Fahrtkosten Ziel <span class="arrow">'+arrow('cost')+'</span></th>':'')+
+    (showCost?'<th class="cst '+cls('cost')+'" data-sort="cost">Fahrtkosten Ziel <span class="arrow">'+arrow('cost')+'</span></th>':'')+
     '</tr></thead><tbody>';
   rows.forEach(r=>{
     const near=(r.distZiel===minZiel);
@@ -2138,7 +2147,7 @@ function renderTable(){
       '<td><span class="dot b"></span>'+escapeHtml(formatName(r.name))+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
       '<td class="num">'+nfKm(r.distStart)+'</td><td class="num">'+nfKm(r.distZiel)+'</td>'+
       '<td class="num">'+fmtDauer(r.durZiel)+'</td>'+
-      (showCost?'<td class="num">'+fmtEuro(calcCost(r.distZiel,r.durZiel))+'</td>':'')+'</tr>';
+      (showCost?'<td class="num cst">'+fmtEuro(calcCost(r.distZiel,r.durZiel))+'</td>':'')+'</tr>';
   });
   html+='</tbody></table></div>';
   wrap.innerHTML=html;
@@ -2695,10 +2704,15 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   // Berechnung / Export
   document.getElementById("calcBtn").addEventListener("click",calculate);
-  document.getElementById("pdfBtn").addEventListener("click",()=>{
+  function printPdf(withCost){
+    document.body.classList.toggle("pdf-no-cost", !withCost);
     if(map){ try{ map.invalidateSize(); }catch(e){} }
     setTimeout(()=>window.print(), 150);   // Karte vor dem Druck neu aufbauen
-  });
+  }
+  document.getElementById("pdfBtn").addEventListener("click",()=>printPdf(true));
+  document.getElementById("pdfBtnNoCost").addEventListener("click",()=>printPdf(false));
+  // nach dem Druck den Kosten-Modus wieder zurücksetzen
+  window.addEventListener("afterprint",()=>document.body.classList.remove("pdf-no-cost"));
   // Karte auch beim direkten Strg+P korrekt rendern
   window.addEventListener("beforeprint",()=>{ if(map){ try{ map.invalidateSize(); }catch(e){} } });
   document.getElementById("csvBtn").addEventListener("click",exportCSV);
