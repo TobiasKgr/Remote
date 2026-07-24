@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v43 (Geoapify) -->
+<!-- App-Version: v44 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -794,16 +794,21 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .filt-reset{font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; padding:2px 4px; text-decoration:underline}
   .filt-reset:hover{color:#334155}
 
-  /* Einzel-Zuteilung */
-  .assign-block{margin:12px 0 4px; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; background:#fafcff}
-  .assign-title{font-size:14px; font-weight:700; color:#1e293b}
-  .assign-title .count{font-size:11px; font-weight:600; color:var(--muted); margin-left:4px}
-  .assign-row{display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #f5f7fa}
-  .assign-row:last-child{border-bottom:none}
-  .assign-row .an{flex:1; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .assign-row select{flex:0 0 auto; padding:5px 6px; font-size:12px}
-  .assign-row select[data-val="rieck"]{border-color:#16a34a; color:#166534; background:#f0fdf4}
-  .assign-row select[data-val="bau"]{border-color:#ea580c; color:#9a3412; background:#fff7ed}
+  /* Einzel-Zuteilung (nur Kartenansicht „Gemischt“) */
+  .assign-block{margin:14px 0 2px; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; background:#fafcff}
+  .assign-title{font-size:15px; font-weight:700; color:#1e293b}
+  .assign-title .count{font-size:12px; font-weight:600; color:var(--muted); margin-left:6px}
+  .assign-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:8px 16px}
+  .assign-row{display:flex; align-items:center; gap:10px; padding:5px 0}
+  .assign-row .an{flex:0 0 34%; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .seg{display:flex; flex:1; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden}
+  .seg button{flex:1; border:none; border-left:1px solid #e2e8f0; background:#fff; padding:6px 4px;
+              font-size:11.5px; font-weight:600; color:#475569; cursor:pointer; white-space:nowrap; transition:background .1s}
+  .seg button:first-child{border-left:none}
+  .seg button:hover{background:#f1f5f9}
+  .seg button.on[data-v=""]{background:#dbeafe; color:#1d4ed8}
+  .seg button.on[data-v="rieck"]{background:#dcfce7; color:#166534}
+  .seg button.on[data-v="bau"]{background:#ffedd5; color:#9a3412}
 
   .emp-list{display:flex; flex-direction:column; gap:2px; max-height:78vh; overflow:auto; margin-top:4px;
             border:1px solid #f1f5f9; border-radius:8px; padding:4px}
@@ -1122,6 +1127,11 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           von dort eine Strecke zum Ziel. (Linien laufen bei der Rieckstraße zusammen.)</span>
         </label>
         <label class="opt-row" style="margin-top:8px">
+          <input type="radio" name="routeMode" value="mixed">
+          <span><b>Gemischt (Einzel-Zuteilung)</b> – für jeden markierten Mitarbeiter unter der Karte selbst
+          festlegen: zur Rieckstraße, direkt zur Baustelle oder einsammeln.</span>
+        </label>
+        <label class="opt-row" style="margin-top:8px">
           <input type="radio" name="routeMode" value="collect">
           <span><b>Einsammeln</b> – eine Route vom Start über alle markierten Mitarbeiter zum Ziel,
           Reihenfolge automatisch optimiert (kürzeste Gesamt-Fahrzeit).</span>
@@ -1130,11 +1140,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <input type="radio" name="routeMode" value="direct">
           <span><b>Einer zur Rieckstraße, Rest direkt</b> – ein Mitarbeiter (der nächste zur Rieckstraße)
           fährt zur Rieckstraße, alle weiteren fahren direkt zur Baustelle.</span>
-        </label>
-        <label class="opt-row" style="margin-top:8px">
-          <input type="radio" name="routeMode" value="mixed">
-          <span><b>Gemischt (Einzel-Zuteilung)</b> – für jeden markierten Mitarbeiter unten selbst festlegen:
-          zur Rieckstraße, direkt zur Baustelle oder einsammeln.</span>
         </label>
       </div>
 
@@ -1186,16 +1191,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
 
       <div class="dot-legend" id="empLegend"></div>
       <div class="emp-list" id="empList"></div>
-
-      <!-- Einzel-Zuteilung: erscheint direkt unter der Liste, nur für die markierten Mitarbeiter -->
-      <div id="assignBlock" class="assign-block">
-        <div class="assign-title">🧭 Einzel-Zuteilung <span class="count" id="assignCount"></span></div>
-        <div class="hint" style="margin:2px 0 6px">Je markiertem Mitarbeiter wählbar: <b style="color:#166534">zur Rieckstraße</b>,
-        <b style="color:#9a3412">direkt zur Baustelle</b> oder leer = <b>einsammeln</b>. Eine Zuteilung schaltet die
-        Kartenansicht automatisch auf „Gemischt“. Kann auch leer bleiben.</div>
-        <div id="assignWrap"></div>
-      </div>
-
       <div class="data-btns">
         <button type="button" id="stammBtn" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3">🗂 Stammdaten verwalten</button>
       </div>
@@ -1225,6 +1220,14 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <div class="card" style="margin-bottom:20px; padding:14px">
         <div id="summary" class="summary" style="display:none"></div>
         <div id="map"></div>
+
+        <!-- Einzel-Zuteilung: nur bei Kartenansicht „Gemischt“, direkt unter der Karte -->
+        <div id="assignBlock" class="assign-block no-print" style="display:none">
+          <div class="assign-title">🧭 Einzel-Zuteilung <span class="count" id="assignCount"></span></div>
+          <div class="hint" style="margin:2px 0 8px">Für jeden markierten Mitarbeiter festlegen, wie er zur Baustelle kommt.
+          <b style="color:#166534">zur Rieckstraße</b> · <b style="color:#9a3412">direkt zur Baustelle</b> · <b style="color:#1d4ed8">einsammeln</b> (Standard).</div>
+          <div id="assignWrap"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1890,26 +1893,31 @@ async function drawMixed(grp){
     rts.forEach((rt,j)=>{ if(rt) L.polyline(rt.coords,{ color:slice[j].color, weight:3, opacity:.75 }).addTo(layerGroup); });
   }
 }
-/* Baut die Zuteilungs-Liste aus der aktuellen Mitarbeiter-Auswahl (nur markierte). */
+/* Baut die Zuteilungs-Liste – nur bei Kartenansicht „Gemischt", nur für markierte Mitarbeiter. */
 function renderAssignPanel(){
   const wrap=document.getElementById("assignWrap"); if(!wrap) return;
   const block=document.getElementById("assignBlock");
   const cnt=document.getElementById("assignCount");
-  const emps=selectedEmployees();
-  if(cnt) cnt.textContent = emps.length ? "("+emps.length+")" : "";
-  if(!emps.length){
-    if(block) block.style.display="none";        // ohne Auswahl komplett ausblenden
-    wrap.innerHTML="";
+  const mode=(document.querySelector('input[name="routeMode"]:checked')||{}).value || "treff";
+  if(mode!=="mixed"){                              // nur im Gemischt-Modus sichtbar
+    if(block) block.style.display="none";
+    wrap.innerHTML=""; if(cnt) cnt.textContent="";
     return;
   }
   if(block) block.style.display="block";
-  const LBL={ "":"einsammeln (Standard)", "rieck":"zur Rieckstraße", "bau":"direkt zur Baustelle" };
-  const optsFor=cur=>["","rieck","bau"].map(v=>'<option value="'+v+'"'+(v===cur?' selected':'')+'>'+LBL[v]+'</option>').join("");
-  wrap.innerHTML = emps.map(m=>{
+  const emps=selectedEmployees().sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de"));
+  if(cnt) cnt.textContent = emps.length ? "("+emps.length+" markiert)" : "";
+  if(!emps.length){
+    wrap.innerHTML='<div class="hint">Noch keine Mitarbeiter markiert – links in der Liste ankreuzen, dann erscheinen sie hier zur Zuteilung.</div>';
+    return;
+  }
+  const OPTS=[["","einsammeln"],["rieck","zur Rieckstraße"],["bau","direkt zur Baustelle"]];
+  wrap.innerHTML='<div class="assign-grid">'+emps.map(m=>{
     const cur=manualAssign[m.id]||"";
+    const segs=OPTS.map(([v,lbl])=>'<button type="button" data-assign="'+m.id+'" data-v="'+v+'"'+(v===cur?' class="on"':'')+'>'+lbl+'</button>').join("");
     return '<div class="assign-row"><span class="an" title="'+escapeHtml(formatName(m.name))+'">'+escapeHtml(formatName(m.name))+'</span>'+
-      '<select data-assign="'+m.id+'" data-val="'+cur+'">'+optsFor(cur)+'</select></div>';
-  }).join("");
+      '<div class="seg">'+segs+'</div></div>';
+  }).join("")+'</div>';
 }
 
 /* Geoapify – Route-Matrix (EIN POST-Call).
@@ -2614,15 +2622,14 @@ window.addEventListener("DOMContentLoaded",()=>{
     visibleEmployees().forEach(m=>m._checked=false); renderEmployees();
   });
 
-  // Einzel-Zuteilung: Auswahl je Mitarbeiter
-  document.getElementById("assignWrap").addEventListener("change",e=>{
-    const s=e.target.closest("select[data-assign]"); if(!s) return;
-    manualAssign[s.dataset.assign]=s.value;
-    s.dataset.val=s.value;                                   // Farbe des Feldes aktualisieren
-    if(s.value){                                            // bei aktiver Zuteilung auf „Gemischt" schalten
-      const mx=document.querySelector('input[name="routeMode"][value="mixed"]'); if(mx) mx.checked=true;
-    }
+  // Einzel-Zuteilung: Segment-Knopf je Mitarbeiter
+  document.getElementById("assignWrap").addEventListener("click",e=>{
+    const btn=e.target.closest("button[data-assign]"); if(!btn) return;
+    manualAssign[btn.dataset.assign]=btn.dataset.v;
+    const seg=btn.closest(".seg"); if(seg) seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b===btn));
   });
+  // Kartenansicht-Wechsel: Zuteilungs-Block nur bei „Gemischt" zeigen
+  document.querySelectorAll('input[name="routeMode"]').forEach(r=>r.addEventListener("change",renderAssignPanel));
 
   // CRUD / Daten
   document.getElementById("addBtn").addEventListener("click",()=>openModal(null));
