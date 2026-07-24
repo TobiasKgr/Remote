@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v46 (Geoapify) -->
+<!-- App-Version: v47 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -716,6 +716,21 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .results>.card{margin-bottom:20px}
   @media(max-width:1300px){ .grid3{grid-template-columns:330px minmax(0,1fr)} #colMap{grid-column:1 / -1} }
   @media(max-width:820px){ .grid3{grid-template-columns:1fr} #colMap{grid-column:auto} }
+  /* Tablet/Handy: kompakter, alles einspaltig gut bedienbar */
+  @media(max-width:640px){
+    .wrap{padding:12px}
+    header.app{padding:12px 14px}
+    header.app h1{font-size:20px}
+    .app-logo{height:34px}
+    .grid3{gap:14px}
+    #map{height:56vh; min-height:300px}
+    .card{padding:14px}
+    .emp-list{max-height:60vh}
+    #summaryText{min-height:200px}
+    .opt-grid{grid-template-columns:1fr 1fr}
+    .exports{flex-wrap:wrap}
+    .assign-grid{grid-template-columns:1fr}
+  }
 
   .card{
     background:var(--panel); border:1px solid var(--line);
@@ -736,6 +751,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .opt-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px 10px}
   .opt-grid .mini{display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:3px}
   .opt-grid input,.opt-grid select{padding:8px 10px}
+  .mini-sel{width:auto; max-width:100%; border:none; background:none; padding:0 16px 0 0; margin-bottom:3px;
+    font-size:11px; font-weight:600; color:var(--muted); cursor:pointer; -webkit-appearance:menulist; appearance:menulist}
+  .mini-sel:focus{box-shadow:none}
 
   .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
   .chips .chip{font-size:12px; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe;
@@ -878,6 +896,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .data-btns{display:flex; gap:8px; margin-top:8px}
 
   #map{height:640px; border-radius:12px; border:1px solid var(--line); background:#e2e8f0}
+  .map-shell{position:relative}
+  .map-busy{position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1000;
+    display:flex; align-items:center; gap:8px; background:rgba(30,58,138,.92); color:#fff;
+    font-size:13px; font-weight:600; padding:7px 14px; border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .map-legend{display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:10px; font-size:12px; color:var(--muted)}
+  .map-legend span{display:inline-flex; align-items:center; gap:6px}
+  .map-legend .ln{width:20px; height:0; border-top:3px solid #999; border-radius:2px}
+  .map-legend .mk{width:14px; height:14px; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.1)}
+  .leaflet-tooltip.emp-name{background:rgba(255,255,255,.9); border:1px solid #cbd5e1; color:#0f172a;
+    font-weight:600; font-size:11px; padding:1px 5px; box-shadow:none}
+  .leaflet-tooltip.emp-name:before{display:none}
 
   .summary{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px}
   .summary .box{flex:1; min-width:150px; background:linear-gradient(135deg,#eff6ff,#dbeafe);
@@ -1011,6 +1040,46 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .print-head h2{margin:0}
   .print-logo{max-height:50px; width:auto; margin-bottom:6px}
   .print-head .meta{font-size:12px; color:#475569}
+
+  .vbest{background:#f0fdf4}
+  /* Hell/Dunkel-Umschalter im Kopf */
+  .theme-toggle{background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); color:#fff;
+    font-size:18px; line-height:1; width:38px; height:38px; border-radius:10px; cursor:pointer; flex:none}
+  .theme-toggle:hover{background:rgba(255,255,255,.28)}
+
+  /* ===== Dark Mode ===== */
+  body.theme-dark{ --panel:#1e293b; --line:#334155; --muted:#94a3b8; background:#0b1220; color:#e2e8f0 }
+  body.theme-dark .card h2,body.theme-dark .assign-title,body.theme-dark .panel-head,
+  body.theme-dark label.fld,body.theme-dark .chk,body.theme-dark .fld{ color:#e2e8f0 }
+  body.theme-dark input[type=text],body.theme-dark input[type=number],body.theme-dark input[type=time],
+  body.theme-dark select,body.theme-dark textarea,body.theme-dark #summaryText{
+    background:#0f172a; color:#e2e8f0; border-color:#475569 }
+  body.theme-dark .mini-sel{ background:none; color:var(--muted) }
+  body.theme-dark thead th{ background:#334155; color:#cbd5e1; border-right-color:#475569 }
+  body.theme-dark tbody td{ border-bottom-color:#293548; border-right-color:#243244 }
+  body.theme-dark tfoot td{ border-right-color:#243244 }
+  body.theme-dark tbody tr:hover{ background:#243244 }
+  body.theme-dark tbody tr.nearest{ background:#14321f }
+  body.theme-dark tbody tr.nearest:hover{ background:#1a3f27 }
+  body.theme-dark .vbest{ background:#14321f }
+  body.theme-dark .emp:hover{ background:#243244 }
+  body.theme-dark .emp-list{ border-color:#334155 }
+  body.theme-dark .assign-block{ background:#172033; border-color:#334155 }
+  body.theme-dark .seg{ border-color:#475569 }
+  body.theme-dark .seg button{ background:#0f172a; color:#cbd5e1; border-left-color:#334155 }
+  body.theme-dark .seg button:hover{ background:#1e293b }
+  body.theme-dark .fchip{ background:#0f172a; border-color:#334155; color:#cbd5e1 }
+  body.theme-dark .panel{ border-color:#334155 }
+  body.theme-dark .chips .chip{ background:#1e3a5f; color:#bfdbfe; border-color:#33507a }
+  body.theme-dark .map-legend,body.theme-dark .hint,body.theme-dark .result-empty{ color:#94a3b8 }
+  body.theme-dark .summary .box{ background:#172033; border-color:#334155 }
+  body.theme-dark .summary .box .v{ color:#e2e8f0 }
+  body.theme-dark #stammWrap th{ background:#334155; color:#cbd5e1 }
+  body.theme-dark #stammWrap td{ border-bottom-color:#293548 }
+  body.theme-dark .modal{ background:#1e293b; color:#e2e8f0 }
+  body.theme-dark .cp-box,body.theme-dark .cp-text{ background:#172033; border-color:#334155 }
+  body.theme-dark .exports button,body.theme-dark .data-btns button,body.theme-dark .linkbtn{
+    background:#0f172a; color:#cbd5e1; border-color:#475569 }
 </style>
 </head>
 <body>
@@ -1062,6 +1131,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <h1>Wibbelt&nbsp;Routing</h1>
     </div>
   </div>
+  <button type="button" id="themeToggle" class="theme-toggle no-print" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">🌙</button>
 </header>
 
 <div class="wrap">
@@ -1101,7 +1171,10 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
               </select>
             </div>
             <div>
-              <span class="mini">Abfahrt</span>
+              <select id="timeMode" class="mini mini-sel" title="Zeitbezug wählen">
+                <option value="depart">Abfahrt um</option>
+                <option value="arrive">Ankunft (Baustelle)</option>
+              </select>
               <input type="time" id="departTime">
             </div>
             <div>
@@ -1149,6 +1222,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <span><b>Einer zur Rieckstraße, Rest direkt</b> – ein Mitarbeiter (der nächste zur Rieckstraße)
           fährt zur Rieckstraße, alle weiteren fahren direkt zur Baustelle.</span>
         </label>
+        <label class="chk" style="margin-top:10px"><input type="checkbox" id="mapNames"> Namen auf der Karte anzeigen</label>
       </div>
 
       <div class="panel" id="panel-filter">
@@ -1229,7 +1303,11 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
 
       <div class="card" style="margin-bottom:20px; padding:14px">
         <div id="summary" class="summary" style="display:none"></div>
-        <div id="map"></div>
+        <div class="map-shell">
+          <div id="map"></div>
+          <div id="mapBusy" class="map-busy" style="display:none"><span class="spinner"></span>Wege werden gezeichnet …</div>
+        </div>
+        <div id="mapLegend" class="map-legend" style="display:none"></div>
 
         <!-- Einzel-Zuteilung: nur bei Kartenansicht „Gemischt“, direkt unter der Karte -->
         <div id="assignBlock" class="assign-block no-print" style="display:none">
@@ -1244,6 +1322,10 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
 
   <!-- Ergebnisse (volle Breite) -->
   <div class="results">
+    <div class="card" id="variantsCard" style="display:none">
+        <h2>Variantenvergleich <span class="count" id="variantsBest"></span></h2>
+        <div id="variantsWrap"></div>
+      </div>
     <div class="card">
         <h2>Mitarbeiter &amp; Entfernungen</h2>
         <div id="tableWrap">
@@ -1384,13 +1466,23 @@ function collectRouteDist(){
   return total;
 }
 
-/* Ankunftszeit = Abfahrt + Fahrdauer */
-function arrivalTime(departStr,durSec){
-  if(!departStr) return null;
-  const p=departStr.split(":"); const h=+p[0], m=+p[1];
+/* Zeitrechnung: Abfahrt +/- Fahrdauer */
+function shiftTime(baseStr,durSec,sign){
+  if(!baseStr) return null;
+  const p=baseStr.split(":"); const h=+p[0], m=+p[1];
   if(isNaN(h)||isNaN(m)) return null;
-  const d=new Date(); d.setHours(h,m,0,0); d.setSeconds(d.getSeconds()+Math.round(durSec||0));
+  const d=new Date(); d.setHours(h,m,0,0); d.setSeconds(d.getSeconds()+sign*Math.round(durSec||0));
   return d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+}
+function arrivalTime(departStr,durSec){ return shiftTime(departStr,durSec,+1); }   // Ankunft = Abfahrt + Dauer
+function departureTime(arriveStr,durSec){ return shiftTime(arriveStr,durSec,-1); } // Abfahrt = Ankunft - Dauer
+/* Liefert je nach Zeitbezug {k,v}: entweder errechnete Ankunft oder errechnete Abfahrt. */
+function timeInfo(durSec){
+  const t=document.getElementById("departTime").value;
+  if(!t) return null;
+  const mode=(document.getElementById("timeMode")||{}).value || "depart";
+  if(mode==="arrive"){ const dep=departureTime(t,durSec); return dep?{k:"Abfahrt spätestens",v:dep}:null; }
+  const eta=arrivalTime(t,durSec); return eta?{k:"Ankunft",v:eta}:null;
 }
 
 /* Ziel-Historie (localStorage) */
@@ -1412,7 +1504,15 @@ function renderHistory(){
 
 /* Fahrt-Einstellungen (Profil, Abfahrt, Kostensätze) im Browser merken */
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
-const SETTING_IDS=["profile","departTime","costKm","costH","seats"];
+const SETTING_IDS=["profile","departTime","costKm","costH","seats","timeMode"];
+/* Hell/Dunkel-Modus */
+const THEME_KEY="wibbelt.theme.v1";
+function loadTheme(){ try{ return localStorage.getItem(THEME_KEY)||"light"; }catch(e){ return "light"; } }
+function saveTheme(t){ try{ localStorage.setItem(THEME_KEY,t); }catch(e){} }
+function applyTheme(t){
+  document.body.classList.toggle("theme-dark", t==="dark");
+  const btn=document.getElementById("themeToggle"); if(btn) btn.textContent = t==="dark" ? "☀️" : "🌙";
+}
 function loadSettings(){
   let s={}; try{ s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}"); }catch(e){}
   SETTING_IDS.forEach(id=>{ if(s[id]!=null && s[id]!=="") document.getElementById(id).value=s[id]; });
@@ -1556,7 +1656,31 @@ function renderMapEmployees(){
     const mk = L.marker([m.lat,m.lon],{icon:iconForEmp(m)}).bindTooltip(tip,{direction:"top",offset:[0,-24]});
     mk.on("click",()=>{ m._checked=!m._checked; mk.setIcon(iconForEmp(m)); renderEmployees(); });
     empLayer.addLayer(mk);
+    // Namen dauerhaft anzeigen (separate, nicht-interaktive Tooltip-Ebene, damit der Hover-Tooltip erhalten bleibt)
+    if(document.getElementById("mapNames").checked){
+      const lbl = L.tooltip({permanent:true, direction:"right", offset:[12,-10], className:"emp-name", interactive:false})
+        .setLatLng([m.lat,m.lon]).setContent(escapeHtml(formatName(m.name).split(",")[0]));
+      empLayer.addLayer(lbl);
+    }
   });
+}
+/* Ladeanzeige über der Karte */
+function setMapBusy(on){ const el=document.getElementById("mapBusy"); if(el) el.style.display = on?"flex":"none"; }
+/* Karten-Legende passend zur aktuellen Kartenansicht */
+function renderMapLegend(mode){
+  const el=document.getElementById("mapLegend"); if(!el) return;
+  const items=[
+    '<span><span class="mk" style="background:#2563eb"></span>Start (Rieckstraße)</span>',
+    '<span><span class="mk" style="background:#dc2626"></span>Ziel (Baustelle)</span>',
+    '<span><span class="ln" style="border-color:#2563eb"></span>'+(mode==="collect"||mode==="mixed"?"Einsammel-Route":"Route zum Ziel")+'</span>'
+  ];
+  if(mode==="treff") items.push('<span><span class="ln" style="border-color:#16a34a"></span>Weg zur Rieckstraße</span>');
+  if(mode==="direct"){ items.push('<span><span class="ln" style="border-color:#16a34a"></span>Wege (einer zur Rieckstraße, Rest direkt)</span>'); }
+  if(mode==="mixed"){
+    items.push('<span><span class="ln" style="border-color:#16a34a"></span>zur Rieckstraße</span>');
+    items.push('<span><span class="ln" style="border-color:#ea580c"></span>direkt zur Baustelle</span>');
+  }
+  el.innerHTML=items.join(""); el.style.display="flex";
 }
 
 /* ================================================================
@@ -1836,15 +1960,17 @@ let treffRunId=0;
 async function drawTreffRoutes(rows){
   if(!map) return;
   const myRun=++treffRunId;         // veraltete Läufe verwerfen (z.B. bei erneuter Berechnung)
+  setMapBusy(true);
   const batch=4;
   for(let i=0;i<rows.length;i+=batch){
     const slice=rows.slice(i,i+batch);
     let rts;
     try{ rts=await Promise.all(slice.map(r=>getRoute([{lat:r.lat,lon:r.lon}, start]).catch(()=>null))); }
     catch(e){ rts=[]; }
-    if(myRun!==treffRunId || !map) return;   // abgebrochen
+    if(myRun!==treffRunId || !map) return;   // abgebrochen (neuerer Lauf übernimmt die Anzeige)
     rts.forEach(rt=>{ if(rt) L.polyline(rt.coords,{ color:"#16a34a", weight:3, opacity:.75 }).addTo(layerGroup); });
   }
+  setMapBusy(false);
 }
 
 /* Einer (der nächste zur Rieckstraße) fährt zur Rieckstraße, alle anderen direkt zur Baustelle (Ziel).
@@ -1855,6 +1981,7 @@ function nearestToStart(rows){
 async function drawDirectRoutes(rows){
   if(!map || !rows.length) return;
   const myRun=++treffRunId;
+  setMapBusy(true);
   const designated=nearestToStart(rows);
   const batch=4;
   for(let i=0;i<rows.length;i+=batch){
@@ -1865,6 +1992,7 @@ async function drawDirectRoutes(rows){
     if(myRun!==treffRunId || !map) return;
     rts.forEach(rt=>{ if(rt) L.polyline(rt.coords,{ color:"#16a34a", weight:3, opacity:.75 }).addTo(layerGroup); });
   }
+  setMapBusy(false);
 }
 
 /* ---- Einzel-Zuteilung („Gemischt") ------------------------------------ */
@@ -1893,6 +2021,7 @@ async function drawMixed(grp){
   ];
   if(!items.length) return;
   const myRun=++treffRunId;
+  setMapBusy(true);
   const batch=4;
   for(let i=0;i<items.length;i+=batch){
     const slice=items.slice(i,i+batch);
@@ -1902,6 +2031,7 @@ async function drawMixed(grp){
     if(myRun!==treffRunId || !map) return;
     rts.forEach((rt,j)=>{ if(rt) L.polyline(rt.coords,{ color:slice[j].color, weight:3, opacity:.75 }).addTo(layerGroup); });
   }
+  setMapBusy(false);
 }
 /* Baut die Zuteilungs-Liste – nur bei Kartenansicht „Gemischt", nur für markierte Mitarbeiter. */
 function renderAssignPanel(){
@@ -2021,10 +2151,9 @@ async function calculate(){
     let route, rows, orderedEmps=null;
 
     startZielDist=null; carpoolData=null;
-    const carpoolOn = document.getElementById("carpoolMode").checked && emps.length>0;
     let mixedLabel=null;
-    if(collect || mixed || carpoolOn){
-      // Volle Matrix -> Tabelle, optimale Reihenfolge, Distanzen für Einsammel-Vergleich
+    if(emps.length>0){
+      // Immer volle Matrix -> Tabelle, optimale Reihenfolge, Distanzen für Einsammel- & Varianten-Vergleich
       const { rows:r, durations, distances, startZiel } = await getMatrix(emps, true);
       rows=r; startZielDist=startZiel;
       const order = solveOrder(durations, emps.length);      // Indizes in optimaler Folge
@@ -2051,19 +2180,20 @@ async function calculate(){
         route = await getRoute([start,ziel]);                // direkte Route zur Anzeige
       }
     }else{
-      const routeP  = getRoute([start,ziel]);
-      const matrixP = emps.length ? getMatrix(emps,false) : Promise.resolve([]);
-      [route,rows] = await Promise.all([routeP,matrixP]);
-      startZielDist=route.distance;                          // direkte Route Start->Ziel
+      route = await getRoute([start,ziel]);
+      rows=[]; startZielDist=route.distance;                 // ohne Mitarbeiter: reine Strecke
     }
 
     lastRows=rows;
     drawResult(route,rows,!!collect,mixedLabel);
     treffRunId++;                                         // evtl. laufende Wege-Zeichnungen abbrechen
+    setMapBusy(false);
     if(rows.length && mode==="treff") drawTreffRoutes(rows);        // echte Wege zur Rieckstraße
     else if(rows.length && mode==="direct") drawDirectRoutes(rows); // einer zur Rieckstraße, Rest direkt
     else if(rows.length && mode==="mixed") drawMixed(assignGroups(rows)); // individuelle Zuteilung
+    renderMapLegend(mode);
     renderCarpool();
+    renderVariants(emps, mode);   // Variantenvergleich (Gesamtkosten)
     buildSummaryText();
     pushHistory(ziel);
     renderEmployees();   // Liste/Umkreis-Filter an ggf. neu gesetztes Ziel anpassen
@@ -2094,11 +2224,11 @@ function drawResult(route,rows,collect,labelOverride){
 
   const sum=document.getElementById("summary"); sum.style.display="flex";
   const label = labelOverride || (collect ? "Einsammel-Route" : "Gesamtstrecke");
-  const eta = arrivalTime(document.getElementById("departTime").value, route.duration);
+  const ti = timeInfo(route.duration);
   const profLabel = profile()==="truck" ? "Transporter/LKW" : "PKW";
   let html =
     '<div class="box"><div class="k">'+label+' · '+profLabel+'</div><div class="v">'+nfKm(route.distance)+'</div></div>'+
-    '<div class="box"><div class="k">Fahrzeit'+(eta?' · Ankunft '+eta:'')+'</div><div class="v">'+fmtDauer(route.duration)+'</div></div>';
+    '<div class="box"><div class="k">Fahrzeit'+(ti?' · '+ti.k+' '+ti.v:'')+'</div><div class="v">'+fmtDauer(route.duration)+'</div></div>';
   if(costEnabled())
     html += '<div class="box cst"><div class="k">Fahrtkosten</div><div class="v">'+fmtEuro(calcCost(route.distance,route.duration))+'</div></div>';
   html += '<div class="box dest"><div class="k">Ziel</div><div class="v">'+escapeHtml(ziel.label)+'</div></div>';
@@ -2106,12 +2236,12 @@ function drawResult(route,rows,collect,labelOverride){
 
   document.getElementById("printMeta").innerHTML =
     escapeHtml("Start: "+start.label+"  →  Ziel: "+ziel.label+"   |   "+profLabel+" · "+label+" "+nfKm(route.distance)+
-      ", Fahrzeit "+fmtDauer(route.duration)+(eta?", Ankunft "+eta:""))+
+      ", Fahrzeit "+fmtDauer(route.duration)+(ti?", "+ti.k+" "+ti.v:""))+
     (costEnabled()?'<span class="cst">'+escapeHtml(", Kosten "+fmtEuro(calcCost(route.distance,route.duration)))+'</span>':"")+
     escapeHtml("   |   erstellt "+nowStr());
 
   lastRoute={distance:route.distance, duration:route.duration};
-  lastRouteMeta={label, eta, profLabel};
+  lastRouteMeta={label, ti, profLabel};
 
   renderTable();
 }
@@ -2278,6 +2408,82 @@ function renderCarpool(){
 }
 
 /* ================================================================
+   Variantenvergleich – Gesamtkosten je Fahrweise (Richtwert)
+   Nutzt dieselben Regeln wie die Mitfahr-Kosten:
+   Fahrer 1 Std./70 km, Beifahrer 1 Std./100 km, Anfahrt 0,30 €/km.
+   ================================================================ */
+function renderVariants(emps, mode){
+  const card=document.getElementById("variantsCard"), wrap=document.getElementById("variantsWrap");
+  const best=document.getElementById("variantsBest");
+  if(!lastRows.length || startZielDist==null){ card.style.display="none"; return; }
+  const N=lastRows.length, seats=seatsPerCar(), dRZ=startZielDist;
+  const kmSum=arr=>arr.reduce((s,x)=>s+(x||0),0)/1000;
+  const anfEuro=m=>((m||0)/1000)*ANFAHRT_EUR_KM;
+  const V=[];
+
+  // 1) Alle selbst direkt (Heim -> Baustelle, jeder Fahrer)
+  V.push({ key:"self", name:"Alle selbst direkt",
+    std:lastRows.reduce((s,r)=>s+stdFahrer(r.distZiel),0), anf:0,
+    km:kmSum(lastRows.map(r=>r.distZiel)),
+    info:"Jeder fährt allein zur Baustelle." });
+
+  // 2) Treffpunkt Rieckstraße (Anfahrt + gemeinsame Fahrt)
+  {
+    const cars=Math.ceil(N/seats), drivers=cars, passengers=N-cars;
+    V.push({ key:"treff", name:"Treffpunkt Rieckstraße",
+      std:drivers*stdFahrer(dRZ)+passengers*stdBeifahrer(dRZ),
+      anf:lastRows.reduce((s,r)=>s+anfEuro(r.distStart),0),
+      km:kmSum(lastRows.map(r=>r.distStart))+cars*(dRZ/1000),
+      info:cars+" Auto"+(cars>1?"s":"")+" ab Rieckstraße ("+seats+" Sitze)." });
+  }
+
+  // 3) Einsammeln (ein Fahrzeug, optimierte Route)
+  {
+    const crd=collectRouteDist();
+    if(crd!=null) V.push({ key:"collect", name:"Einsammeln (eine Route)",
+      std:stdFahrer(crd)+lastRows.reduce((s,r)=>s+stdBeifahrer(r.distZiel),0), anf:0,
+      km:crd/1000, info:"Ein Fahrzeug ab Rieckstraße holt alle ab." });
+  }
+
+  // 4) Einer zur Rieckstraße, Rest direkt
+  {
+    const one=nearestToStart(lastRows);
+    const rest=lastRows.filter(r=>r!==one);
+    V.push({ key:"direct", name:"Einer zur Rieckstraße, Rest direkt",
+      std:stdFahrer(one.distStart)+stdFahrer(dRZ)+rest.reduce((s,r)=>s+stdFahrer(r.distZiel),0), anf:0,
+      km:(one.distStart+dRZ)/1000+kmSum(rest.map(r=>r.distZiel)),
+      info:formatName(one.name)+" über die Rieckstraße, übrige direkt." });
+  }
+
+  const r=costRates(), hasH=r.h>0;
+  V.forEach(v=>{ v.total = hasH ? v.std*r.h + v.anf : null; });
+  // Empfehlung: kleinste €-Summe (falls €/Std gesetzt), sonst kleinste Stundenzahl, dann kleinste Anfahrt
+  const rank=(a,b)=> hasH ? (a.total-b.total) : (a.std-b.std)||(a.anf-b.anf);
+  const min=[...V].sort(rank)[0];
+  const cur={treff:"treff",collect:"collect",direct:"direct"}[mode];   // aktuelle Ansicht markieren
+
+  let h='<div style="overflow-x:auto"><table><thead><tr>'+
+    '<th>Variante</th><th>Fahrstrecke</th><th>Bezahlte Stunden</th><th class="cst">Anfahrt</th>'+
+    (hasH?'<th class="cst">Gesamt €</th>':'')+'<th>Hinweis</th></tr></thead><tbody>';
+  V.forEach(v=>{
+    const isBest=v===min, isCur=v.key===cur;
+    h+='<tr'+(isBest?' class="vbest"':'')+'>'+
+      '<td><b>'+escapeHtml(v.name)+'</b>'+(isBest?' <span class="badge">günstigste</span>':'')+(isCur?' <span class="rl tg">aktuell</span>':'')+'</td>'+
+      '<td class="num">'+nfKm(v.km*1000)+'</td>'+
+      '<td class="num">'+fmtStd(v.std)+'</td>'+
+      '<td class="num cst">'+(v.anf>0?fmtEuro(v.anf):"–")+'</td>'+
+      (hasH?'<td class="num cst">'+fmtEuro(v.total)+'</td>':'')+
+      '<td style="font-size:12px;color:#64748b">'+escapeHtml(v.info)+'</td></tr>';
+  });
+  h+='</tbody></table></div>'+
+    '<div class="hint" style="margin-top:8px">Richtwert: Fahrer 1 Std./'+KM_FAHRER+' km, Beifahrer 1 Std./'+KM_BEIFAHRER+' km, Anfahrt '+
+    fmtEuro(ANFAHRT_EUR_KM)+'/km. '+(hasH?'„Gesamt €“ = Stunden × '+fmtEuro(r.h)+'/Std. + Anfahrt.':'Für einen €-Gesamtwert „€ / Std.“ in den Fahrt-Optionen setzen.')+'</div>';
+  wrap.innerHTML=h;
+  best.textContent="Empfehlung: "+min.name;
+  card.style.display="block";
+}
+
+/* ================================================================
    Zusammenfassung als kopierbarer Klartext
    ================================================================ */
 function buildSummaryText(){
@@ -2318,7 +2524,7 @@ function buildSummaryText(){
     t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".\n"+
       "Alle fahren zunächst zur Rieckstraße, von dort gemeinsam zum Ziel.";
   }
-  const strecke = lastRouteMeta ? "\n"+lastRouteMeta.label+": "+nfKm(lastRoute.distance)+", Fahrzeit "+fmtDauer(lastRoute.duration)+(lastRouteMeta.eta?", Ankunft "+lastRouteMeta.eta:"") : "";
+  const strecke = lastRouteMeta ? "\n"+lastRouteMeta.label+": "+nfKm(lastRoute.distance)+", Fahrzeit "+fmtDauer(lastRoute.duration)+(lastRouteMeta.ti?", "+lastRouteMeta.ti.k+" "+lastRouteMeta.ti.v:"") : "";
   ta.value = "Ziel: "+ziel.label+"\n"+t+strecke;
   card.style.display="block";
 }
@@ -2568,6 +2774,7 @@ async function saveModal(){
    Init / Events
    ================================================================ */
 window.addEventListener("DOMContentLoaded",()=>{
+  applyTheme(loadTheme());
   checkKey();
   loadMitarbeiter();
   mitarbeiter.forEach(m=>m._checked = false);      // standardmäßig niemand vorausgewählt
@@ -2578,6 +2785,31 @@ window.addEventListener("DOMContentLoaded",()=>{
   loadSettings();
   renderHistory();
   restorePanels();
+
+  // Hell/Dunkel
+  document.getElementById("themeToggle").addEventListener("click",()=>{
+    const dark=!document.body.classList.contains("theme-dark");
+    applyTheme(dark?"dark":"light"); saveTheme(dark?"dark":"light");
+  });
+  // Namen auf der Karte: bei Umschalten Marker neu zeichnen
+  document.getElementById("mapNames").addEventListener("change",()=>{ if(empLayer) renderMapEmployees(); });
+
+  // Tastenkürzel: Enter = Route berechnen · Strg/⌘+F = Suche · Esc = Dialog/Vorschläge schließen
+  const CALC_ENTER_IDS=["zielInput","startInput","costKm","costH","seats","departTime","maSearch"];
+  document.addEventListener("keydown",e=>{
+    const anyModalOpen=document.querySelector("#modalBg.open, #importBg.open, #stammBg.open");
+    if(e.key==="Enter" && !e.shiftKey && !anyModalOpen){
+      if(e.target.id==="zielInput" && document.querySelector("#zielSuggest.open")) return;   // Auswahl im Vorschlag zulassen
+      if(e.target.id==="startInput" && document.querySelector("#startSuggest.open")) return;
+      if(e.target===document.body || CALC_ENTER_IDS.includes(e.target.id)){
+        e.preventDefault(); document.getElementById("calcBtn").click();
+      }
+    }else if((e.ctrlKey||e.metaKey) && (e.key==="f"||e.key==="F")){
+      e.preventDefault(); const s=document.getElementById("maSearch"); if(s){ s.focus(); s.select(); }
+    }else if(e.key==="Escape"){
+      document.querySelectorAll(".suggest.open").forEach(el=>el.classList.remove("open"));
+    }
+  });
 
   // Panels auf-/zuklappen
   document.querySelectorAll("[data-toggle-panel]").forEach(b=>
