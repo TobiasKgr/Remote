@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v40 (Geoapify) -->
+<!-- App-Version: v41 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -947,6 +947,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .modal h3{margin:0 0 14px; font-size:18px}
   .modal.wide{max-width:960px}
   #stammWrap table{width:100%; border-collapse:collapse; font-size:13px}
+  #stammWrap th[data-sort]{cursor:pointer; user-select:none}
+  #stammWrap th[data-sort]:hover{background:#e2e8f0}
+  #stammWrap th .sarr{font-size:10px; color:#94a3b8; margin-left:2px}
   #stammWrap th{position:sticky; top:0; background:#f1f5f9; text-align:left; padding:8px 8px; font-size:11px;
     text-transform:uppercase; letter-spacing:.3px; color:#475569; border-bottom:2px solid var(--line); white-space:nowrap}
   #stammWrap td{padding:6px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle}
@@ -2308,15 +2311,31 @@ async function runImport(replace){
 /* ---- Stammdaten verwalten (große Tabelle, Inline-Pflege) ---- */
 function openStamm(){ document.getElementById("stammSearch").value=""; renderStamm(); document.getElementById("stammBg").classList.add("open"); }
 function closeStamm(){ document.getElementById("stammBg").classList.remove("open"); }
+let stammSort = { key:"name", dir:1 };   // Sortierung der Stammdaten-Tabelle
+/* Sortierwert je Spalte. Merkmal-/Rolle-/Aktiv-Spalten: 0 = trifft zu (steht bei aufsteigend oben). */
+function stammKeyVal(m,key){
+  if(key==="name")    return formatName(m.name).toLowerCase();
+  if(key==="adresse") return (m.adresse||"").toLowerCase();
+  if(key==="rolle")   return ({Projektleiter:0, Monteur:1}[m.rolle] ?? 2);
+  if(key==="aktiv")   return m.aktiv?0:1;
+  return (m.tags||[]).includes(key)?0:1;   // Merkmal-Spalte: mit Merkmal zuerst
+}
 function renderStamm(){
   const q=document.getElementById("stammSearch").value.trim().toLowerCase();
   const list=[...mitarbeiter]
     .filter(m=>!q || (m.name+" "+m.adresse+" "+(m.rolle||"")+" "+(m.tags||[]).join(" ")+" "+(m.gruppe||"")).toLowerCase().includes(q))
-    .sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de"));
+    .sort((a,b)=>{
+      const va=stammKeyVal(a,stammSort.key), vb=stammKeyVal(b,stammSort.key);
+      let c = (typeof va==="number") ? va-vb : String(va).localeCompare(String(vb),"de");
+      if(c===0) c=formatName(a.name).localeCompare(formatName(b.name),"de");   // Zweitschlüssel: Name
+      return stammSort.dir*c;
+    });
   document.getElementById("stammCount").textContent="("+mitarbeiter.length+" gesamt)";
   const roleOpts=v=>['','Projektleiter','Monteur'].map(o=>'<option value="'+o+'"'+(o===(v||"")?' selected':'')+'>'+(o||'– keine –')+'</option>').join("");
-  let html='<table><thead><tr><th>Name</th><th>Adresse</th><th>Rolle</th>'+
-    MERKMALE.map(t=>'<th class="ctr">'+escapeHtml(t)+'</th>').join("")+'<th class="ctr">Aktiv</th><th></th></tr></thead><tbody>';
+  const arr=k=> stammSort.key===k ? (stammSort.dir>0?' ▲':' ▼') : ' ↕';
+  const th=(k,label,cls)=>'<th'+(cls?' class="'+cls+'"':'')+' data-sort="'+escapeHtml(k)+'" title="Sortieren">'+label+'<span class="sarr">'+arr(k)+'</span></th>';
+  let html='<table><thead><tr>'+th("name","Name")+th("adresse","Adresse")+th("rolle","Rolle")+
+    MERKMALE.map(t=>th(t,escapeHtml(t),"ctr")).join("")+th("aktiv","Aktiv","ctr")+'<th></th></tr></thead><tbody>';
   if(list.length===0) html+='<tr><td colspan="'+(5+MERKMALE.length)+'" style="text-align:center;color:#64748b;padding:16px">Keine Treffer.</td></tr>';
   list.forEach(m=>{
     html+='<tr class="'+(m.aktiv?"":"inactive")+'">'+
@@ -2498,6 +2517,10 @@ window.addEventListener("DOMContentLoaded",()=>{
     saveMitarbeiter(); markPending(); renderEmployees();
   });
   sw.addEventListener("click",e=>{
+    const so=e.target.closest("th[data-sort]");
+    if(so){ const k=so.dataset.sort;
+      if(stammSort.key===k) stammSort.dir*=-1; else { stammSort.key=k; stammSort.dir=1; }
+      renderStamm(); return; }
     const ed=e.target.closest("[data-edit]"); if(ed){ closeStamm(); openModal(ed.dataset.edit); return; }
     const del=e.target.closest("[data-del]");
     if(del){ const m=mitarbeiter.find(x=>x.id===del.dataset.del);
