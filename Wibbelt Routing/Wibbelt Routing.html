@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v44 (Geoapify) -->
+<!-- App-Version: v45 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -798,12 +798,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .assign-block{margin:14px 0 2px; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; background:#fafcff}
   .assign-title{font-size:15px; font-weight:700; color:#1e293b}
   .assign-title .count{font-size:12px; font-weight:600; color:var(--muted); margin-left:6px}
-  .assign-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:8px 16px}
-  .assign-row{display:flex; align-items:center; gap:10px; padding:5px 0}
-  .assign-row .an{flex:0 0 34%; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .seg{display:flex; flex:1; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden}
-  .seg button{flex:1; border:none; border-left:1px solid #e2e8f0; background:#fff; padding:6px 4px;
-              font-size:11.5px; font-weight:600; color:#475569; cursor:pointer; white-space:nowrap; transition:background .1s}
+  .assign-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px 16px}
+  .assign-row{display:flex; flex-direction:column; align-items:stretch; gap:4px; padding:2px 0}
+  .assign-row .an{font-size:13px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .seg{display:flex; align-items:stretch; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden}
+  .seg button{flex:1 1 0; min-width:0; border:none; border-left:1px solid #e2e8f0; background:#fff; padding:6px 5px;
+              font-size:11.5px; font-weight:600; color:#475569; cursor:pointer; line-height:1.2; white-space:normal;
+              display:flex; align-items:center; justify-content:center; text-align:center; transition:background .1s}
   .seg button:first-child{border-left:none}
   .seg button:hover{background:#f1f5f9}
   .seg button.on[data-v=""]{background:#dbeafe; color:#1d4ed8}
@@ -911,7 +912,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .cp-box .ln{font-size:13px; color:#475569; margin-top:3px}
   .cp-box .tag-rec{font-size:10px; font-weight:700; color:#166534; background:#dcfce7; padding:1px 6px; border-radius:20px; margin-left:6px}
   .cp-text{background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:11px 13px; font-size:14px; line-height:1.55; margin-bottom:14px; color:#1e293b}
-  #summaryText{width:100%; min-height:80px; resize:vertical; border:1px solid #cbd5e1; border-radius:8px;
+  #summaryText{width:100%; min-height:230px; resize:vertical; border:1px solid #cbd5e1; border-radius:8px;
     padding:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5; color:#0f172a; background:#f8fafc}
   .copybtn{border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:13px; font-weight:600;
     padding:6px 12px; border-radius:8px; cursor:pointer}
@@ -1098,7 +1099,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
             </div>
             <div>
               <span class="mini">€ / km</span>
-              <input type="number" id="costKm" min="0" step="0.01" placeholder="z. B. 0,30">
+              <input type="number" id="costKm" min="0" step="0.01" value="0.20" placeholder="z. B. 0,30">
             </div>
             <div>
               <span class="mini">€ / Std.</span>
@@ -1251,7 +1252,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
 
   <div class="card" id="summaryCard" style="display:none; margin-top:20px">
     <h2>Zusammenfassung (kopierbar) <button id="copyBtn" class="copybtn no-print">📋 Kopieren</button></h2>
-    <textarea id="summaryText" readonly></textarea>
+    <textarea id="summaryText" rows="10" readonly></textarea>
   </div>
 </div>
 
@@ -1911,7 +1912,7 @@ function renderAssignPanel(){
     wrap.innerHTML='<div class="hint">Noch keine Mitarbeiter markiert – links in der Liste ankreuzen, dann erscheinen sie hier zur Zuteilung.</div>';
     return;
   }
-  const OPTS=[["","einsammeln"],["rieck","zur Rieckstraße"],["bau","direkt zur Baustelle"]];
+  const OPTS=[["","einsammeln"],["rieck","zur Rieckstraße"],["bau","zur Baustelle"]];
   wrap.innerHTML='<div class="assign-grid">'+emps.map(m=>{
     const cur=manualAssign[m.id]||"";
     const segs=OPTS.map(([v,lbl])=>'<button type="button" data-assign="'+m.id+'" data-v="'+v+'"'+(v===cur?' class="on"':'')+'>'+lbl+'</button>').join("");
