@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v39 (Geoapify) -->
+<!-- App-Version: v40 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1581,13 +1581,18 @@ function buildTagChecks(){
   document.getElementById("mTags").innerHTML = MERKMALE.map(t=>
     '<label class="chk"><input type="checkbox" data-tag="'+escapeHtml(t)+'"> '+escapeHtml(t)+'</label>').join("");
 
-  const chip = c =>
-    '<button type="button" class="fchip" data-cat="'+escapeHtml(c)+'" data-state="" '+
+  // Standardzustand beim Start: diese Kategorien ausgeblendet ("ohne"); Rest neutral (egal)
+  const DEFAULT_OHNE = ["Projektleiter", ...MERKMALE];
+  const chip = c => {
+    const st = DEFAULT_OHNE.includes(c) ? "ohne" : "";
+    const glyph = st==="mit" ? "✓" : st==="ohne" ? "✕" : "";
+    return '<button type="button" class="fchip" data-cat="'+escapeHtml(c)+'" data-state="'+st+'" '+
       'title="'+escapeHtml(c)+' – klicken: nur mit → ohne → egal">'+
       '<span class="fdot" style="background:'+dotColor(c)+'"></span>'+
       '<span class="flabel">'+escapeHtml(c)+'</span>'+
-      '<span class="fst"></span>'+
+      '<span class="fst">'+glyph+'</span>'+
     '</button>';
+  };
   document.getElementById("tagFilter").innerHTML =
     '<div class="filt-group"><span class="filt-lbl">Rolle</span>'+
       ROLLEN.map(chip).join("")+'</div>'+
