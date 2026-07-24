@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v48 (Geoapify) -->
+<!-- App-Version: v49 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -793,8 +793,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .ma-tools input[type=text]{flex:1}
   .chk{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#334155; cursor:pointer; white-space:nowrap}
   .chk input{width:15px; height:15px; accent-color:var(--accent)}
-  .radius-box{display:flex; align-items:center; gap:6px; font-size:12px; color:#334155}
+  .radius-box{display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:12px; color:#334155; white-space:normal}
   .radius-box input[type=number]{width:64px; padding:6px 8px}
+  .radius-box select{flex:0 0 auto}
 
   /* Filter-Chips (3 Zustände: neutral / nur mit / nur ohne) */
   .filt-wrap{display:flex; flex-direction:column; gap:8px}
@@ -1250,8 +1251,8 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
               <label class="chk"><input type="checkbox" id="onlyActive" checked> nur aktive anzeigen</label>
               <label class="chk radius-box">
                 <input type="checkbox" id="radiusOn"> im Umkreis
-                <input type="number" id="radiusKm" value="50" min="1" step="5"> km um
-                <select id="radiusRef" style="padding:5px 6px">
+                <input type="number" id="radiusKm" value="70" min="1" step="5"> km um
+                <select id="radiusRef" style="padding:5px 6px; min-width:104px; width:auto">
                   <option value="ziel">Ziel</option>
                   <option value="start">Rieckstraße</option>
                 </select>
