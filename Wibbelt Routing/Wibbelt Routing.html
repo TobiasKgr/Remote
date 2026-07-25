@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v55 (Geoapify) -->
+<!-- App-Version: v56 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1059,6 +1059,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   .vbest{background:#f0fdf4}
 
+  /* Hin- & Rückfahrt */
+  .rt-boxes{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin:10px 0}
+  .rt-box{border:1px solid var(--line); border-radius:10px; padding:12px; background:#f8fafc}
+  .rt-box h4{margin:0 0 6px; font-size:14px; color:var(--accent)}
+  .rt-box .ln{font-size:13px; color:#334155; margin:2px 0}
+  .rt-total{background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:8px 12px}
+  .rt-total .ln{font-size:14px; color:#0f172a}
+  #returnWrap select{padding:5px 6px; font-size:12px}
+  body.theme-dark .rt-box{background:#172033; border-color:#334155}
+  body.theme-dark .rt-box .ln{color:#cbd5e1}
+  body.theme-dark .rt-total{background:#0f2233; border-color:#334155}
+  body.theme-dark .rt-total .ln{color:#e2e8f0}
+
   /* Start-Erklärung */
   .intro{position:relative; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px;
     padding:14px 40px 14px 16px; margin-bottom:16px; color:#1e293b}
@@ -1309,6 +1322,11 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
             <span class="mini" style="flex:none">Sitzplätze je Fahrzeug (inkl. Fahrer):</span>
             <input type="number" id="seats" value="2" min="1" max="9" style="width:70px; padding:6px 8px">
           </div>
+          <label class="opt-row" style="margin-top:10px">
+            <input type="checkbox" id="returnTrip">
+            <span><b>Rückfahrt mitrechnen</b> (Baustelle → Rieckstraße). Danach lässt sich je Mitarbeiter für
+            <b>Hin-</b> und <b>Rückfahrt</b> getrennt festlegen: mit Firma, privat oder nicht dabei.</span>
+          </label>
         </div>
       </div>
       <!-- Routing-Optionen -->
@@ -1445,6 +1463,11 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <div class="result-empty">Noch keine Berechnung – wähle ein Ziel und Mitarbeiter und klicke auf „Route berechnen“.</div>
         </div>
       </div>
+    <div class="card" id="returnCard" style="margin-top:20px; display:none">
+        <h2>Hin- &amp; Rückfahrt</h2>
+        <div class="hint" style="margin-top:-4px">Je Mitarbeiter für Hin- und Rückfahrt festlegen: <b>mit Firma</b>, <b>privat</b> (eigene Anreise, keine Firmenkosten) oder <b>–</b> (nicht dabei). Grundlage: Treffpunkt Rieckstraße.</div>
+        <div id="returnWrap"></div>
+      </div>
     <div class="card" id="carpoolCard" style="margin-top:20px; display:none">
         <h2 id="carpoolHead" style="cursor:pointer; user-select:none">Fahrgemeinschaft – bezahlte Stunden <span class="chev">▾</span></h2>
         <div id="carpoolBody">
@@ -1554,7 +1577,9 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <li><b>Zeitbezug</b> – „Abfahrt um" oder „Ankunft (Baustelle)" → Abfahrt wird zurückgerechnet.</li>
         <li><b>Filter</b> – nach Rolle/Merkmalen (Chips), Umkreis, Suche; Sortierung nach Nachname.</li>
         <li><b>Stammdaten verwalten</b> und <b>Aus Excel importieren</b> (Name · Vorname · Straße · PLZ · Wohnort).</li>
+        <li><b>Hin- &amp; Rückfahrt</b> – Rückfahrt zusätzlich berechnen; je Mitarbeiter/Richtung „mit Firma", „privat" oder „nicht dabei".</li>
         <li><b>Export</b> – „PDF mit/ohne Kosten" und „Tabelle als CSV".</li>
+        <li><b>Einstellungen</b> – Grundwerte, Filter- &amp; Fenster-Voreinstellungen; als Datei sicher- und mit Kollegen teilbar.</li>
         <li><b>Karte</b> – Vollbild (⛶), Namen einblenden, Marker-Klick springt zur Liste, Legende.</li>
         <li><b>Anzeige</b> – Hell/Dunkel (🌙), Anzeigegröße (A− / A+).</li>
       </ul>
@@ -1629,6 +1654,14 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <button type="button" id="zoomIn" aria-label="größer">A+</button>
         </div>
         <span class="hint" style="margin:0">wirkt sofort</span>
+      </div>
+
+      <h4 class="set-h">Einstellungen übertragen</h4>
+      <div class="set-row">
+        <button type="button" class="cancel" id="setExport">💾 Als Datei sichern</button>
+        <button type="button" class="cancel" id="setImport">📂 Aus Datei laden</button>
+        <input type="file" id="setImportFile" accept=".json,application/json" style="display:none">
+        <span class="hint" style="margin:0">Konfiguration (Grundwerte, Filter, Fenster) mit Kollegen teilen.</span>
       </div>
 
       <div class="hint" style="margin-top:10px">Die Werte gelten beim Öffnen des Programms. „Speichern" übernimmt sie sofort. (Anzeigegröße und Hell/Dunkel wirken direkt.)</div>
@@ -1744,7 +1777,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v55";
+const APP_VERSION="v56";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -1846,6 +1879,23 @@ function saveSettingsModal(){
   }
   closeSettings(); setStatus("Voreinstellungen gespeichert.","ok");
 }
+/* Einstellungen als Datei sichern / laden (zum Teilen mit Kollegen) */
+function exportConfig(){
+  const cfg=readSettingsForm();            // auch ungespeicherte Formularwerte mitnehmen
+  downloadBlob(JSON.stringify(cfg,null,2),"application/json","wibbelt-einstellungen.json");
+}
+function importConfig(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{ const s=JSON.parse(String(r.result));
+      if(!s||typeof s!=="object"||Array.isArray(s)) throw 0;
+      const d=defaultConfig(); CONFIG=Object.assign(d,s); CONFIG.filter=Object.assign(d.filter, s.filter||{});
+      saveConfig(); applyConfigDefaults(); renderEmployees(); fillSettingsForm(CONFIG);
+      setStatus("Einstellungen aus Datei geladen.","ok");
+    }catch(e){ setStatus("Datei nicht lesbar – erwartet wird eine Einstellungs-Datei (JSON).","err"); }
+  };
+  r.readAsText(file);
+}
 
 /* Hell/Dunkel-Modus */
 const THEME_KEY="wibbelt.theme.v1";
@@ -1921,6 +1971,7 @@ let lastCarpoolText = "";          // Klartext-Vorschlag für die Zusammenfassun
 let hiddenGroupOpen = false;       // Bereich "Ausgeblendet" auf-/zugeklappt
 let orderMap = null;               // Einsammel-Reihenfolge: {employeeId: Positionsnummer}
 let manualAssign = {};             // Einzel-Zuteilung: {employeeId: "" | "rieck" | "bau"} ("" = einsammeln)
+let travelPlan = {};               // Hin-/Rückfahrt je Mitarbeiter: {id:{hin,rueck}} mit "mit"|"privat"|"nein"
 let sortState = { key:"distZiel", dir:1 };
 let editId = null;                 // Modal: null=neu, sonst id
 let formGeo = null;                // Modal: {label,lat,lon} aus Autocomplete
@@ -2559,6 +2610,7 @@ async function calculate(){
     renderMapLegend(mode);
     renderCarpool();
     renderVariants(emps, mode);   // Variantenvergleich (Gesamtkosten)
+    renderReturnPlan();           // Hin-/Rückfahrt (falls aktiv)
     buildSummaryText();
     pushHistory(ziel);
     renderEmployees();   // Liste/Umkreis-Filter an ggf. neu gesetztes Ziel anpassen
@@ -2849,6 +2901,63 @@ function renderVariants(emps, mode){
 }
 
 /* ================================================================
+   Hin- & Rückfahrt (Treffpunkt-Modell) – je Mitarbeiter/Richtung
+   ================================================================ */
+function tripCost(members){
+  const N=members.length;
+  if(!N || startZielDist==null) return { n:0, cars:0, anfahrt:0, std:0, km:0 };
+  const seats=seatsPerCar(), cars=Math.ceil(N/seats), drivers=cars, passengers=N-cars;
+  const anfahrt=members.reduce((s,r)=>s+((r.distStart||0)/1000)*ANFAHRT_EUR_KM,0);
+  const std=drivers*stdFahrer(startZielDist)+passengers*stdBeifahrer(startZielDist);
+  const km=members.reduce((s,r)=>s+(r.distStart||0),0)/1000 + cars*(startZielDist/1000);
+  return { n:N, cars, anfahrt, std, km };
+}
+function returnPlanText(){ return lastReturnText; }
+let lastReturnText="";
+function renderReturnPlan(){
+  const card=document.getElementById("returnCard"), wrap=document.getElementById("returnWrap");
+  const on=document.getElementById("returnTrip").checked;
+  if(!on || !lastRows.length || startZielDist==null){ card.style.display="none"; lastReturnText=""; return; }
+  card.style.display="block";
+
+  // Auswahl-Matrix je Mitarbeiter (Hin / Rück)
+  const opt=(v,cur)=>'<option value="'+v+'"'+(v===cur?' selected':'')+'>'+({mit:"mit Firma",privat:"privat","nein":"–"}[v])+'</option>';
+  const sel=(id,dir,cur)=>'<select data-tp="'+id+'" data-dir="'+dir+'">'+["mit","privat","nein"].map(v=>opt(v,cur)).join("")+'</select>';
+  let rowsHtml=[...lastRows].sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de")).map(r=>{
+    const tp=travelPlan[r.id]||{hin:"mit",rueck:"mit"};
+    return '<tr><td>'+escapeHtml(formatName(r.name))+'</td><td class="ctr">'+sel(r.id,"hin",tp.hin)+'</td><td class="ctr">'+sel(r.id,"rueck",tp.rueck)+'</td></tr>';
+  }).join("");
+
+  const pick=(dir,val)=>lastRows.filter(r=>((travelPlan[r.id]||{hin:"mit",rueck:"mit"})[dir])===val);
+  const hinMit=pick("hin","mit"), rueckMit=pick("rueck","mit");
+  const hinPriv=pick("hin","privat").map(r=>r.name), rueckPriv=pick("rueck","privat").map(r=>r.name);
+  const H=tripCost(hinMit), R=tripCost(rueckMit);
+  const r=costRates(), hasH=r.h>0;
+  const euroOf=t=> hasH ? (t.std*r.h + t.anfahrt) : null;
+  const eH=euroOf(H), eR=euroOf(R);
+
+  const block=(title,t,priv,eur)=>
+    '<div class="rt-box"><h4>'+title+'</h4>'+
+    '<div class="ln"><b>'+t.n+'</b> mit Firma · '+t.cars+' Auto'+(t.cars===1?'':'s')+' · '+nfKm(t.km*1000)+'</div>'+
+    '<div class="ln">Anfahrt '+fmtEuro(t.anfahrt)+' · Fahrt '+fmtStd(t.std)+(eur!=null?' · <b>'+fmtEuro(eur)+'</b>':'')+'</div>'+
+    (priv.length?'<div class="ln" style="color:#9a3412">privat: '+priv.map(escapeHtml).join(", ")+'</div>':'')+
+    '</div>';
+
+  const gesamtEuro = (eH!=null&&eR!=null)? '<div class="ln"><b>Gesamt Hin+Rück: '+fmtEuro(eH+eR)+'</b> (Anfahrt '+fmtEuro(H.anfahrt+R.anfahrt)+', Fahrt '+fmtStd(H.std+R.std)+')</div>'
+    : '<div class="ln"><b>Gesamt Hin+Rück:</b> Anfahrt '+fmtEuro(H.anfahrt+R.anfahrt)+' · Fahrt '+fmtStd(H.std+R.std)+' · '+nfKm((H.km+R.km)*1000)+'</div>';
+
+  wrap.innerHTML =
+    '<div class="rt-boxes">'+block("Hinfahrt → Baustelle",H,hinPriv,eH)+block("Rückfahrt → Rieckstraße",R,rueckPriv,eR)+'</div>'+
+    '<div class="rt-total">'+gesamtEuro+'</div>'+
+    '<div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>Mitarbeiter</th><th class="ctr">Hinfahrt</th><th class="ctr">Rückfahrt</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
+
+  // Klartext für die Zusammenfassung
+  const names=t=>t.map(r=>r.name);
+  lastReturnText="Hinfahrt: "+(hinMit.length?listNamesPlain(names(hinMit)):"–")+(hinPriv.length?" (privat: "+listNamesPlain(hinPriv)+")":"")+
+    ".\nRückfahrt: "+(rueckMit.length?listNamesPlain(names(rueckMit)):"–")+(rueckPriv.length?" (privat: "+listNamesPlain(rueckPriv)+")":"")+".";
+}
+
+/* ================================================================
    Zusammenfassung als kopierbarer Klartext
    ================================================================ */
 function buildSummaryText(){
@@ -2890,7 +2999,8 @@ function buildSummaryText(){
       "Alle fahren zunächst zur Rieckstraße, von dort gemeinsam zum Ziel.";
   }
   const strecke = lastRouteMeta ? "\n"+lastRouteMeta.label+": "+nfKm(lastRoute.distance)+", Fahrzeit "+fmtDauer(lastRoute.duration)+(lastRouteMeta.ti?", "+lastRouteMeta.ti.k+" "+lastRouteMeta.ti.v:"") : "";
-  ta.value = "Ziel: "+ziel.label+"\n"+t+strecke;
+  const rueck = (document.getElementById("returnTrip").checked && lastReturnText) ? "\n\n"+lastReturnText : "";
+  ta.value = "Ziel: "+ziel.label+"\n"+t+strecke+rueck;
   card.style.display="block";
 }
 
@@ -3198,6 +3308,18 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("setCancel").addEventListener("click",closeSettings);
   document.getElementById("setSave").addEventListener("click",saveSettingsModal);
   document.getElementById("setReset").addEventListener("click",()=>fillSettingsForm(defaultConfig()));
+  document.getElementById("setExport").addEventListener("click",exportConfig);
+  document.getElementById("setImport").addEventListener("click",()=>document.getElementById("setImportFile").click());
+  document.getElementById("setImportFile").addEventListener("change",e=>{ if(e.target.files[0]) importConfig(e.target.files[0]); e.target.value=""; });
+
+  // Hin-/Rückfahrt
+  document.getElementById("returnTrip").addEventListener("change",()=>{ renderReturnPlan(); buildSummaryText(); });
+  document.getElementById("returnWrap").addEventListener("change",e=>{
+    const s=e.target.closest("select[data-tp]"); if(!s) return;
+    const id=s.dataset.tp, dir=s.dataset.dir;
+    (travelPlan[id] = travelPlan[id] || {hin:"mit",rueck:"mit"})[dir] = s.value;
+    renderReturnPlan(); buildSummaryText();
+  });
   document.getElementById("settingsBg").addEventListener("click",e=>{ if(e.target.id==="settingsBg") closeSettings(); });
 
   // Tastenkürzel: Enter = Route berechnen · Strg/⌘+F = Suche · Esc = Dialog/Vorschläge schließen
