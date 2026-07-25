@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v49 (Geoapify) -->
+<!-- App-Version: v50 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -837,6 +837,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     transition:background .12s;
   }
   .emp:hover{background:#f8fafc}
+  @keyframes empflash{0%{background:#fde68a}60%{background:#fef3c7}100%{background:transparent}}
+  .emp.flash{animation:empflash 1.6s ease-out}
+  body.theme-dark .emp.flash{animation:empflashd 1.6s ease-out}
+  @keyframes empflashd{0%{background:#3f3410}60%{background:#2a2410}100%{background:transparent}}
   .emp.inactive{opacity:.5}
   .emp .cbx{width:17px; height:17px; accent-color:var(--accent); cursor:pointer; flex:none}
   .emp .info{flex:1; min-width:0; cursor:pointer}
@@ -898,6 +902,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   #map{height:640px; border-radius:12px; border:1px solid var(--line); background:#e2e8f0}
   .map-shell{position:relative}
+  .map-fsbtn{position:absolute; top:10px; right:10px; z-index:1000; width:36px; height:36px; border-radius:8px;
+    border:1px solid var(--line); background:#fff; color:#334155; font-size:18px; line-height:1; cursor:pointer;
+    box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .map-fsbtn:hover{background:#f1f5f9}
+  /* Karte „Vollbild" (maximiert im Browserfenster) */
+  .card.map-max{position:fixed; inset:0; z-index:3000; margin:0; border-radius:0; padding:12px;
+    display:flex; flex-direction:column; background:var(--panel)}
+  .card.map-max #summary,.card.map-max #mapLegend{flex:0 0 auto}
+  .card.map-max .map-shell{flex:1 1 auto; min-height:0}
+  .card.map-max #map{height:100%}
+  .card.map-max #assignBlock{flex:0 0 auto; max-height:32vh; overflow:auto}
   .map-busy{position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1000;
     display:flex; align-items:center; gap:8px; background:rgba(30,58,138,.92); color:#fff;
     font-size:13px; font-weight:600; padding:7px 14px; border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,.25)}
@@ -1043,7 +1058,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .print-head .meta{font-size:12px; color:#475569}
 
   .vbest{background:#f0fdf4}
-  /* Hell/Dunkel-Umschalter im Kopf */
+  /* Kopf-Werkzeuge: Zoom + Hell/Dunkel */
+  .head-tools{display:flex; align-items:center; gap:8px; flex:none}
+  .zoomctl{display:flex; align-items:center; gap:2px; background:rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.3); border-radius:10px; padding:2px}
+  .zoomctl button{background:none; border:none; color:#fff; font-size:13px; font-weight:700; cursor:pointer;
+    padding:6px 8px; border-radius:8px; line-height:1}
+  .zoomctl button:hover{background:rgba(255,255,255,.22)}
+  .zoomctl #zoomReset{font-size:12px; min-width:44px}
   .theme-toggle{background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); color:#fff;
     font-size:18px; line-height:1; width:38px; height:38px; border-radius:10px; cursor:pointer; flex:none}
   .theme-toggle:hover{background:rgba(255,255,255,.28)}
@@ -1144,7 +1166,14 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <h1>Wibbelt&nbsp;Routing</h1>
     </div>
   </div>
-  <button type="button" id="themeToggle" class="theme-toggle no-print" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">🌙</button>
+  <div class="head-tools no-print">
+    <div class="zoomctl" title="Anzeigegröße">
+      <button type="button" id="zoomOut" aria-label="kleiner">A−</button>
+      <button type="button" id="zoomReset" title="Zurücksetzen">100%</button>
+      <button type="button" id="zoomIn" aria-label="größer">A+</button>
+    </div>
+    <button type="button" id="themeToggle" class="theme-toggle" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">🌙</button>
+  </div>
 </header>
 
 <div class="wrap">
@@ -1314,11 +1343,12 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <div class="meta" id="printMeta"></div>
       </div>
 
-      <div class="card" style="margin-bottom:20px; padding:14px">
+      <div class="card" id="mapCard" style="margin-bottom:20px; padding:14px">
         <div id="summary" class="summary" style="display:none"></div>
         <div class="map-shell">
           <div id="map"></div>
           <div id="mapBusy" class="map-busy" style="display:none"><span class="spinner"></span>Wege werden gezeichnet …</div>
+          <button type="button" id="mapFsBtn" class="map-fsbtn no-print" title="Karte im Vollbild (Esc schließt)" aria-label="Vollbild">⛶</button>
         </div>
         <div id="mapLegend" class="map-legend" style="display:none"></div>
 
@@ -1528,6 +1558,21 @@ function applyTheme(t){
   document.body.classList.toggle("theme-dark", t==="dark");
   const btn=document.getElementById("themeToggle"); if(btn) btn.textContent = t==="dark" ? "☀️" : "🌙";
 }
+/* Anzeigegröße (App-Zoom) */
+const ZOOM_KEY="wibbelt.zoom.v1";
+const ZOOM_STEPS=[0.8,0.9,1.0,1.1,1.25,1.4,1.6];
+function loadZoom(){ let z=parseFloat(localStorage.getItem(ZOOM_KEY)); return (ZOOM_STEPS.includes(z)?z:1.0); }
+function applyZoom(z){
+  document.body.style.zoom = z;                       // skaliert die gesamte Oberfläche
+  const r=document.getElementById("zoomReset"); if(r) r.textContent = Math.round(z*100)+"%";
+  try{ localStorage.setItem(ZOOM_KEY, String(z)); }catch(e){}
+  if(map) setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 60);
+}
+function stepZoom(dir){
+  const cur=loadZoom(); let i=ZOOM_STEPS.indexOf(cur); if(i<0) i=ZOOM_STEPS.indexOf(1.0);
+  i=Math.max(0, Math.min(ZOOM_STEPS.length-1, i+dir));
+  applyZoom(ZOOM_STEPS[i]);
+}
 function loadSettings(){
   let s={}; try{ s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}"); }catch(e){}
   SETTING_IDS.forEach(id=>{ if(s[id]!=null && s[id]!=="") document.getElementById(id).value=s[id]; });
@@ -1669,7 +1714,7 @@ function renderMapEmployees(){
     if(row) tip += "<br>Entf. Start: "+nfKm(row.distStart)+"<br>Entf. Ziel: "+nfKm(row.distZiel)+"<br>Fahrzeit Ziel: "+fmtDauer(row.durZiel);
     tip += '<br><i>'+(m._checked?"✓ ausgewählt":"nicht ausgewählt")+' – klicken zum Umschalten</i>';
     const mk = L.marker([m.lat,m.lon],{icon:iconForEmp(m)}).bindTooltip(tip,{direction:"top",offset:[0,-24]});
-    mk.on("click",()=>{ m._checked=!m._checked; mk.setIcon(iconForEmp(m)); renderEmployees(); });
+    mk.on("click",()=>{ m._checked=!m._checked; mk.setIcon(iconForEmp(m)); renderEmployees(); flashEmpRow(m.id); });
     empLayer.addLayer(mk);
     // Namen dauerhaft anzeigen (separate, nicht-interaktive Tooltip-Ebene, damit der Hover-Tooltip erhalten bleibt)
     if(document.getElementById("mapNames").checked){
@@ -1681,6 +1726,15 @@ function renderMapEmployees(){
 }
 /* Ladeanzeige über der Karte */
 function setMapBusy(on){ const el=document.getElementById("mapBusy"); if(el) el.style.display = on?"flex":"none"; }
+/* Zur passenden Zeile in der Mitarbeiterliste springen und kurz hervorheben (Marker-Klick) */
+function flashEmpRow(id){
+  const row=document.querySelector('#empList .emp[data-emp="'+id+'"]');
+  if(!row) return;
+  row.scrollIntoView({block:"center", behavior:"smooth"});
+  row.classList.remove("flash"); void row.offsetWidth;   // Animation neu starten
+  row.classList.add("flash");
+  setTimeout(()=>row.classList.remove("flash"), 1600);
+}
 /* Karten-Legende passend zur aktuellen Kartenansicht */
 function renderMapLegend(mode){
   const el=document.getElementById("mapLegend"); if(!el) return;
@@ -1838,7 +1892,7 @@ function renderEmployees(){
     const toggle = m.aktiv
       ? '<button class="iconbtn" title="Ausblenden" data-toggle="'+m.id+'">👁</button>'
       : '<button class="iconbtn" title="Einblenden" data-toggle="'+m.id+'" style="color:#2563eb">↺</button>';
-    return '<div class="emp'+(m.aktiv?"":" inactive")+'">'+
+    return '<div class="emp'+(m.aktiv?"":" inactive")+'" data-emp="'+m.id+'">'+
       '<input type="checkbox" class="cbx" data-id="'+m.id+'" '+(m.aktiv?"":"disabled")+' '+(m._checked?"checked":"")+'>'+
       '<div class="info" data-edit="'+m.id+'">'+
         '<div class="nm"><span class="nmtext">'+escapeHtml(formatName(m.name))+'</span>'+
@@ -2790,6 +2844,7 @@ async function saveModal(){
    ================================================================ */
 window.addEventListener("DOMContentLoaded",()=>{
   applyTheme(loadTheme());
+  applyZoom(loadZoom());
   checkKey();
   loadMitarbeiter();
   mitarbeiter.forEach(m=>m._checked = false);      // standardmäßig niemand vorausgewählt
@@ -2809,6 +2864,21 @@ window.addEventListener("DOMContentLoaded",()=>{
   // Namen auf der Karte: bei Umschalten Marker neu zeichnen
   document.getElementById("mapNames").addEventListener("change",()=>{ if(empLayer) renderMapEmployees(); });
 
+  // Karte im Vollbild (maximiert im Fenster)
+  function toggleMapFs(force){
+    const card=document.getElementById("mapCard");
+    const on = force!=null ? force : !card.classList.contains("map-max");
+    card.classList.toggle("map-max", on);
+    document.getElementById("mapFsBtn").textContent = on ? "✕" : "⛶";
+    if(map) setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 60);
+  }
+  document.getElementById("mapFsBtn").addEventListener("click",()=>toggleMapFs());
+
+  // Anzeigegröße
+  document.getElementById("zoomIn").addEventListener("click",()=>stepZoom(+1));
+  document.getElementById("zoomOut").addEventListener("click",()=>stepZoom(-1));
+  document.getElementById("zoomReset").addEventListener("click",()=>applyZoom(1.0));
+
   // Tastenkürzel: Enter = Route berechnen · Strg/⌘+F = Suche · Esc = Dialog/Vorschläge schließen
   const CALC_ENTER_IDS=["zielInput","startInput","costKm","costH","seats","departTime","maSearch"];
   document.addEventListener("keydown",e=>{
@@ -2823,6 +2893,8 @@ window.addEventListener("DOMContentLoaded",()=>{
       e.preventDefault(); const s=document.getElementById("maSearch"); if(s){ s.focus(); s.select(); }
     }else if(e.key==="Escape"){
       document.querySelectorAll(".suggest.open").forEach(el=>el.classList.remove("open"));
+      const mc=document.getElementById("mapCard");
+      if(mc.classList.contains("map-max")) toggleMapFs(false);
     }
   });
 
