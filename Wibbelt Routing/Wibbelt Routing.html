@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v54 (Geoapify) -->
+<!-- App-Version: v55 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1261,7 +1261,9 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <div class="suggest" id="startSuggest"></div>
       </div>
       <div class="hint">Vorbelegt mit dem Firmenstandort – bei Bedarf überschreibbar.</div>
-      <label class="fld" for="zielInput">Zieladresse</label>
+      <label class="fld" for="zielInput">Zieladresse
+        <button type="button" class="linkbtn" id="zielPaste" title="Zieladresse aus der Zwischenablage einfügen">📋 einfügen</button>
+      </label>
       <div class="autoc">
         <input type="text" id="zielInput" autocomplete="off" placeholder="Zieladresse eingeben (ab 3 Zeichen) …">
         <div class="suggest" id="zielSuggest"></div>
@@ -1742,7 +1744,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v54";
+const APP_VERSION="v55";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -3228,6 +3230,18 @@ window.addEventListener("DOMContentLoaded",()=>{
   wireAutocomplete("startInput","startSuggest",{ set:s=>{start=s;} });
   wireAutocomplete("zielInput","zielSuggest",{ set:s=>{ziel=s; renderEmployees();}, dirty:()=>{ziel=null;} });
   wireAutocomplete("mAdresse","mSuggest",{ set:s=>{formGeo=s;}, dirty:()=>{ /* freier Text -> beim Speichern geocodieren */ } });
+
+  // Zieladresse aus der Zwischenablage einfügen
+  document.getElementById("zielPaste").addEventListener("click", async ()=>{
+    const inp=document.getElementById("zielInput");
+    let txt="";
+    try{ txt=(await navigator.clipboard.readText()||""); }
+    catch(e){ inp.focus(); setStatus("Zwischenablage nicht lesbar – bitte mit Strg+V ins Zielfeld einfügen.","info"); return; }
+    txt=txt.replace(/\s+/g," ").trim();
+    if(!txt){ setStatus("Die Zwischenablage ist leer.","info"); return; }
+    inp.value=txt; inp.focus();
+    inp.dispatchEvent(new Event("input",{bubbles:true}));   // löst Adress-Vorschläge aus (ziel wird zurückgesetzt)
+  });
 
   // Mitarbeiter-Liste: delegiertes Klick-Handling
   document.getElementById("empList").addEventListener("click",e=>{
