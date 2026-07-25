@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v50 (Geoapify) -->
+<!-- App-Version: v51 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1058,6 +1058,30 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .print-head .meta{font-size:12px; color:#475569}
 
   .vbest{background:#f0fdf4}
+
+  /* Start-Erklärung */
+  .intro{position:relative; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px;
+    padding:14px 40px 14px 16px; margin-bottom:16px; color:#1e293b}
+  .intro-h{font-size:16px; font-weight:700; margin-bottom:4px}
+  .intro-t{font-size:13px; color:#475569; margin-bottom:8px}
+  .intro-steps{margin:0 0 10px; padding-left:20px; font-size:13px; line-height:1.6}
+  .intro-a{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  .intro-a .save{background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:600; cursor:pointer}
+  .intro-x{position:absolute; top:8px; right:8px; background:none; border:none; font-size:16px; color:#64748b; cursor:pointer; padding:4px 8px; border-radius:6px}
+  .intro-x:hover{background:#dbeafe}
+  /* Hilfe-Modal Inhalte */
+  #helpBody h4{margin:14px 0 4px; font-size:14px; color:var(--accent)}
+  #helpBody h4:first-child{margin-top:0}
+  .help-ol,.help-ul{margin:0; padding-left:20px; font-size:13px; line-height:1.6; color:#334155}
+  .help-ol li,.help-ul li{margin:3px 0}
+  /* Fußzeile mit Version */
+  .appfoot{text-align:center; color:var(--muted); font-size:12px; padding:16px 0 24px}
+  .footlink{background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer; text-decoration:underline; padding:0}
+  /* Dark Mode für die neuen Elemente */
+  body.theme-dark .intro{background:#172033; border-color:#334155; color:#e2e8f0}
+  body.theme-dark .intro-t{color:#94a3b8}
+  body.theme-dark .intro-x:hover{background:#1e293b}
+  body.theme-dark .help-ol,body.theme-dark .help-ul{color:#cbd5e1}
   /* Kopf-Werkzeuge: Zoom + Hell/Dunkel */
   .head-tools{display:flex; align-items:center; gap:8px; flex:none}
   .zoomctl{display:flex; align-items:center; gap:2px; background:rgba(255,255,255,.15);
@@ -1172,6 +1196,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <button type="button" id="zoomReset" title="Zurücksetzen">100%</button>
       <button type="button" id="zoomIn" aria-label="größer">A+</button>
     </div>
+    <button type="button" id="helpBtn" class="theme-toggle" title="Hilfe &amp; Info" aria-label="Hilfe und Info">❓</button>
     <button type="button" id="themeToggle" class="theme-toggle" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">🌙</button>
   </div>
 </header>
@@ -1181,6 +1206,23 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
     ⚠️ Es ist noch kein Geoapify-Key hinterlegt. Trage oben im Quelltext bei
     <code>const GEOAPIFY_KEY</code> deinen persönlichen Schlüssel von
     geoapify.com ein, sonst funktionieren Suche und Routenberechnung nicht.
+  </div>
+
+  <!-- Start-Erklärung (bis zum Ausblenden sichtbar) -->
+  <div class="intro no-print" id="introBox" style="display:none">
+    <button type="button" class="intro-x" id="introClose" title="Ausblenden" aria-label="Ausblenden">✕</button>
+    <div class="intro-h">👋 Willkommen bei <b>Wibbelt&nbsp;Routing</b></div>
+    <div class="intro-t">Plane die Fahrt vom Firmenstandort (Rieckstraße) zu einer Baustelle und sieh, welche Mitarbeiter wie weit fahren.</div>
+    <ol class="intro-steps">
+      <li><b>Zieladresse</b> eingeben und aus den Vorschlägen wählen.</li>
+      <li><b>Mitarbeiter</b> markieren (Liste oder Klick auf die Karte).</li>
+      <li><b>Kartenansicht</b> wählen (Treffpunkt, Gemischt, Einsammeln …).</li>
+      <li><b>Route berechnen</b> – Karte, Tabelle, Kosten & Zusammenfassung erscheinen.</li>
+    </ol>
+    <div class="intro-a">
+      <button type="button" class="save" id="introOk">Verstanden</button>
+      <button type="button" class="linkbtn" id="introHelp">Ausführliche Hilfe öffnen</button>
+    </div>
   </div>
 
   <div class="grid3">
@@ -1453,6 +1495,64 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
   </div>
 </div>
 
+<!-- ===================== MODAL: Hilfe & Info ===================== -->
+<div class="modal-bg" id="helpBg">
+  <div class="modal wide">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+      <h3 style="margin:0">Hilfe &amp; Info <span id="helpVer" style="font-size:13px;color:#64748b;font-weight:600"></span></h3>
+      <button class="cancel" id="helpClose" style="padding:6px 14px">Schließen</button>
+    </div>
+    <div id="helpBody" style="overflow:auto; max-height:72vh; margin-top:10px">
+      <h4>In 4 Schritten</h4>
+      <ol class="help-ol">
+        <li><b>Zieladresse</b> eingeben (ab 3 Zeichen kommen Vorschläge) und auswählen. Der Startpunkt (Rieckstraße) ist vorbelegt, kann aber überschrieben werden.</li>
+        <li><b>Mitarbeiter markieren</b> – in der Liste ankreuzen oder direkt auf der Karte anklicken.</li>
+        <li><b>Kartenansicht</b> wählen (siehe unten).</li>
+        <li><b>„Route berechnen"</b> – es erscheinen Karte, Tabelle, Variantenvergleich und die kopierbare Zusammenfassung.</li>
+      </ol>
+
+      <h4>Kartenansichten</h4>
+      <ul class="help-ul">
+        <li><b>Treffpunkt Rieckstraße</b> – jeder fährt zur Rieckstraße, von dort gemeinsam zum Ziel.</li>
+        <li><b>Gemischt (Einzel-Zuteilung)</b> – je Mitarbeiter unter der Karte festlegen: zur Rieckstraße, direkt zur Baustelle oder einsammeln.</li>
+        <li><b>Einsammeln</b> – ein Fahrzeug ab Rieckstraße holt alle in optimierter Reihenfolge ab.</li>
+        <li><b>Einer zur Rieckstraße, Rest direkt</b> – der Nächstgelegene fährt zur Rieckstraße, die anderen direkt zur Baustelle.</li>
+      </ul>
+
+      <h4>Was kann das Programm noch?</h4>
+      <ul class="help-ul">
+        <li><b>Variantenvergleich</b> – zeigt Strecke, bezahlte Stunden und Kosten je Fahrweise und markiert die günstigste.</li>
+        <li><b>Mitfahr-Kosten</b> – Fahrer 1 Std./70 km, Beifahrer 1 Std./100 km, abgerechnet im 15-Minuten-Takt; Anfahrt 0,30 €/km.</li>
+        <li><b>Zeitbezug</b> – „Abfahrt um" oder „Ankunft (Baustelle)" → Abfahrt wird zurückgerechnet.</li>
+        <li><b>Filter</b> – nach Rolle/Merkmalen (Chips), Umkreis, Suche; Sortierung nach Nachname.</li>
+        <li><b>Stammdaten verwalten</b> und <b>Aus Excel importieren</b> (Name · Vorname · Straße · PLZ · Wohnort).</li>
+        <li><b>Export</b> – „PDF mit/ohne Kosten" und „Tabelle als CSV".</li>
+        <li><b>Karte</b> – Vollbild (⛶), Namen einblenden, Marker-Klick springt zur Liste, Legende.</li>
+        <li><b>Anzeige</b> – Hell/Dunkel (🌙), Anzeigegröße (A− / A+).</li>
+      </ul>
+
+      <h4>Tastenkürzel</h4>
+      <ul class="help-ul">
+        <li><b>Enter</b> – Route berechnen</li>
+        <li><b>Strg/⌘ + F</b> – Mitarbeiter-Suche</li>
+        <li><b>Esc</b> – Vorschläge / Vollbild schließen</li>
+      </ul>
+
+      <h4>Daten teilen (Netzwerk-Ordner)</h4>
+      <div class="hint" style="margin:0">Änderungen an Mitarbeitern über <b>„Für Server speichern"</b> als <code>mitarbeiter.js</code> herunterladen und im Freigabe-Ordner ersetzen – dann sehen alle Kollegen denselben Stand.</div>
+
+      <h4>Bei Problemen</h4>
+      <div class="hint" style="margin:0">„Key fehlt/ungültig" → Schlüssel im Quelltext prüfen. „Quota erreicht" → Tageslimit, morgen wieder. „Keine Internetverbindung" → Netzwerk prüfen.</div>
+    </div>
+    <div class="actions">
+      <button class="save" id="helpDone">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fußzeile mit Versionsnummer -->
+<div class="appfoot no-print">Wibbelt&nbsp;Routing <span id="footVer"></span> · <button type="button" class="footlink" id="footHelp">Hilfe</button></div>
+
 <script>
 /* ================================================================
    Formatierung (deutsch)
@@ -1550,6 +1650,19 @@ function renderHistory(){
 /* Fahrt-Einstellungen (Profil, Abfahrt, Kostensätze) im Browser merken */
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","costKm","costH","seats","timeMode"];
+/* Version / Hilfe / Start-Erklärung */
+const APP_VERSION="v51";
+const INTRO_KEY="wibbelt.intro.v1";
+function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
+function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
+function dismissIntro(){ document.getElementById("introBox").style.display="none"; try{ localStorage.setItem(INTRO_KEY,"1"); }catch(e){} }
+function initHelpAndIntro(){
+  document.getElementById("footVer").textContent=APP_VERSION;
+  document.getElementById("helpVer").textContent=APP_VERSION;
+  let seen="0"; try{ seen=localStorage.getItem(INTRO_KEY)||"0"; }catch(e){}
+  if(seen!=="1") document.getElementById("introBox").style.display="block";
+}
+
 /* Hell/Dunkel-Modus */
 const THEME_KEY="wibbelt.theme.v1";
 function loadTheme(){ try{ return localStorage.getItem(THEME_KEY)||"light"; }catch(e){ return "light"; } }
@@ -2845,6 +2958,7 @@ async function saveModal(){
 window.addEventListener("DOMContentLoaded",()=>{
   applyTheme(loadTheme());
   applyZoom(loadZoom());
+  initHelpAndIntro();
   checkKey();
   loadMitarbeiter();
   mitarbeiter.forEach(m=>m._checked = false);      // standardmäßig niemand vorausgewählt
@@ -2879,10 +2993,20 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("zoomOut").addEventListener("click",()=>stepZoom(-1));
   document.getElementById("zoomReset").addEventListener("click",()=>applyZoom(1.0));
 
+  // Hilfe & Start-Erklärung
+  document.getElementById("helpBtn").addEventListener("click",openHelp);
+  document.getElementById("footHelp").addEventListener("click",openHelp);
+  document.getElementById("helpClose").addEventListener("click",closeHelp);
+  document.getElementById("helpDone").addEventListener("click",closeHelp);
+  document.getElementById("helpBg").addEventListener("click",e=>{ if(e.target.id==="helpBg") closeHelp(); });
+  document.getElementById("introOk").addEventListener("click",dismissIntro);
+  document.getElementById("introClose").addEventListener("click",dismissIntro);
+  document.getElementById("introHelp").addEventListener("click",openHelp);
+
   // Tastenkürzel: Enter = Route berechnen · Strg/⌘+F = Suche · Esc = Dialog/Vorschläge schließen
   const CALC_ENTER_IDS=["zielInput","startInput","costKm","costH","seats","departTime","maSearch"];
   document.addEventListener("keydown",e=>{
-    const anyModalOpen=document.querySelector("#modalBg.open, #importBg.open, #stammBg.open");
+    const anyModalOpen=document.querySelector("#modalBg.open, #importBg.open, #stammBg.open, #helpBg.open");
     if(e.key==="Enter" && !e.shiftKey && !anyModalOpen){
       if(e.target.id==="zielInput" && document.querySelector("#zielSuggest.open")) return;   // Auswahl im Vorschlag zulassen
       if(e.target.id==="startInput" && document.querySelector("#startSuggest.open")) return;
@@ -2893,6 +3017,7 @@ window.addEventListener("DOMContentLoaded",()=>{
       e.preventDefault(); const s=document.getElementById("maSearch"); if(s){ s.focus(); s.select(); }
     }else if(e.key==="Escape"){
       document.querySelectorAll(".suggest.open").forEach(el=>el.classList.remove("open"));
+      if(document.getElementById("helpBg").classList.contains("open")) closeHelp();
       const mc=document.getElementById("mapCard");
       if(mc.classList.contains("map-max")) toggleMapFs(false);
     }
