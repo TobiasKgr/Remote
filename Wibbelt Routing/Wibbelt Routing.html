@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v51 (Geoapify) -->
+<!-- App-Version: v52 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1074,6 +1074,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #helpBody h4:first-child{margin-top:0}
   .help-ol,.help-ul{margin:0; padding-left:20px; font-size:13px; line-height:1.6; color:#334155}
   .help-ol li,.help-ul li{margin:3px 0}
+  /* Einstellungen */
+  .set-h{margin:14px 0 6px; font-size:14px; color:var(--accent); border-bottom:1px solid var(--line); padding-bottom:4px}
+  .set-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px 14px}
+  .set-grid label{display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#334155}
+  .set-grid input,.set-grid select{padding:8px 10px}
+  .set-row{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center}
+  body.theme-dark .set-grid label{color:#cbd5e1}
   /* Fußzeile mit Version */
   .appfoot{text-align:center; color:var(--muted); font-size:12px; padding:16px 0 24px}
   .footlink{background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer; text-decoration:underline; padding:0}
@@ -1196,6 +1203,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <button type="button" id="zoomReset" title="Zurücksetzen">100%</button>
       <button type="button" id="zoomIn" aria-label="größer">A+</button>
     </div>
+    <button type="button" id="settingsBtn" class="theme-toggle" title="Einstellungen / Voreinstellungen" aria-label="Einstellungen">⚙️</button>
     <button type="button" id="helpBtn" class="theme-toggle" title="Hilfe &amp; Info" aria-label="Hilfe und Info">❓</button>
     <button type="button" id="themeToggle" class="theme-toggle" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">🌙</button>
   </div>
@@ -1550,8 +1558,61 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
   </div>
 </div>
 
+<!-- ===================== MODAL: Einstellungen / Voreinstellungen ===================== -->
+<div class="modal-bg" id="settingsBg">
+  <div class="modal wide">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+      <h3 style="margin:0">⚙️ Voreinstellungen</h3>
+      <button class="cancel" id="setClose" style="padding:6px 14px">Schließen</button>
+    </div>
+    <div style="overflow:auto; max-height:72vh; margin-top:10px">
+      <h4 class="set-h">Kosten-Grundwerte</h4>
+      <div class="set-grid">
+        <label>Fahrer: km je 1 Std.<input type="number" id="setKmFahrer" min="1" step="1"></label>
+        <label>Beifahrer: km je 1 Std.<input type="number" id="setKmBeifahrer" min="1" step="1"></label>
+        <label>Anfahrt € / km (Heim→Rieckstraße)<input type="number" id="setAnfahrt" min="0" step="0.01"></label>
+        <label>Abrechnungstakt
+          <select id="setTakt">
+            <option value="1">ganze Stunde</option>
+            <option value="0.5">30 Minuten</option>
+            <option value="0.25">15 Minuten</option>
+            <option value="0">exakt (keine Rundung)</option>
+          </select>
+        </label>
+        <label>Standard € / km<input type="number" id="setCostKm" min="0" step="0.01"></label>
+        <label>Standard € / Std. (optional)<input type="number" id="setCostH" min="0" step="1"></label>
+        <label>Standard Sitzplätze je Fahrzeug<input type="number" id="setSeats" min="1" max="9" step="1"></label>
+      </div>
+
+      <h4 class="set-h">Filter beim Start</h4>
+      <div class="set-grid" id="setFilterGrid"></div>
+      <div class="set-row" style="margin-top:8px">
+        <label class="chk"><input type="checkbox" id="setOnlyActive"> nur aktive anzeigen</label>
+        <label class="chk"><input type="checkbox" id="setRadiusOn"> Umkreis-Filter aktiv</label>
+        <label class="chk">Umkreis <input type="number" id="setRadiusKm" min="1" step="5" style="width:70px"> km um
+          <select id="setRadiusRef" style="width:auto"><option value="ziel">Ziel</option><option value="start">Rieckstraße</option></select>
+        </label>
+      </div>
+
+      <h4 class="set-h">Fenster beim Start (auf-/zugeklappt)</h4>
+      <div class="set-row">
+        <label class="chk"><input type="checkbox" id="setPanelFahrt"> Fahrt-Optionen geöffnet</label>
+        <label class="chk"><input type="checkbox" id="setPanelFilter"> Filter &amp; Sortierung geöffnet</label>
+      </div>
+      <div class="hint" style="margin-top:10px">Die Werte gelten beim Öffnen des Programms. „Speichern" übernimmt sie sofort.</div>
+    </div>
+    <div class="actions" style="justify-content:space-between">
+      <button class="cancel" id="setReset">Auf Standard zurücksetzen</button>
+      <div style="display:flex; gap:8px">
+        <button class="cancel" id="setCancel">Abbrechen</button>
+        <button class="save" id="setSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Fußzeile mit Versionsnummer -->
-<div class="appfoot no-print">Wibbelt&nbsp;Routing <span id="footVer"></span> · <button type="button" class="footlink" id="footHelp">Hilfe</button></div>
+<div class="appfoot no-print">Wibbelt&nbsp;Routing <span id="footVer"></span> · <button type="button" class="footlink" id="footHelp">Hilfe</button> · <button type="button" class="footlink" id="footSettings">Einstellungen</button></div>
 
 <script>
 /* ================================================================
@@ -1583,12 +1644,13 @@ function costEnabled(){ const r=costRates(); return r.km>0||r.h>0; }
 function calcCost(meters,sec){ const r=costRates(); return (meters/1000)*r.km + (sec/3600)*r.h; }
 
 /* Fahrgemeinschaft: bezahlte Stunden nach angefangenen km-Blöcken (Fahrer 70 km, Beifahrer 100 km) */
-const KM_FAHRER=70, KM_BEIFAHRER=100;
-const ANFAHRT_EUR_KM=0.30;        // Kilometergeld Heim -> Rieckstraße
+let KM_FAHRER=70, KM_BEIFAHRER=100;   // km je bezahlte Stunde (aus Einstellungen)
+let ANFAHRT_EUR_KM=0.30;              // Kilometergeld Heim -> Rieckstraße
+let ABRECHNUNG_TAKT=0.25;             // Abrechnungstakt in Std. (0 = exakt)
 /* Bezahlte Zeit im 15-Minuten-Takt (0,25-Std.-Schritte), immer aufgerundet */
-function roundQuarter(h){ return Math.ceil((h-1e-9)/0.25)*0.25; }
-function stdFahrer(meters){ if(meters==null||isNaN(meters)) return 0; return roundQuarter((meters/1000)/KM_FAHRER); }
-function stdBeifahrer(meters){ if(meters==null||isNaN(meters)) return 0; return roundQuarter((meters/1000)/KM_BEIFAHRER); }
+function roundTakt(h){ return ABRECHNUNG_TAKT>0 ? Math.ceil((h-1e-9)/ABRECHNUNG_TAKT)*ABRECHNUNG_TAKT : Math.round(h*100)/100; }
+function stdFahrer(meters){ if(meters==null||isNaN(meters)) return 0; return roundTakt((meters/1000)/KM_FAHRER); }
+function stdBeifahrer(meters){ if(meters==null||isNaN(meters)) return 0; return roundTakt((meters/1000)/KM_BEIFAHRER); }
 function fmtStd(n){ const v=Math.round((n||0)*100)/100; return v.toLocaleString("de-DE",{minimumFractionDigits:0, maximumFractionDigits:2})+" Std."; }
 function seatsPerCar(){ return Math.max(1, parseInt(document.getElementById("seats").value)||2); }
 function listNames(arr){ arr=arr.map(escapeHtml); if(arr.length<=1) return arr[0]||""; return arr.slice(0,-1).join(", ")+" und "+arr[arr.length-1]; }
@@ -1649,9 +1711,9 @@ function renderHistory(){
 
 /* Fahrt-Einstellungen (Profil, Abfahrt, Kostensätze) im Browser merken */
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
-const SETTING_IDS=["profile","departTime","costKm","costH","seats","timeMode"];
+const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v51";
+const APP_VERSION="v52";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -1661,6 +1723,98 @@ function initHelpAndIntro(){
   document.getElementById("helpVer").textContent=APP_VERSION;
   let seen="0"; try{ seen=localStorage.getItem(INTRO_KEY)||"0"; }catch(e){}
   if(seen!=="1") document.getElementById("introBox").style.display="block";
+}
+
+/* ================================================================
+   Voreinstellungen (⚙️) – Grundwerte, Filter-Startzustand, Panels
+   ================================================================ */
+const CONFIG_KEY="wibbelt.config.v1";
+function defaultConfig(){ return {
+  kmFahrer:70, kmBeifahrer:100, anfahrtEurKm:0.30, takt:0.25,
+  costKm:0.20, costH:0, seats:2,
+  filter:{ Projektleiter:"ohne", Monteur:"", Solvay:"ohne", Wiederholt:"ohne", Werkstatt:"ohne" },
+  onlyActive:true, radiusOn:false, radiusKm:70, radiusRef:"ziel",
+  panelFahrt:true, panelFilter:true    // true = beim Start geöffnet
+}; }
+let CONFIG = defaultConfig();
+function loadConfig(){
+  try{ const s=JSON.parse(localStorage.getItem(CONFIG_KEY)||"null");
+    if(s && typeof s==="object"){ const d=defaultConfig(); CONFIG=Object.assign(d, s); CONFIG.filter=Object.assign(d.filter, s.filter||{}); }
+  }catch(e){}
+}
+function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(CONFIG)); }catch(e){} }
+/* Kosten-Grundwerte in die Rechen-Variablen übernehmen */
+function applyConfigConstants(){
+  KM_FAHRER=parseFloat(CONFIG.kmFahrer)||70;
+  KM_BEIFAHRER=parseFloat(CONFIG.kmBeifahrer)||100;
+  ANFAHRT_EUR_KM=isNaN(parseFloat(CONFIG.anfahrtEurKm))?0:parseFloat(CONFIG.anfahrtEurKm);
+  ABRECHNUNG_TAKT=isNaN(parseFloat(CONFIG.takt))?0:parseFloat(CONFIG.takt);
+}
+/* CONFIG-Standardwerte in die Bedien-Elemente schreiben (Felder, Filter-Chips, Panels) */
+function applyConfigDefaults(){
+  applyConfigConstants();
+  const setv=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
+  setv("costKm", CONFIG.costKm);
+  setv("costH", (parseFloat(CONFIG.costH)>0? CONFIG.costH : ""));
+  setv("seats", CONFIG.seats);
+  setv("radiusKm", CONFIG.radiusKm);
+  setv("radiusRef", CONFIG.radiusRef);
+  document.getElementById("radiusOn").checked = !!CONFIG.radiusOn;
+  document.getElementById("onlyActive").checked = !!CONFIG.onlyActive;
+  // Panels auf/zu
+  const pf=document.getElementById("panel-fahrt"); if(pf) pf.classList.toggle("collapsed", !CONFIG.panelFahrt);
+  const pl=document.getElementById("panel-filter"); if(pl) pl.classList.toggle("collapsed", !CONFIG.panelFilter);
+  // Filter-Chips auf Startzustand
+  applyFilterConfig();
+}
+/* Setzt die Filter-Chips auf die in CONFIG hinterlegten Startzustände */
+function applyFilterConfig(){
+  document.querySelectorAll('#tagFilter .fchip').forEach(c=>{
+    const st=(CONFIG.filter&&CONFIG.filter[c.dataset.cat])||"";
+    c.dataset.state=st;
+    c.querySelector(".fst").textContent = st==="mit"?"✓":st==="ohne"?"✕":"";
+  });
+}
+/* ---- Einstellungs-Dialog ---- */
+function settingsFilterCats(){ return [...ROLLEN, ...MERKMALE]; }
+function fillSettingsForm(cfg){
+  const v=(id,val)=>{ const el=document.getElementById(id); if(el) el.value=val; };
+  v("setKmFahrer",cfg.kmFahrer); v("setKmBeifahrer",cfg.kmBeifahrer); v("setAnfahrt",cfg.anfahrtEurKm);
+  v("setTakt",String(cfg.takt)); v("setCostKm",cfg.costKm); v("setCostH",(parseFloat(cfg.costH)>0?cfg.costH:""));
+  v("setSeats",cfg.seats); v("setRadiusKm",cfg.radiusKm); v("setRadiusRef",cfg.radiusRef);
+  document.getElementById("setOnlyActive").checked=!!cfg.onlyActive;
+  document.getElementById("setRadiusOn").checked=!!cfg.radiusOn;
+  document.getElementById("setPanelFahrt").checked=!!cfg.panelFahrt;
+  document.getElementById("setPanelFilter").checked=!!cfg.panelFilter;
+  const opts=cur=>[["","egal"],["mit","nur mit"],["ohne","ohne"]].map(([val,l])=>'<option value="'+val+'"'+(val===cur?' selected':'')+'>'+l+'</option>').join("");
+  document.getElementById("setFilterGrid").innerHTML = settingsFilterCats().map(c=>
+    '<label>'+escapeHtml(c)+'<select data-fcat="'+escapeHtml(c)+'">'+opts((cfg.filter&&cfg.filter[c])||"")+'</select></label>').join("");
+}
+function readSettingsForm(){
+  const cfg=defaultConfig();
+  const num=(id,def)=>{ const x=parseFloat(document.getElementById(id).value); return isNaN(x)?def:x; };
+  cfg.kmFahrer=Math.max(1,num("setKmFahrer",70)); cfg.kmBeifahrer=Math.max(1,num("setKmBeifahrer",100));
+  cfg.anfahrtEurKm=Math.max(0,num("setAnfahrt",0)); cfg.takt=num("setTakt",0.25);
+  cfg.costKm=Math.max(0,num("setCostKm",0)); cfg.costH=Math.max(0,num("setCostH",0));
+  cfg.seats=Math.max(1,Math.round(num("setSeats",2)));
+  cfg.radiusKm=Math.max(1,num("setRadiusKm",70)); cfg.radiusRef=document.getElementById("setRadiusRef").value;
+  cfg.onlyActive=document.getElementById("setOnlyActive").checked;
+  cfg.radiusOn=document.getElementById("setRadiusOn").checked;
+  cfg.panelFahrt=document.getElementById("setPanelFahrt").checked;
+  cfg.panelFilter=document.getElementById("setPanelFilter").checked;
+  cfg.filter={}; document.querySelectorAll('#setFilterGrid select[data-fcat]').forEach(s=>cfg.filter[s.dataset.fcat]=s.value);
+  return cfg;
+}
+function openSettings(){ fillSettingsForm(CONFIG); document.getElementById("settingsBg").classList.add("open"); }
+function closeSettings(){ document.getElementById("settingsBg").classList.remove("open"); }
+function saveSettingsModal(){
+  CONFIG=readSettingsForm(); saveConfig();
+  applyConfigDefaults(); renderEmployees();
+  if(lastRows.length){
+    const mode=(document.querySelector('input[name="routeMode"]:checked')||{}).value||"treff";
+    renderTable(); renderCarpool(); renderVariants(selectedEmployees(), mode); buildSummaryText();
+  }
+  closeSettings(); setStatus("Voreinstellungen gespeichert.","ok");
 }
 
 /* Hell/Dunkel-Modus */
@@ -1702,7 +1856,7 @@ function saveSettings(){
 
 /* Auf-/zuklappbare Gruppen – Zustand merken */
 const PANEL_KEY="wibbelt.panels.v1";
-function togglePanel(id){ const p=document.getElementById("panel-"+id); if(p){ p.classList.toggle("collapsed"); savePanels(); } }
+function togglePanel(id){ const p=document.getElementById("panel-"+id); if(p) p.classList.toggle("collapsed"); }
 function savePanels(){
   const st={}; document.querySelectorAll(".panel").forEach(p=>{ if(p.id) st[p.id]=p.classList.contains("collapsed"); });
   try{ localStorage.setItem(PANEL_KEY,JSON.stringify(st)); }catch(e){}
@@ -1931,10 +2085,9 @@ function buildTagChecks(){
   document.getElementById("mTags").innerHTML = MERKMALE.map(t=>
     '<label class="chk"><input type="checkbox" data-tag="'+escapeHtml(t)+'"> '+escapeHtml(t)+'</label>').join("");
 
-  // Standardzustand beim Start: diese Kategorien ausgeblendet ("ohne"); Rest neutral (egal)
-  const DEFAULT_OHNE = ["Projektleiter", ...MERKMALE];
+  // Startzustand der Filter aus den Voreinstellungen (⚙️)
   const chip = c => {
-    const st = DEFAULT_OHNE.includes(c) ? "ohne" : "";
+    const st = (CONFIG.filter && CONFIG.filter[c]) || "";
     const glyph = st==="mit" ? "✓" : st==="ohne" ? "✕" : "";
     return '<button type="button" class="fchip" data-cat="'+escapeHtml(c)+'" data-state="'+st+'" '+
       'title="'+escapeHtml(c)+' – klicken: nur mit → ohne → egal">'+
@@ -2956,6 +3109,7 @@ async function saveModal(){
    Init / Events
    ================================================================ */
 window.addEventListener("DOMContentLoaded",()=>{
+  loadConfig();
   applyTheme(loadTheme());
   applyZoom(loadZoom());
   initHelpAndIntro();
@@ -2963,12 +3117,12 @@ window.addEventListener("DOMContentLoaded",()=>{
   loadMitarbeiter();
   mitarbeiter.forEach(m=>m._checked = false);      // standardmäßig niemand vorausgewählt
   try{ initMap(); }catch(e){ console.error("Karte konnte nicht initialisiert werden:",e); }
-  buildTagChecks();
+  buildTagChecks();                                // Chips gemäß CONFIG.filter
+  applyConfigDefaults();                           // Grundwerte/Felder/Panels/Filter aus CONFIG
   renderEmployees();
   updateShareState();
-  loadSettings();
+  loadSettings();                                  // zuletzt genutzte Profil-/Zeitwerte
   renderHistory();
-  restorePanels();
 
   // Hell/Dunkel
   document.getElementById("themeToggle").addEventListener("click",()=>{
@@ -3003,10 +3157,19 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("introClose").addEventListener("click",dismissIntro);
   document.getElementById("introHelp").addEventListener("click",openHelp);
 
+  // Einstellungen / Voreinstellungen
+  document.getElementById("settingsBtn").addEventListener("click",openSettings);
+  document.getElementById("footSettings").addEventListener("click",openSettings);
+  document.getElementById("setClose").addEventListener("click",closeSettings);
+  document.getElementById("setCancel").addEventListener("click",closeSettings);
+  document.getElementById("setSave").addEventListener("click",saveSettingsModal);
+  document.getElementById("setReset").addEventListener("click",()=>fillSettingsForm(defaultConfig()));
+  document.getElementById("settingsBg").addEventListener("click",e=>{ if(e.target.id==="settingsBg") closeSettings(); });
+
   // Tastenkürzel: Enter = Route berechnen · Strg/⌘+F = Suche · Esc = Dialog/Vorschläge schließen
   const CALC_ENTER_IDS=["zielInput","startInput","costKm","costH","seats","departTime","maSearch"];
   document.addEventListener("keydown",e=>{
-    const anyModalOpen=document.querySelector("#modalBg.open, #importBg.open, #stammBg.open, #helpBg.open");
+    const anyModalOpen=document.querySelector("#modalBg.open, #importBg.open, #stammBg.open, #helpBg.open, #settingsBg.open");
     if(e.key==="Enter" && !e.shiftKey && !anyModalOpen){
       if(e.target.id==="zielInput" && document.querySelector("#zielSuggest.open")) return;   // Auswahl im Vorschlag zulassen
       if(e.target.id==="startInput" && document.querySelector("#startSuggest.open")) return;
@@ -3018,6 +3181,7 @@ window.addEventListener("DOMContentLoaded",()=>{
     }else if(e.key==="Escape"){
       document.querySelectorAll(".suggest.open").forEach(el=>el.classList.remove("open"));
       if(document.getElementById("helpBg").classList.contains("open")) closeHelp();
+      if(document.getElementById("settingsBg").classList.contains("open")) closeSettings();
       const mc=document.getElementById("mapCard");
       if(mc.classList.contains("map-max")) toggleMapFs(false);
     }
