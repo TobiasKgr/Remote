@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v53 (Geoapify) -->
+<!-- App-Version: v54 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1098,6 +1098,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
     padding:6px 8px; border-radius:8px; line-height:1}
   .zoomctl button:hover{background:rgba(255,255,255,.22)}
   .zoomctl #zoomReset{font-size:12px; min-width:44px}
+  /* Zoom-Steuerung im Einstellungen-Fenster (heller Hintergrund) */
+  .zoomctl-panel{background:#f1f5f9; border-color:#cbd5e1}
+  .zoomctl-panel button{color:#334155}
+  .zoomctl-panel button:hover{background:#e2e8f0}
+  body.theme-dark .zoomctl-panel{background:#0f172a; border-color:#475569}
+  body.theme-dark .zoomctl-panel button{color:#cbd5e1}
+  body.theme-dark .zoomctl-panel button:hover{background:#1e293b}
   .theme-toggle{background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); color:#fff;
     font-size:18px; line-height:1; width:38px; height:38px; border-radius:10px; cursor:pointer; flex:none}
   .theme-toggle:hover{background:rgba(255,255,255,.28)}
@@ -1209,11 +1216,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
     </div>
   </div>
   <div class="head-tools no-print">
-    <div class="zoomctl" title="Anzeigegröße">
-      <button type="button" id="zoomOut" aria-label="kleiner">A−</button>
-      <button type="button" id="zoomReset" title="Zurücksetzen">100%</button>
-      <button type="button" id="zoomIn" aria-label="größer">A+</button>
-    </div>
     <button type="button" id="themeToggle" class="theme-toggle" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">🌙</button>
     <div class="menu-wrap">
       <button type="button" id="menuBtn" class="theme-toggle" title="Menü" aria-haspopup="true" aria-expanded="false" aria-label="Menü">☰</button>
@@ -1615,7 +1617,19 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <label class="chk"><input type="checkbox" id="setPanelFahrt"> Fahrt-Optionen geöffnet</label>
         <label class="chk"><input type="checkbox" id="setPanelFilter"> Filter &amp; Sortierung geöffnet</label>
       </div>
-      <div class="hint" style="margin-top:10px">Die Werte gelten beim Öffnen des Programms. „Speichern" übernimmt sie sofort.</div>
+
+      <h4 class="set-h">Anzeige</h4>
+      <div class="set-row">
+        <span style="font-size:13px; font-weight:600">Anzeigegröße (Text):</span>
+        <div class="zoomctl zoomctl-panel" title="Anzeigegröße">
+          <button type="button" id="zoomOut" aria-label="kleiner">A−</button>
+          <button type="button" id="zoomReset" title="Zurücksetzen">100%</button>
+          <button type="button" id="zoomIn" aria-label="größer">A+</button>
+        </div>
+        <span class="hint" style="margin:0">wirkt sofort</span>
+      </div>
+
+      <div class="hint" style="margin-top:10px">Die Werte gelten beim Öffnen des Programms. „Speichern" übernimmt sie sofort. (Anzeigegröße und Hell/Dunkel wirken direkt.)</div>
     </div>
     <div class="actions" style="justify-content:space-between">
       <button class="cancel" id="setReset">Auf Standard zurücksetzen</button>
@@ -1728,7 +1742,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v53";
+const APP_VERSION="v54";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
