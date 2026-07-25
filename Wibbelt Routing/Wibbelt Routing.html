@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v57 (Geoapify) -->
+<!-- App-Version: v58 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1282,7 +1282,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <button type="button" class="trip-tab active" data-trip="hin">🚗 Hinfahrt</button>
         <button type="button" class="trip-tab" data-trip="rueck">↩ Rückfahrt</button>
       </div>
-      <button type="button" class="linkbtn no-print" id="takeoverBtn" style="display:none; margin:0 0 8px">⤵ Ziel &amp; Auswahl aus Hinfahrt übernehmen</button>
+      <button type="button" class="linkbtn no-print" id="takeoverBtn" style="display:none; margin:0 0 8px">⤵ Aus Hinfahrt übernehmen (Start↔Ziel getauscht)</button>
       <h2 id="tripTitle">Hinfahrt · Ziel &amp; Optionen</h2>
       <label class="fld" for="startInput">Startpunkt</label>
       <div class="autoc">
@@ -1583,7 +1583,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <li><b>Zeitbezug</b> – „Abfahrt um" oder „Ankunft (Baustelle)" → Abfahrt wird zurückgerechnet.</li>
         <li><b>Filter</b> – nach Rolle/Merkmalen (Chips), Umkreis, Suche; Sortierung nach Nachname.</li>
         <li><b>Stammdaten verwalten</b> und <b>Aus Excel importieren</b> (Name · Vorname · Straße · PLZ · Wohnort).</li>
-        <li><b>Hinfahrt / Rückfahrt</b> – oben umschaltbar; jede Reise ist eigenständig (eigenes Ziel, eigene Auswahl, eigenes Ergebnis). In der Rückfahrt lässt sich „Ziel &amp; Auswahl aus Hinfahrt übernehmen" und dann anpassen.</li>
+        <li><b>Hinfahrt / Rückfahrt</b> – oben umschaltbar; jede Reise ist eigenständig (eigener Start, eigenes Ziel, eigene Auswahl, eigenes Ergebnis). In der Rückfahrt „Aus Hinfahrt übernehmen" tauscht Start↔Ziel (Start = Baustelle, Ziel = Rieckstraße) und übernimmt die Auswahl – danach frei anpassbar.</li>
         <li><b>Export</b> – „PDF mit/ohne Kosten" und „Tabelle als CSV".</li>
         <li><b>Einstellungen</b> – Grundwerte, Filter- &amp; Fenster-Voreinstellungen; als Datei sicher- und mit Kollegen teilbar.</li>
         <li><b>Karte</b> – Vollbild (⛶), Namen einblenden, Marker-Klick springt zur Liste, Legende.</li>
@@ -1783,7 +1783,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v57";
+const APP_VERSION="v58";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -2557,12 +2557,14 @@ function currentMode(){ return (document.querySelector('input[name="routeMode"]:
 function captureActiveTrip(){
   syncCheckedState();
   const s=tripSlots[activeTrip];
+  s.start=start; s.startText=document.getElementById("startInput").value;
   s.ziel=ziel; s.zielText=document.getElementById("zielInput").value;
   s.checkedIds=mitarbeiter.filter(m=>m._checked).map(m=>m.id);
   s.mode=currentMode();
 }
 function restoreActiveTrip(){
   const s=tripSlots[activeTrip];
+  if(s.start){ start=s.start; document.getElementById("startInput").value=s.startText||s.start.label||""; }
   ziel=s.ziel; document.getElementById("zielInput").value=s.zielText||"";
   const set=new Set(s.checkedIds); mitarbeiter.forEach(m=>m._checked=set.has(m.id));
   const r=document.querySelector('input[name="routeMode"][value="'+(s.mode||"treff")+'"]'); if(r) r.checked=true;
@@ -2584,14 +2586,18 @@ function switchTrip(name){
   clearStatus();
 }
 function takeoverFromHin(){
-  const h=tripSlots.hin;
-  const hinZiel = (activeTrip==="hin") ? ziel : h.ziel;
-  const hinText = (activeTrip==="hin") ? document.getElementById("zielInput").value : (h.zielText||"");
-  const hinIds  = (activeTrip==="hin") ? mitarbeiter.filter(m=>m._checked).map(m=>m.id) : h.checkedIds;
-  ziel=hinZiel; document.getElementById("zielInput").value=hinText||"";
-  const set=new Set(hinIds); mitarbeiter.forEach(m=>m._checked=set.has(m.id));
+  // Hin-Daten holen (Hin ist beim Aufruf immer die inaktive Reise)
+  const h = (activeTrip==="hin") ? {
+      start, startText:document.getElementById("startInput").value, ziel, zielText:document.getElementById("zielInput").value,
+      checkedIds:mitarbeiter.filter(m=>m._checked).map(m=>m.id)
+    } : tripSlots.hin;
+  if(!h.ziel){ setStatus("Für die Hinfahrt ist noch keine Zieladresse gewählt.","err"); return; }
+  // Adressen TAUSCHEN: Rückfahrt-Start = Hin-Ziel (Baustelle), Rückfahrt-Ziel = Hin-Start (Rieckstraße)
+  start = h.ziel; document.getElementById("startInput").value = h.zielText || (h.ziel.label||"");
+  ziel  = h.start || null; document.getElementById("zielInput").value = h.startText || (h.start? h.start.label:"") || "";
+  const set=new Set(h.checkedIds||[]); mitarbeiter.forEach(m=>m._checked=set.has(m.id));
   renderEmployees();
-  setStatus("Ziel und Auswahl aus der Hinfahrt übernommen – jetzt bei Bedarf anpassen und „Rückfahrt berechnen“.","info");
+  setStatus("Aus Hinfahrt übernommen: Start = Baustelle, Ziel = Rieckstraße (Adressen getauscht). Auswahl bei Bedarf anpassen, dann „Rückfahrt berechnen“.","info");
 }
 /* Ergebnis einer Reise wiederherstellen (ohne erneuten API-Aufruf) oder leeren */
 function clearResults(){
@@ -3370,6 +3376,9 @@ window.addEventListener("DOMContentLoaded",()=>{
     b.addEventListener("click",()=>togglePanel(b.dataset.togglePanel)));
 
   document.getElementById("startInput").value=start.label;
+  // Beide Reisen mit dem Firmenstandort als Start vorbelegen
+  tripSlots.hin.start=start;   tripSlots.hin.startText=start.label;
+  tripSlots.rueck.start=start; tripSlots.rueck.startText=start.label;
   wireAutocomplete("startInput","startSuggest",{ set:s=>{start=s;} });
   wireAutocomplete("zielInput","zielSuggest",{ set:s=>{ziel=s; renderEmployees();}, dirty:()=>{ziel=null;} });
   wireAutocomplete("mAdresse","mSuggest",{ set:s=>{formGeo=s;}, dirty:()=>{ /* freier Text -> beim Speichern geocodieren */ } });
