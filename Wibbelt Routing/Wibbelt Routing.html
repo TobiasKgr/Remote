@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v58 (Geoapify) -->
+<!-- App-Version: v59 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1282,7 +1282,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <button type="button" class="trip-tab active" data-trip="hin">🚗 Hinfahrt</button>
         <button type="button" class="trip-tab" data-trip="rueck">↩ Rückfahrt</button>
       </div>
-      <button type="button" class="linkbtn no-print" id="takeoverBtn" style="display:none; margin:0 0 8px">⤵ Aus Hinfahrt übernehmen (Start↔Ziel getauscht)</button>
       <h2 id="tripTitle">Hinfahrt · Ziel &amp; Optionen</h2>
       <label class="fld" for="startInput">Startpunkt</label>
       <div class="autoc">
@@ -1345,23 +1344,19 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <div class="fld" style="margin:0 0 6px">Kartenansicht</div>
         <label class="opt-row">
           <input type="radio" name="routeMode" value="treff" checked>
-          <span><b>Treffpunkt Rieckstraße</b> – jeder fährt mit seiner Entfernung zur Rieckstraße;
-          von dort eine Strecke zum Ziel. (Linien laufen bei der Rieckstraße zusammen.)</span>
+          <span id="modeTreffTxt"></span>
         </label>
         <label class="opt-row" style="margin-top:8px">
           <input type="radio" name="routeMode" value="mixed">
-          <span><b>Gemischt (Einzel-Zuteilung)</b> – für jeden markierten Mitarbeiter unter der Karte selbst
-          festlegen: zur Rieckstraße, direkt zur Baustelle oder einsammeln.</span>
+          <span id="modeMixedTxt"></span>
         </label>
         <label class="opt-row" style="margin-top:8px">
           <input type="radio" name="routeMode" value="collect">
-          <span><b>Einsammeln</b> – eine Route vom Start über alle markierten Mitarbeiter zum Ziel,
-          Reihenfolge automatisch optimiert (kürzeste Gesamt-Fahrzeit).</span>
+          <span id="modeCollectTxt"></span>
         </label>
         <label class="opt-row" style="margin-top:8px">
           <input type="radio" name="routeMode" value="direct">
-          <span><b>Einer zur Rieckstraße, Rest direkt</b> – ein Mitarbeiter (der nächste zur Rieckstraße)
-          fährt zur Rieckstraße, alle weiteren fahren direkt zur Baustelle.</span>
+          <span id="modeDirectTxt"></span>
         </label>
         <label class="chk" style="margin-top:10px"><input type="checkbox" id="mapNames"> Namen auf der Karte anzeigen</label>
       </div>
@@ -1454,8 +1449,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <!-- Einzel-Zuteilung: nur bei Kartenansicht „Gemischt“, direkt unter der Karte -->
         <div id="assignBlock" class="assign-block no-print" style="display:none">
           <div class="assign-title">🧭 Einzel-Zuteilung <span class="count" id="assignCount"></span></div>
-          <div class="hint" style="margin:2px 0 8px">Für jeden markierten Mitarbeiter festlegen, wie er zur Baustelle kommt.
-          <b style="color:#166534">zur Rieckstraße</b> · <b style="color:#9a3412">direkt zur Baustelle</b> · <b style="color:#1d4ed8">einsammeln</b> (Standard).</div>
+          <div class="hint" id="assignHint" style="margin:2px 0 8px"></div>
           <div id="assignWrap"></div>
         </div>
       </div>
@@ -1783,7 +1777,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v58";
+const APP_VERSION="v59";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -2091,16 +2085,17 @@ function flashEmpRow(id){
 /* Karten-Legende passend zur aktuellen Kartenansicht */
 function renderMapLegend(mode){
   const el=document.getElementById("mapLegend"); if(!el) return;
+  const {hub,dest}=tripPlaces();
   const items=[
-    '<span><span class="mk" style="background:#2563eb"></span>Start (Rieckstraße)</span>',
-    '<span><span class="mk" style="background:#dc2626"></span>Ziel (Baustelle)</span>',
+    '<span><span class="mk" style="background:#2563eb"></span>Start ('+hub+')</span>',
+    '<span><span class="mk" style="background:#dc2626"></span>Ziel ('+dest+')</span>',
     '<span><span class="ln" style="border-color:#2563eb"></span>'+(mode==="collect"||mode==="mixed"?"Einsammel-Route":"Route zum Ziel")+'</span>'
   ];
-  if(mode==="treff") items.push('<span><span class="ln" style="border-color:#16a34a"></span>Weg zur Rieckstraße</span>');
-  if(mode==="direct"){ items.push('<span><span class="ln" style="border-color:#16a34a"></span>Wege (einer zur Rieckstraße, Rest direkt)</span>'); }
+  if(mode==="treff") items.push('<span><span class="ln" style="border-color:#16a34a"></span>Weg zur '+hub+'</span>');
+  if(mode==="direct"){ items.push('<span><span class="ln" style="border-color:#16a34a"></span>Wege (einer zur '+hub+', Rest direkt)</span>'); }
   if(mode==="mixed"){
-    items.push('<span><span class="ln" style="border-color:#16a34a"></span>zur Rieckstraße</span>');
-    items.push('<span><span class="ln" style="border-color:#ea580c"></span>direkt zur Baustelle</span>');
+    items.push('<span><span class="ln" style="border-color:#16a34a"></span>zur '+hub+'</span>');
+    items.push('<span><span class="ln" style="border-color:#ea580c"></span>direkt zur '+dest+'</span>');
   }
   el.innerHTML=items.join(""); el.style.display="flex";
 }
@@ -2466,13 +2461,16 @@ function renderAssignPanel(){
     return;
   }
   if(block) block.style.display="block";
+  const {hub,dest}=tripPlaces();
+  const ah=document.getElementById("assignHint");
+  if(ah) ah.innerHTML='Für jeden markierten Mitarbeiter festlegen: <b style="color:#166534">zur '+hub+'</b> · <b style="color:#9a3412">direkt zur '+dest+'</b> · <b style="color:#1d4ed8">einsammeln</b> (Standard).';
   const emps=selectedEmployees().sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de"));
   if(cnt) cnt.textContent = emps.length ? "("+emps.length+" markiert)" : "";
   if(!emps.length){
     wrap.innerHTML='<div class="hint">Noch keine Mitarbeiter markiert – links in der Liste ankreuzen, dann erscheinen sie hier zur Zuteilung.</div>';
     return;
   }
-  const OPTS=[["","einsammeln"],["rieck","zur Rieckstraße"],["bau","zur Baustelle"]];
+  const OPTS=[["","einsammeln"],["rieck","zur "+hub],["bau","zur "+dest]];
   wrap.innerHTML='<div class="assign-grid">'+emps.map(m=>{
     const cur=manualAssign[m.id]||"";
     const segs=OPTS.map(([v,lbl])=>'<button type="button" data-assign="'+m.id+'" data-v="'+v+'"'+(v===cur?' class="on"':'')+'>'+lbl+'</button>').join("");
@@ -2571,33 +2569,44 @@ function restoreActiveTrip(){
   renderEmployees();
   restoreResults(s.cache);
 }
+/* Ortsbezeichnungen je Reise: Hin = Rieckstraße→Baustelle, Rück = Baustelle→Rieckstraße */
+function tripPlaces(){ return activeTrip==="rueck" ? {hub:"Baustelle", dest:"Rieckstraße"} : {hub:"Rieckstraße", dest:"Baustelle"}; }
+/* Beschriftungen der Kartenansicht an die aktive Reise anpassen */
+function updateModeLabels(){
+  const {hub,dest}=tripPlaces();
+  const set=(id,html)=>{ const el=document.getElementById(id); if(el) el.innerHTML=html; };
+  set("modeTreffTxt","<b>Treffpunkt "+hub+"</b> – jeder fährt mit seiner Entfernung zur "+hub+"; von dort gemeinsam zur "+dest+".");
+  set("modeMixedTxt","<b>Gemischt (Einzel-Zuteilung)</b> – für jeden markierten Mitarbeiter unter der Karte festlegen: zur "+hub+", direkt zur "+dest+" oder einsammeln.");
+  set("modeCollectTxt","<b>Einsammeln</b> – eine Route ab der "+hub+" über alle markierten Mitarbeiter zur "+dest+", Reihenfolge automatisch optimiert.");
+  set("modeDirectTxt","<b>Einer zur "+hub+", Rest direkt</b> – der Nächstgelegene fährt zur "+hub+", alle anderen direkt zur "+dest+".");
+}
 function updateTripUI(){
   document.querySelectorAll('.trip-tab').forEach(b=>b.classList.toggle('active', b.dataset.trip===activeTrip));
-  document.getElementById("takeoverBtn").style.display = activeTrip==="rueck" ? "inline-block":"none";
   document.getElementById("calcBtn").textContent = activeTrip==="rueck" ? "Rückfahrt berechnen" : "Route berechnen";
   document.getElementById("tripTitle").innerHTML = (activeTrip==="rueck"?"Rückfahrt":"Hinfahrt")+" · Ziel &amp; Optionen";
+  updateModeLabels();
 }
 function switchTrip(name){
   if(name===activeTrip) return;
   captureActiveTrip();
   activeTrip=name;
   updateTripUI();
-  restoreActiveTrip();
-  clearStatus();
+  // Rückfahrt automatisch aus der Hinfahrt füllen (Adressen getauscht + Auswahl), solange noch nicht berechnet
+  if(name==="rueck" && tripSlots.rueck.cache===null && tripSlots.hin.ziel){
+    autoFillReturnFromHin();
+  }else{
+    restoreActiveTrip(); clearStatus();
+  }
 }
-function takeoverFromHin(){
-  // Hin-Daten holen (Hin ist beim Aufruf immer die inaktive Reise)
-  const h = (activeTrip==="hin") ? {
-      start, startText:document.getElementById("startInput").value, ziel, zielText:document.getElementById("zielInput").value,
-      checkedIds:mitarbeiter.filter(m=>m._checked).map(m=>m.id)
-    } : tripSlots.hin;
-  if(!h.ziel){ setStatus("Für die Hinfahrt ist noch keine Zieladresse gewählt.","err"); return; }
-  // Adressen TAUSCHEN: Rückfahrt-Start = Hin-Ziel (Baustelle), Rückfahrt-Ziel = Hin-Start (Rieckstraße)
+function autoFillReturnFromHin(){
+  const h=tripSlots.hin;
   start = h.ziel; document.getElementById("startInput").value = h.zielText || (h.ziel.label||"");
-  ziel  = h.start || null; document.getElementById("zielInput").value = h.startText || (h.start? h.start.label:"") || "";
+  ziel  = h.start || null; document.getElementById("zielInput").value = (h.start ? (h.startText||h.start.label) : "") || "";
   const set=new Set(h.checkedIds||[]); mitarbeiter.forEach(m=>m._checked=set.has(m.id));
+  const r=document.querySelector('input[name="routeMode"][value="'+(tripSlots.rueck.mode||"treff")+'"]'); if(r) r.checked=true;
   renderEmployees();
-  setStatus("Aus Hinfahrt übernommen: Start = Baustelle, Ziel = Rieckstraße (Adressen getauscht). Auswahl bei Bedarf anpassen, dann „Rückfahrt berechnen“.","info");
+  clearResults();
+  setStatus("Rückfahrt automatisch aus der Hinfahrt übernommen: Start = Baustelle, Ziel = Rieckstraße, gleiche Auswahl. Bei Bedarf anpassen und „Rückfahrt berechnen“.","info");
 }
 /* Ergebnis einer Reise wiederherstellen (ohne erneuten API-Aufruf) oder leeren */
 function clearResults(){
@@ -2927,24 +2936,25 @@ function renderVariants(emps, mode){
   const best=document.getElementById("variantsBest");
   if(!lastRows.length || startZielDist==null){ card.style.display="none"; return; }
   const N=lastRows.length, seats=seatsPerCar(), dRZ=startZielDist;
+  const {hub,dest}=tripPlaces();
   const kmSum=arr=>arr.reduce((s,x)=>s+(x||0),0)/1000;
   const anfEuro=m=>((m||0)/1000)*ANFAHRT_EUR_KM;
   const V=[];
 
-  // 1) Alle selbst direkt (Heim -> Baustelle, jeder Fahrer)
+  // 1) Alle selbst direkt (Heim -> Ziel, jeder Fahrer)
   V.push({ key:"self", name:"Alle selbst direkt",
     std:lastRows.reduce((s,r)=>s+stdFahrer(r.distZiel),0), anf:0,
     km:kmSum(lastRows.map(r=>r.distZiel)),
-    info:"Jeder fährt allein zur Baustelle." });
+    info:"Jeder fährt allein zur "+dest+"." });
 
-  // 2) Treffpunkt Rieckstraße (Anfahrt + gemeinsame Fahrt)
+  // 2) Treffpunkt (Anfahrt + gemeinsame Fahrt)
   {
     const cars=Math.ceil(N/seats), drivers=cars, passengers=N-cars;
-    V.push({ key:"treff", name:"Treffpunkt Rieckstraße",
+    V.push({ key:"treff", name:"Treffpunkt "+hub,
       std:drivers*stdFahrer(dRZ)+passengers*stdBeifahrer(dRZ),
       anf:lastRows.reduce((s,r)=>s+anfEuro(r.distStart),0),
       km:kmSum(lastRows.map(r=>r.distStart))+cars*(dRZ/1000),
-      info:cars+" Auto"+(cars>1?"s":"")+" ab Rieckstraße ("+seats+" Sitze)." });
+      info:cars+" Auto"+(cars>1?"s":"")+" ab "+hub+" ("+seats+" Sitze)." });
   }
 
   // 3) Einsammeln (ein Fahrzeug, optimierte Route)
@@ -2952,17 +2962,17 @@ function renderVariants(emps, mode){
     const crd=collectRouteDist();
     if(crd!=null) V.push({ key:"collect", name:"Einsammeln (eine Route)",
       std:stdFahrer(crd)+lastRows.reduce((s,r)=>s+stdBeifahrer(r.distZiel),0), anf:0,
-      km:crd/1000, info:"Ein Fahrzeug ab Rieckstraße holt alle ab." });
+      km:crd/1000, info:"Ein Fahrzeug ab "+hub+" holt alle ab." });
   }
 
-  // 4) Einer zur Rieckstraße, Rest direkt
+  // 4) Einer zur Treffpunkt, Rest direkt
   {
     const one=nearestToStart(lastRows);
     const rest=lastRows.filter(r=>r!==one);
-    V.push({ key:"direct", name:"Einer zur Rieckstraße, Rest direkt",
+    V.push({ key:"direct", name:"Einer zur "+hub+", Rest direkt",
       std:stdFahrer(one.distStart)+stdFahrer(dRZ)+rest.reduce((s,r)=>s+stdFahrer(r.distZiel),0), anf:0,
       km:(one.distStart+dRZ)/1000+kmSum(rest.map(r=>r.distZiel)),
-      info:formatName(one.name)+" über die Rieckstraße, übrige direkt." });
+      info:formatName(one.name)+" über die "+hub+", übrige direkt." });
   }
 
   const r=costRates(), hasH=r.h>0;
@@ -3001,6 +3011,7 @@ function buildSummaryText(){
   if(!ziel || !lastRoute){ card.style.display="none"; return; }
   const names=lastRows.map(r=>r.name), N=names.length;
   const mode=(document.querySelector('input[name="routeMode"]:checked')||{}).value || "treff";
+  const {hub,dest}=tripPlaces();
   let t;
   if(N===0){
     t="Keine Mitarbeiter ausgewählt.";
@@ -3010,14 +3021,14 @@ function buildSummaryText(){
       ? [...lastRows].sort((a,b)=>(orderMap[a.id]||0)-(orderMap[b.id]||0)).map(r=>r.name)
       : names;
     const liste = ordered.map((n,i)=>"  "+(i+1)+". "+n).join("\n");
-    t="Einsammeln: Ein Fahrzeug fährt ab der Rieckstraße und holt der Reihe nach ab:\n"+
+    t="Einsammeln: Ein Fahrzeug fährt ab der "+hub+" und holt der Reihe nach ab:\n"+
       liste+"\n"+
-      "→ danach weiter zur Baustelle.";
+      "→ danach weiter zur "+dest+".";
   }else if(mode==="direct"){
     const one=nearestToStart(lastRows).name;
     const rest=names.filter(n=>n!==one);
-    t=one+" fährt zur Rieckstraße und von dort zum Ziel.\n"+
-      (rest.length? "Direkt zur Baustelle: "+listNamesPlain(rest)+"." : "Sonst fährt niemand direkt.");
+    t=one+" fährt zur "+hub+" und von dort zur "+dest+".\n"+
+      (rest.length? "Direkt zur "+dest+": "+listNamesPlain(rest)+"." : "Sonst fährt niemand direkt.");
   }else if(mode==="mixed"){
     const grp=assignGroups(lastRows);
     const parts=[];
@@ -3025,14 +3036,14 @@ function buildSummaryText(){
       const ordered = orderMap
         ? [...grp.S].sort((a,b)=>(orderMap[a.id]||0)-(orderMap[b.id]||0)).map(r=>r.name)
         : grp.S.map(r=>r.name);
-      parts.push("Einsammeln ab Rieckstraße: "+ordered.join(" → ")+" → Baustelle.");
+      parts.push("Einsammeln ab "+hub+": "+ordered.join(" → ")+" → "+dest+".");
     }
-    if(grp.R.length) parts.push("Zur Rieckstraße fahren: "+listNamesPlain(grp.R.map(r=>r.name))+".");
-    if(grp.B.length) parts.push("Direkt zur Baustelle fahren: "+listNamesPlain(grp.B.map(r=>r.name))+".");
+    if(grp.R.length) parts.push("Zur "+hub+" fahren: "+listNamesPlain(grp.R.map(r=>r.name))+".");
+    if(grp.B.length) parts.push("Direkt zur "+dest+" fahren: "+listNamesPlain(grp.B.map(r=>r.name))+".");
     t="Gemischte Zuteilung:\n"+parts.join("\n");
   }else{
-    t="Treffpunkt Rieckstraße: "+listNamesPlain(names)+".\n"+
-      "Alle fahren zunächst zur Rieckstraße, von dort gemeinsam zum Ziel.";
+    t="Treffpunkt "+hub+": "+listNamesPlain(names)+".\n"+
+      "Alle fahren zunächst zur "+hub+", von dort gemeinsam zur "+dest+".";
   }
   const strecke = lastRouteMeta ? "\n"+lastRouteMeta.label+": "+nfKm(lastRoute.distance)+", Fahrzeit "+fmtDauer(lastRoute.duration)+(lastRouteMeta.ti?", "+lastRouteMeta.ti.k+" "+lastRouteMeta.ti.v:"") : "";
   const kopf = (activeTrip==="rueck" ? "RÜCKFAHRT" : "HINFAHRT")+"\n";
@@ -3513,7 +3524,6 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("calcBtn").addEventListener("click",calculate);
   // Reise-Umschalter Hin-/Rückfahrt
   document.querySelectorAll(".trip-tab").forEach(t=>t.addEventListener("click",()=>switchTrip(t.dataset.trip)));
-  document.getElementById("takeoverBtn").addEventListener("click",takeoverFromHin);
   updateTripUI();
   function printPdf(withCost){
     document.body.classList.toggle("pdf-no-cost", !withCost);
