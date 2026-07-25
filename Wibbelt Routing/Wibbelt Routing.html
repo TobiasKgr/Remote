@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v56 (Geoapify) -->
+<!-- App-Version: v57 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1059,6 +1059,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   .vbest{background:#f0fdf4}
 
+  /* Reise-Umschalter Hin-/Rückfahrt */
+  .trip-tabs{display:flex; gap:6px; margin-bottom:10px; background:#eef2f7; border-radius:10px; padding:4px}
+  .trip-tab{flex:1; border:none; background:none; cursor:pointer; font-size:14px; font-weight:700; color:#64748b;
+    padding:9px 8px; border-radius:8px}
+  .trip-tab:hover{background:#e2e8f0}
+  .trip-tab.active{background:#fff; color:var(--accent); box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  body.theme-dark .trip-tabs{background:#0f172a}
+  body.theme-dark .trip-tab{color:#94a3b8}
+  body.theme-dark .trip-tab:hover{background:#1e293b}
+  body.theme-dark .trip-tab.active{background:#1e293b; color:#93c5fd}
+
   /* Hin- & Rückfahrt */
   .rt-boxes{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin:10px 0}
   .rt-box{border:1px solid var(--line); border-radius:10px; padding:12px; background:#f8fafc}
@@ -1267,7 +1278,12 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
   <div class="grid3">
     <!-- Spalte 1: Ziel & Optionen (+ Filter) -->
     <div class="card no-print" id="colControls">
-      <h2>Ziel &amp; Optionen</h2>
+      <div class="trip-tabs no-print">
+        <button type="button" class="trip-tab active" data-trip="hin">🚗 Hinfahrt</button>
+        <button type="button" class="trip-tab" data-trip="rueck">↩ Rückfahrt</button>
+      </div>
+      <button type="button" class="linkbtn no-print" id="takeoverBtn" style="display:none; margin:0 0 8px">⤵ Ziel &amp; Auswahl aus Hinfahrt übernehmen</button>
+      <h2 id="tripTitle">Hinfahrt · Ziel &amp; Optionen</h2>
       <label class="fld" for="startInput">Startpunkt</label>
       <div class="autoc">
         <input type="text" id="startInput" autocomplete="off" placeholder="Startadresse …">
@@ -1322,11 +1338,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
             <span class="mini" style="flex:none">Sitzplätze je Fahrzeug (inkl. Fahrer):</span>
             <input type="number" id="seats" value="2" min="1" max="9" style="width:70px; padding:6px 8px">
           </div>
-          <label class="opt-row" style="margin-top:10px">
-            <input type="checkbox" id="returnTrip">
-            <span><b>Rückfahrt mitrechnen</b> (Baustelle → Rieckstraße). Danach lässt sich je Mitarbeiter für
-            <b>Hin-</b> und <b>Rückfahrt</b> getrennt festlegen: mit Firma, privat oder nicht dabei.</span>
-          </label>
         </div>
       </div>
       <!-- Routing-Optionen -->
@@ -1463,11 +1474,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
           <div class="result-empty">Noch keine Berechnung – wähle ein Ziel und Mitarbeiter und klicke auf „Route berechnen“.</div>
         </div>
       </div>
-    <div class="card" id="returnCard" style="margin-top:20px; display:none">
-        <h2>Hin- &amp; Rückfahrt</h2>
-        <div class="hint" style="margin-top:-4px">Je Mitarbeiter für Hin- und Rückfahrt festlegen: <b>mit Firma</b>, <b>privat</b> (eigene Anreise, keine Firmenkosten) oder <b>–</b> (nicht dabei). Grundlage: Treffpunkt Rieckstraße.</div>
-        <div id="returnWrap"></div>
-      </div>
     <div class="card" id="carpoolCard" style="margin-top:20px; display:none">
         <h2 id="carpoolHead" style="cursor:pointer; user-select:none">Fahrgemeinschaft – bezahlte Stunden <span class="chev">▾</span></h2>
         <div id="carpoolBody">
@@ -1577,7 +1583,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <li><b>Zeitbezug</b> – „Abfahrt um" oder „Ankunft (Baustelle)" → Abfahrt wird zurückgerechnet.</li>
         <li><b>Filter</b> – nach Rolle/Merkmalen (Chips), Umkreis, Suche; Sortierung nach Nachname.</li>
         <li><b>Stammdaten verwalten</b> und <b>Aus Excel importieren</b> (Name · Vorname · Straße · PLZ · Wohnort).</li>
-        <li><b>Hin- &amp; Rückfahrt</b> – Rückfahrt zusätzlich berechnen; je Mitarbeiter/Richtung „mit Firma", „privat" oder „nicht dabei".</li>
+        <li><b>Hinfahrt / Rückfahrt</b> – oben umschaltbar; jede Reise ist eigenständig (eigenes Ziel, eigene Auswahl, eigenes Ergebnis). In der Rückfahrt lässt sich „Ziel &amp; Auswahl aus Hinfahrt übernehmen" und dann anpassen.</li>
         <li><b>Export</b> – „PDF mit/ohne Kosten" und „Tabelle als CSV".</li>
         <li><b>Einstellungen</b> – Grundwerte, Filter- &amp; Fenster-Voreinstellungen; als Datei sicher- und mit Kollegen teilbar.</li>
         <li><b>Karte</b> – Vollbild (⛶), Namen einblenden, Marker-Klick springt zur Liste, Legende.</li>
@@ -1777,7 +1783,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v56";
+const APP_VERSION="v57";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -1971,7 +1977,6 @@ let lastCarpoolText = "";          // Klartext-Vorschlag für die Zusammenfassun
 let hiddenGroupOpen = false;       // Bereich "Ausgeblendet" auf-/zugeklappt
 let orderMap = null;               // Einsammel-Reihenfolge: {employeeId: Positionsnummer}
 let manualAssign = {};             // Einzel-Zuteilung: {employeeId: "" | "rieck" | "bau"} ("" = einsammeln)
-let travelPlan = {};               // Hin-/Rückfahrt je Mitarbeiter: {id:{hin,rueck}} mit "mit"|"privat"|"nein"
 let sortState = { key:"distZiel", dir:1 };
 let editId = null;                 // Modal: null=neu, sonst id
 let formGeo = null;                // Modal: {label,lat,lon} aus Autocomplete
@@ -2541,6 +2546,82 @@ function setStatus(msg,kind){ const el=document.getElementById("status"); el.cla
 function clearStatus(){ document.getElementById("status").className="status"; }
 
 /* ================================================================
+   Zwei eigenständige Reisen: Hinfahrt / Rückfahrt
+   Jede Reise hat eigenes Ziel, eigene Mitarbeiter-Auswahl, eigenen Modus
+   und eigenes (zwischengespeichertes) Ergebnis.
+   ================================================================ */
+let activeTrip="hin";
+function emptyTrip(){ return { ziel:null, zielText:"", checkedIds:[], mode:"treff", cache:null }; }
+const tripSlots={ hin:emptyTrip(), rueck:emptyTrip() };
+function currentMode(){ return (document.querySelector('input[name="routeMode"]:checked')||{}).value||"treff"; }
+function captureActiveTrip(){
+  syncCheckedState();
+  const s=tripSlots[activeTrip];
+  s.ziel=ziel; s.zielText=document.getElementById("zielInput").value;
+  s.checkedIds=mitarbeiter.filter(m=>m._checked).map(m=>m.id);
+  s.mode=currentMode();
+}
+function restoreActiveTrip(){
+  const s=tripSlots[activeTrip];
+  ziel=s.ziel; document.getElementById("zielInput").value=s.zielText||"";
+  const set=new Set(s.checkedIds); mitarbeiter.forEach(m=>m._checked=set.has(m.id));
+  const r=document.querySelector('input[name="routeMode"][value="'+(s.mode||"treff")+'"]'); if(r) r.checked=true;
+  renderEmployees();
+  restoreResults(s.cache);
+}
+function updateTripUI(){
+  document.querySelectorAll('.trip-tab').forEach(b=>b.classList.toggle('active', b.dataset.trip===activeTrip));
+  document.getElementById("takeoverBtn").style.display = activeTrip==="rueck" ? "inline-block":"none";
+  document.getElementById("calcBtn").textContent = activeTrip==="rueck" ? "Rückfahrt berechnen" : "Route berechnen";
+  document.getElementById("tripTitle").innerHTML = (activeTrip==="rueck"?"Rückfahrt":"Hinfahrt")+" · Ziel &amp; Optionen";
+}
+function switchTrip(name){
+  if(name===activeTrip) return;
+  captureActiveTrip();
+  activeTrip=name;
+  updateTripUI();
+  restoreActiveTrip();
+  clearStatus();
+}
+function takeoverFromHin(){
+  const h=tripSlots.hin;
+  const hinZiel = (activeTrip==="hin") ? ziel : h.ziel;
+  const hinText = (activeTrip==="hin") ? document.getElementById("zielInput").value : (h.zielText||"");
+  const hinIds  = (activeTrip==="hin") ? mitarbeiter.filter(m=>m._checked).map(m=>m.id) : h.checkedIds;
+  ziel=hinZiel; document.getElementById("zielInput").value=hinText||"";
+  const set=new Set(hinIds); mitarbeiter.forEach(m=>m._checked=set.has(m.id));
+  renderEmployees();
+  setStatus("Ziel und Auswahl aus der Hinfahrt übernommen – jetzt bei Bedarf anpassen und „Rückfahrt berechnen“.","info");
+}
+/* Ergebnis einer Reise wiederherstellen (ohne erneuten API-Aufruf) oder leeren */
+function clearResults(){
+  if(map){ try{ layerGroup.clearLayers(); }catch(e){} }
+  treffRunId++; setMapBusy(false);
+  document.getElementById("summary").style.display="none";
+  document.getElementById("mapLegend").style.display="none";
+  document.getElementById("tableWrap").innerHTML='<div class="result-empty">Für diese Reise noch keine Berechnung – Ziel &amp; Mitarbeiter wählen und „'+(activeTrip==="rueck"?"Rückfahrt berechnen":"Route berechnen")+'" klicken.</div>';
+  document.getElementById("variantsCard").style.display="none";
+  document.getElementById("carpoolCard").style.display="none";
+  document.getElementById("summaryCard").style.display="none";
+  document.getElementById("assignBlock").style.display="none";
+  lastRows=[]; lastRoute=null; lastRouteMeta=null; orderMap=null; carpoolData=null; startZielDist=null;
+  document.getElementById("csvBtn").disabled=true;
+  if(empLayer) renderMapEmployees();
+}
+function restoreResults(cache){
+  if(!cache){ clearResults(); return; }
+  lastRows=cache.rows; lastRouteMeta=cache.routeMeta; startZielDist=cache.startZielDist;
+  carpoolData=cache.carpoolData; orderMap=cache.orderMap;
+  treffRunId++; setMapBusy(false);
+  drawResult(cache.route, cache.rows, false, cache.routeMeta?cache.routeMeta.label:null);
+  renderMapLegend(cache.mode);
+  renderCarpool(); renderVariants(selectedEmployees(), cache.mode);
+  renderAssignPanel(); buildSummaryText();
+  document.getElementById("pdfBtn").disabled=false;
+  document.getElementById("csvBtn").disabled=cache.rows.length===0;
+}
+
+/* ================================================================
    Hauptberechnung
    ================================================================ */
 async function calculate(){
@@ -2610,18 +2691,24 @@ async function calculate(){
     renderMapLegend(mode);
     renderCarpool();
     renderVariants(emps, mode);   // Variantenvergleich (Gesamtkosten)
-    renderReturnPlan();           // Hin-/Rückfahrt (falls aktiv)
     buildSummaryText();
     pushHistory(ziel);
     renderEmployees();   // Liste/Umkreis-Filter an ggf. neu gesetztes Ziel anpassen
     document.getElementById("pdfBtn").disabled=false;
     document.getElementById("csvBtn").disabled=rows.length===0;
-    setStatus("Berechnung erfolgreich – "+emps.length+" Mitarbeiter berücksichtigt"+(collect?" (optimierte Einsammel-Route)":mixed?" (gemischte Zuteilung)":"")+".","ok");
+    // Ergebnis dieser Reise zwischenspeichern (für den Wechsel Hin/Rück)
+    captureActiveTrip();
+    tripSlots[activeTrip].cache = {
+      route:{coords:route.coords, distance:route.distance, duration:route.duration},
+      rows:lastRows, routeMeta:lastRouteMeta, startZielDist, carpoolData, orderMap, mode
+    };
+    const trvLabel = activeTrip==="rueck" ? "Rückfahrt" : "Hinfahrt";
+    setStatus(trvLabel+" berechnet – "+emps.length+" Mitarbeiter"+(collect?" (optimierte Einsammel-Route)":mixed?" (gemischte Zuteilung)":"")+".","ok");
   }catch(e){
     console.error(e);
     if(e instanceof TypeError) setStatus(errText({type:"offline"}),"err");
     else setStatus(errText(e),"err");
-  }finally{ btn.disabled=false; btn.textContent="Route berechnen"; }
+  }finally{ btn.disabled=false; btn.textContent = activeTrip==="rueck" ? "Rückfahrt berechnen" : "Route berechnen"; }
 }
 
 /* ================================================================
@@ -2901,63 +2988,6 @@ function renderVariants(emps, mode){
 }
 
 /* ================================================================
-   Hin- & Rückfahrt (Treffpunkt-Modell) – je Mitarbeiter/Richtung
-   ================================================================ */
-function tripCost(members){
-  const N=members.length;
-  if(!N || startZielDist==null) return { n:0, cars:0, anfahrt:0, std:0, km:0 };
-  const seats=seatsPerCar(), cars=Math.ceil(N/seats), drivers=cars, passengers=N-cars;
-  const anfahrt=members.reduce((s,r)=>s+((r.distStart||0)/1000)*ANFAHRT_EUR_KM,0);
-  const std=drivers*stdFahrer(startZielDist)+passengers*stdBeifahrer(startZielDist);
-  const km=members.reduce((s,r)=>s+(r.distStart||0),0)/1000 + cars*(startZielDist/1000);
-  return { n:N, cars, anfahrt, std, km };
-}
-function returnPlanText(){ return lastReturnText; }
-let lastReturnText="";
-function renderReturnPlan(){
-  const card=document.getElementById("returnCard"), wrap=document.getElementById("returnWrap");
-  const on=document.getElementById("returnTrip").checked;
-  if(!on || !lastRows.length || startZielDist==null){ card.style.display="none"; lastReturnText=""; return; }
-  card.style.display="block";
-
-  // Auswahl-Matrix je Mitarbeiter (Hin / Rück)
-  const opt=(v,cur)=>'<option value="'+v+'"'+(v===cur?' selected':'')+'>'+({mit:"mit Firma",privat:"privat","nein":"–"}[v])+'</option>';
-  const sel=(id,dir,cur)=>'<select data-tp="'+id+'" data-dir="'+dir+'">'+["mit","privat","nein"].map(v=>opt(v,cur)).join("")+'</select>';
-  let rowsHtml=[...lastRows].sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de")).map(r=>{
-    const tp=travelPlan[r.id]||{hin:"mit",rueck:"mit"};
-    return '<tr><td>'+escapeHtml(formatName(r.name))+'</td><td class="ctr">'+sel(r.id,"hin",tp.hin)+'</td><td class="ctr">'+sel(r.id,"rueck",tp.rueck)+'</td></tr>';
-  }).join("");
-
-  const pick=(dir,val)=>lastRows.filter(r=>((travelPlan[r.id]||{hin:"mit",rueck:"mit"})[dir])===val);
-  const hinMit=pick("hin","mit"), rueckMit=pick("rueck","mit");
-  const hinPriv=pick("hin","privat").map(r=>r.name), rueckPriv=pick("rueck","privat").map(r=>r.name);
-  const H=tripCost(hinMit), R=tripCost(rueckMit);
-  const r=costRates(), hasH=r.h>0;
-  const euroOf=t=> hasH ? (t.std*r.h + t.anfahrt) : null;
-  const eH=euroOf(H), eR=euroOf(R);
-
-  const block=(title,t,priv,eur)=>
-    '<div class="rt-box"><h4>'+title+'</h4>'+
-    '<div class="ln"><b>'+t.n+'</b> mit Firma · '+t.cars+' Auto'+(t.cars===1?'':'s')+' · '+nfKm(t.km*1000)+'</div>'+
-    '<div class="ln">Anfahrt '+fmtEuro(t.anfahrt)+' · Fahrt '+fmtStd(t.std)+(eur!=null?' · <b>'+fmtEuro(eur)+'</b>':'')+'</div>'+
-    (priv.length?'<div class="ln" style="color:#9a3412">privat: '+priv.map(escapeHtml).join(", ")+'</div>':'')+
-    '</div>';
-
-  const gesamtEuro = (eH!=null&&eR!=null)? '<div class="ln"><b>Gesamt Hin+Rück: '+fmtEuro(eH+eR)+'</b> (Anfahrt '+fmtEuro(H.anfahrt+R.anfahrt)+', Fahrt '+fmtStd(H.std+R.std)+')</div>'
-    : '<div class="ln"><b>Gesamt Hin+Rück:</b> Anfahrt '+fmtEuro(H.anfahrt+R.anfahrt)+' · Fahrt '+fmtStd(H.std+R.std)+' · '+nfKm((H.km+R.km)*1000)+'</div>';
-
-  wrap.innerHTML =
-    '<div class="rt-boxes">'+block("Hinfahrt → Baustelle",H,hinPriv,eH)+block("Rückfahrt → Rieckstraße",R,rueckPriv,eR)+'</div>'+
-    '<div class="rt-total">'+gesamtEuro+'</div>'+
-    '<div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>Mitarbeiter</th><th class="ctr">Hinfahrt</th><th class="ctr">Rückfahrt</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
-
-  // Klartext für die Zusammenfassung
-  const names=t=>t.map(r=>r.name);
-  lastReturnText="Hinfahrt: "+(hinMit.length?listNamesPlain(names(hinMit)):"–")+(hinPriv.length?" (privat: "+listNamesPlain(hinPriv)+")":"")+
-    ".\nRückfahrt: "+(rueckMit.length?listNamesPlain(names(rueckMit)):"–")+(rueckPriv.length?" (privat: "+listNamesPlain(rueckPriv)+")":"")+".";
-}
-
-/* ================================================================
    Zusammenfassung als kopierbarer Klartext
    ================================================================ */
 function buildSummaryText(){
@@ -2999,8 +3029,8 @@ function buildSummaryText(){
       "Alle fahren zunächst zur Rieckstraße, von dort gemeinsam zum Ziel.";
   }
   const strecke = lastRouteMeta ? "\n"+lastRouteMeta.label+": "+nfKm(lastRoute.distance)+", Fahrzeit "+fmtDauer(lastRoute.duration)+(lastRouteMeta.ti?", "+lastRouteMeta.ti.k+" "+lastRouteMeta.ti.v:"") : "";
-  const rueck = (document.getElementById("returnTrip").checked && lastReturnText) ? "\n\n"+lastReturnText : "";
-  ta.value = "Ziel: "+ziel.label+"\n"+t+strecke+rueck;
+  const kopf = (activeTrip==="rueck" ? "RÜCKFAHRT" : "HINFAHRT")+"\n";
+  ta.value = kopf+"Ziel: "+ziel.label+"\n"+t+strecke;
   card.style.display="block";
 }
 
@@ -3311,15 +3341,6 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("setExport").addEventListener("click",exportConfig);
   document.getElementById("setImport").addEventListener("click",()=>document.getElementById("setImportFile").click());
   document.getElementById("setImportFile").addEventListener("change",e=>{ if(e.target.files[0]) importConfig(e.target.files[0]); e.target.value=""; });
-
-  // Hin-/Rückfahrt
-  document.getElementById("returnTrip").addEventListener("change",()=>{ renderReturnPlan(); buildSummaryText(); });
-  document.getElementById("returnWrap").addEventListener("change",e=>{
-    const s=e.target.closest("select[data-tp]"); if(!s) return;
-    const id=s.dataset.tp, dir=s.dataset.dir;
-    (travelPlan[id] = travelPlan[id] || {hin:"mit",rueck:"mit"})[dir] = s.value;
-    renderReturnPlan(); buildSummaryText();
-  });
   document.getElementById("settingsBg").addEventListener("click",e=>{ if(e.target.id==="settingsBg") closeSettings(); });
 
   // Tastenkürzel: Enter = Route berechnen · Strg/⌘+F = Suche · Esc = Dialog/Vorschläge schließen
@@ -3481,6 +3502,10 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   // Berechnung / Export
   document.getElementById("calcBtn").addEventListener("click",calculate);
+  // Reise-Umschalter Hin-/Rückfahrt
+  document.querySelectorAll(".trip-tab").forEach(t=>t.addEventListener("click",()=>switchTrip(t.dataset.trip)));
+  document.getElementById("takeoverBtn").addEventListener("click",takeoverFromHin);
+  updateTripUI();
   function printPdf(withCost){
     document.body.classList.toggle("pdf-no-cost", !withCost);
     if(map){ try{ map.invalidateSize(); }catch(e){} }
