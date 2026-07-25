@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v52 (Geoapify) -->
+<!-- App-Version: v53 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1080,6 +1080,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .set-grid label{display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#334155}
   .set-grid input,.set-grid select{padding:8px 10px}
   .set-row{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center}
+  .set-ver{text-align:center; color:var(--muted); font-size:12px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
   body.theme-dark .set-grid label{color:#cbd5e1}
   /* Fußzeile mit Version */
   .appfoot{text-align:center; color:var(--muted); font-size:12px; padding:16px 0 24px}
@@ -1100,6 +1101,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .theme-toggle{background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); color:#fff;
     font-size:18px; line-height:1; width:38px; height:38px; border-radius:10px; cursor:pointer; flex:none}
   .theme-toggle:hover{background:rgba(255,255,255,.28)}
+  /* Drei-Balken-Menü */
+  .menu-wrap{position:relative}
+  .menu-pop{position:absolute; right:0; top:44px; z-index:200; min-width:190px; padding:6px;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.25); display:none}
+  .menu-pop.open{display:block}
+  .menu-pop button{display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+    font-size:14px; color:#334155; padding:9px 12px; border-radius:8px}
+  .menu-pop button:hover{background:#f1f5f9}
+  body.theme-dark .menu-pop button{color:#e2e8f0}
+  body.theme-dark .menu-pop button:hover{background:#1e293b}
 
   /* ===== Dark Mode ===== */
   body.theme-dark{ --panel:#1e293b; --line:#334155; --muted:#94a3b8; background:#0b1220; color:#e2e8f0 }
@@ -1203,9 +1214,14 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <button type="button" id="zoomReset" title="Zurücksetzen">100%</button>
       <button type="button" id="zoomIn" aria-label="größer">A+</button>
     </div>
-    <button type="button" id="settingsBtn" class="theme-toggle" title="Einstellungen / Voreinstellungen" aria-label="Einstellungen">⚙️</button>
-    <button type="button" id="helpBtn" class="theme-toggle" title="Hilfe &amp; Info" aria-label="Hilfe und Info">❓</button>
     <button type="button" id="themeToggle" class="theme-toggle" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">🌙</button>
+    <div class="menu-wrap">
+      <button type="button" id="menuBtn" class="theme-toggle" title="Menü" aria-haspopup="true" aria-expanded="false" aria-label="Menü">☰</button>
+      <div class="menu-pop" id="mainMenu">
+        <button type="button" id="menuHelp">❓ Hilfe</button>
+        <button type="button" id="menuSettings">⚙️ Einstellungen</button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -1507,7 +1523,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
 <div class="modal-bg" id="helpBg">
   <div class="modal wide">
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
-      <h3 style="margin:0">Hilfe &amp; Info <span id="helpVer" style="font-size:13px;color:#64748b;font-weight:600"></span></h3>
+      <h3 style="margin:0">Hilfe &amp; Info</h3>
       <button class="cancel" id="helpClose" style="padding:6px 14px">Schließen</button>
     </div>
     <div id="helpBody" style="overflow:auto; max-height:72vh; margin-top:10px">
@@ -1608,11 +1624,10 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <button class="save" id="setSave">Speichern</button>
       </div>
     </div>
+    <div class="set-ver">Wibbelt&nbsp;Routing · Version <span id="setVer"></span></div>
   </div>
 </div>
 
-<!-- Fußzeile mit Versionsnummer -->
-<div class="appfoot no-print">Wibbelt&nbsp;Routing <span id="footVer"></span> · <button type="button" class="footlink" id="footHelp">Hilfe</button> · <button type="button" class="footlink" id="footSettings">Einstellungen</button></div>
 
 <script>
 /* ================================================================
@@ -1713,14 +1728,13 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v52";
+const APP_VERSION="v53";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
 function dismissIntro(){ document.getElementById("introBox").style.display="none"; try{ localStorage.setItem(INTRO_KEY,"1"); }catch(e){} }
 function initHelpAndIntro(){
-  document.getElementById("footVer").textContent=APP_VERSION;
-  document.getElementById("helpVer").textContent=APP_VERSION;
+  document.getElementById("setVer").textContent=APP_VERSION;   // Version nur unten in den Einstellungen
   let seen="0"; try{ seen=localStorage.getItem(INTRO_KEY)||"0"; }catch(e){}
   if(seen!=="1") document.getElementById("introBox").style.display="block";
 }
@@ -3147,9 +3161,15 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("zoomOut").addEventListener("click",()=>stepZoom(-1));
   document.getElementById("zoomReset").addEventListener("click",()=>applyZoom(1.0));
 
+  // Drei-Balken-Menü (Hilfe / Einstellungen)
+  const menu=document.getElementById("mainMenu"), menuBtn=document.getElementById("menuBtn");
+  const openMenu=o=>{ menu.classList.toggle("open",o); menuBtn.setAttribute("aria-expanded", o?"true":"false"); };
+  menuBtn.addEventListener("click",e=>{ e.stopPropagation(); openMenu(!menu.classList.contains("open")); });
+  document.addEventListener("click",e=>{ if(!menu.contains(e.target) && e.target!==menuBtn) openMenu(false); });
+  document.getElementById("menuHelp").addEventListener("click",()=>{ openMenu(false); openHelp(); });
+  document.getElementById("menuSettings").addEventListener("click",()=>{ openMenu(false); openSettings(); });
+
   // Hilfe & Start-Erklärung
-  document.getElementById("helpBtn").addEventListener("click",openHelp);
-  document.getElementById("footHelp").addEventListener("click",openHelp);
   document.getElementById("helpClose").addEventListener("click",closeHelp);
   document.getElementById("helpDone").addEventListener("click",closeHelp);
   document.getElementById("helpBg").addEventListener("click",e=>{ if(e.target.id==="helpBg") closeHelp(); });
@@ -3158,8 +3178,6 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("introHelp").addEventListener("click",openHelp);
 
   // Einstellungen / Voreinstellungen
-  document.getElementById("settingsBtn").addEventListener("click",openSettings);
-  document.getElementById("footSettings").addEventListener("click",openSettings);
   document.getElementById("setClose").addEventListener("click",closeSettings);
   document.getElementById("setCancel").addEventListener("click",closeSettings);
   document.getElementById("setSave").addEventListener("click",saveSettingsModal);
@@ -3180,6 +3198,7 @@ window.addEventListener("DOMContentLoaded",()=>{
       e.preventDefault(); const s=document.getElementById("maSearch"); if(s){ s.focus(); s.select(); }
     }else if(e.key==="Escape"){
       document.querySelectorAll(".suggest.open").forEach(el=>el.classList.remove("open"));
+      document.getElementById("mainMenu").classList.remove("open");
       if(document.getElementById("helpBg").classList.contains("open")) closeHelp();
       if(document.getElementById("settingsBg").classList.contains("open")) closeSettings();
       const mc=document.getElementById("mapCard");
