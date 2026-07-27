@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v59 (Geoapify) -->
+<!-- App-Version: v60 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1232,6 +1232,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
 <!-- ============================================================= -->
 <script src="mitarbeiter.js" onerror="window.__maSharedMissing=true"></script>
 
+<div id="zoomRoot">
 <header class="app">
   <div style="display:flex; align-items:center; gap:14px">
     <img id="appLogo" class="app-logo" src="logo.png" alt="Wibbelt GmbH" onerror="this.style.display='none'">
@@ -1482,6 +1483,7 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
     <textarea id="summaryText" rows="10" readonly></textarea>
   </div>
 </div>
+</div><!-- /zoomRoot -->
 
 <!-- ===================== MODAL: Mitarbeiter ===================== -->
 <div class="modal-bg" id="modalBg">
@@ -1777,7 +1779,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v59";
+const APP_VERSION="v60";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -1910,7 +1912,8 @@ const ZOOM_KEY="wibbelt.zoom.v1";
 const ZOOM_STEPS=[0.8,0.9,1.0,1.1,1.25,1.4,1.6];
 function loadZoom(){ let z=parseFloat(localStorage.getItem(ZOOM_KEY)); return (ZOOM_STEPS.includes(z)?z:1.0); }
 function applyZoom(z){
-  document.body.style.zoom = z;                       // skaliert die gesamte Oberfläche
+  // Nur den Inhalts-Container zoomen, NICHT die Modals (position:fixed würde sonst brechen)
+  const zr=document.getElementById("zoomRoot"); if(zr) zr.style.zoom = z;
   const r=document.getElementById("zoomReset"); if(r) r.textContent = Math.round(z*100)+"%";
   try{ localStorage.setItem(ZOOM_KEY, String(z)); }catch(e){}
   if(map) setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 60);
@@ -3323,6 +3326,10 @@ window.addEventListener("DOMContentLoaded",()=>{
   function toggleMapFs(force){
     const card=document.getElementById("mapCard");
     const on = force!=null ? force : !card.classList.contains("map-max");
+    const zr=document.getElementById("zoomRoot");
+    // Vollbild braucht echtes position:fixed → Zoom des Wrappers vorübergehend neutralisieren
+    if(on){ card.dataset.prevZoom = zr.style.zoom||""; zr.style.zoom=""; }
+    else if("prevZoom" in card.dataset){ zr.style.zoom = card.dataset.prevZoom; delete card.dataset.prevZoom; }
     card.classList.toggle("map-max", on);
     document.getElementById("mapFsBtn").textContent = on ? "✕" : "⛶";
     if(map) setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 60);
