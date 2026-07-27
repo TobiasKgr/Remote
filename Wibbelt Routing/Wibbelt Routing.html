@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v62 (Geoapify) -->
+<!-- App-Version: v63 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -828,7 +828,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .seg button:hover{background:#f1f5f9}
   .seg button.on[data-v=""]{background:#dbeafe; color:#1d4ed8}
   .seg button.on[data-v="rieck"]{background:#dcfce7; color:#166534}
-  .seg button.on[data-v="bau"]{background:#ffedd5; color:#9a3412}
+  .seg button.on[data-v="bau"]{background:#ede9fe; color:#6d28d9}
 
   .emp-list{display:flex; flex-direction:column; gap:2px; max-height:78vh; overflow:auto; margin-top:4px;
             border:1px solid #f1f5f9; border-radius:8px; padding:4px}
@@ -1140,6 +1140,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .menu-pop button{display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
     font-size:14px; color:#334155; padding:9px 12px; border-radius:8px}
   .menu-pop button:hover{background:#f1f5f9}
+  .menu-sep{height:1px; background:var(--line); margin:5px 6px}
   body.theme-dark .menu-pop button{color:#e2e8f0}
   body.theme-dark .menu-pop button:hover{background:#1e293b}
 
@@ -1247,6 +1248,10 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
       <div class="menu-pop" id="mainMenu">
         <button type="button" id="menuHelp">❓ Hilfe</button>
         <button type="button" id="menuSettings">⚙️ Einstellungen</button>
+        <div class="menu-sep"></div>
+        <button type="button" id="menuProjSave">💾 Projekt speichern</button>
+        <button type="button" id="menuProjLoad">📂 Projekt laden</button>
+        <input type="file" id="projFile" accept=".json,application/json" style="display:none">
       </div>
     </div>
   </div>
@@ -1366,8 +1371,9 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <button type="button" class="panel-head" data-toggle-panel="filter">🔍 Filter &amp; Sortierung <span class="chev">▾</span></button>
         <div class="panel-body">
           <div class="ma-tools">
-            <div class="row">
-              <input type="text" id="maSearch" placeholder="🔍 Suchen (Name, Adresse, Gruppe) …">
+            <div class="row" style="position:relative">
+              <input type="text" id="maSearch" autocomplete="off" placeholder="🔍 Suchen (Name, Adresse, Gruppe) …">
+              <div class="suggest" id="maSuggest"></div>
             </div>
             <div class="filt-wrap" id="tagFilter"></div>
             <div class="hint" style="margin-top:-2px">Chip anklicken: 1× <b style="color:#166534">nur mit</b> · 2× <b style="color:#991b1b">ohne</b> · 3× egal (kein Filter).</div>
@@ -1582,6 +1588,8 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <li><b>Hinfahrt / Rückfahrt</b> – oben umschaltbar; jede Reise ist eigenständig (eigener Start, eigenes Ziel, eigene Auswahl, eigenes Ergebnis). In der Rückfahrt „Aus Hinfahrt übernehmen" tauscht Start↔Ziel (Start = Baustelle, Ziel = Rieckstraße) und übernimmt die Auswahl – danach frei anpassbar.</li>
         <li><b>Export</b> – „PDF mit/ohne Kosten" und „Tabelle als CSV".</li>
         <li><b>Einstellungen</b> – Grundwerte, Filter- &amp; Fenster-Voreinstellungen; als Datei sicher- und mit Kollegen teilbar.</li>
+        <li><b>Projekt speichern/laden</b> (Menü ☰) – ganze Planung (beide Reisen: Ziel, Auswahl, Optionen) als Datei sichern und später wieder laden.</li>
+        <li><b>Mitarbeiter-Suche</b> – findet per Name/Adresse jeden (unabhängig von den Filtern) mit Namensvorschlägen zum direkten Auswählen.</li>
         <li><b>Karte</b> – Vollbild (⛶), Namen einblenden, Marker-Klick springt zur Liste, Legende.</li>
         <li><b>Anzeige</b> – Hell/Dunkel (🌙), Anzeigegröße (A− / A+).</li>
       </ul>
@@ -1779,7 +1787,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v62";
+const APP_VERSION="v63";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -1895,6 +1903,44 @@ function importConfig(file){
       saveConfig(); applyConfigDefaults(); renderEmployees(); fillSettingsForm(CONFIG);
       setStatus("Einstellungen aus Datei geladen.","ok");
     }catch(e){ setStatus("Datei nicht lesbar – erwartet wird eine Einstellungs-Datei (JSON).","err"); }
+  };
+  r.readAsText(file);
+}
+
+/* ---- Projekt sichern/laden (Route, Auswahl, Optionen beider Reisen) ---- */
+function tripToJSON(s){ return { ziel:s.ziel, zielText:s.zielText, start:s.start, startText:s.startText, checkedIds:s.checkedIds, mode:s.mode }; }
+function jsonToTrip(t){ t=t||{}; return { ziel:t.ziel||null, zielText:t.zielText||"", start:t.start||null, startText:t.startText||"", checkedIds:t.checkedIds||[], mode:t.mode||"treff", cache:null }; }
+function exportProject(){
+  captureActiveTrip();
+  const ov=id=>{ const el=document.getElementById(id); return el?el.value:""; };
+  const proj={
+    app:"wibbelt-projekt", version:APP_VERSION, saved:nowStr(),
+    activeTrip,
+    trips:{ hin:tripToJSON(tripSlots.hin), rueck:tripToJSON(tripSlots.rueck) },
+    manualAssign:{...manualAssign},
+    options:{ profile:ov("profile"), departTime:ov("departTime"), timeMode:ov("timeMode"),
+      costKm:ov("costKm"), costH:ov("costH"), seats:ov("seats"), carpool:document.getElementById("carpoolMode").checked }
+  };
+  downloadBlob(JSON.stringify(proj,null,2),"application/json","Wibbelt_Projekt_"+new Date().toISOString().slice(0,10)+".json");
+}
+function importProject(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    let d; try{ d=JSON.parse(String(r.result)); }catch(e){ setStatus("Projekt-Datei nicht lesbar (kein gültiges JSON).","err"); return; }
+    if(!d || d.app!=="wibbelt-projekt" || !d.trips){ setStatus("Das ist keine Wibbelt-Projekt-Datei.","err"); return; }
+    const o=d.options||{};
+    const sv=(id,v)=>{ const el=document.getElementById(id); if(el && v!=null) el.value=v; };
+    sv("profile",o.profile); sv("departTime",o.departTime); sv("timeMode",o.timeMode);
+    sv("costKm",o.costKm); sv("costH",o.costH); sv("seats",o.seats);
+    document.getElementById("carpoolMode").checked=!!o.carpool;
+    manualAssign = d.manualAssign || {};
+    tripSlots.hin = jsonToTrip(d.trips.hin);
+    tripSlots.rueck = jsonToTrip(d.trips.rueck);
+    activeTrip = (d.activeTrip==="rueck") ? "rueck" : "hin";
+    updateTripUI();
+    restoreActiveTrip();                 // Eingaben der aktiven Reise in die Oberfläche
+    setStatus("Projekt geladen ("+(d.saved||"")+") – wird berechnet …","ok");
+    if(ziel) calculate();                // Route neu berechnen
   };
   r.readAsText(file);
 }
@@ -2098,7 +2144,7 @@ function renderMapLegend(mode){
   if(mode==="direct"){ items.push('<span><span class="ln" style="border-color:#16a34a"></span>Wege (einer zur '+hub+', Rest direkt)</span>'); }
   if(mode==="mixed"){
     items.push('<span><span class="ln" style="border-color:#16a34a"></span>zur '+hub+'</span>');
-    items.push('<span><span class="ln" style="border-color:#ea580c"></span>direkt zur '+dest+'</span>');
+    items.push('<span><span class="ln" style="border-color:#7c3aed"></span>direkt zur '+dest+'</span>');
   }
   el.innerHTML=items.join(""); el.style.display="flex";
 }
@@ -2116,13 +2162,15 @@ function visibleEmployees(){
   const radiusM = (parseFloat(document.getElementById("radiusKm").value)||0)*1000;
   const list = mitarbeiter.filter(m=>{
     if(onlyActive && !m.aktiv) return false;
-    for(const f of catFilters){
-      const has = isRoleCat(f.cat) ? (m.rolle===f.cat) : (m.tags||[]).includes(f.cat);
-      if(f.val==="mit" && !has) return false; if(f.val==="ohne" && has) return false;
-    }
     if(q){
+      // Textsuche wirkt UNABHÄNGIG von den Merkmal-/Rollen-Filtern (findet jeden per Name/Adresse)
       const hay = (m.name+" "+m.adresse+" "+(m.gruppe||"")+" "+(m.rolle||"")+" "+(m.tags||[]).join(" ")).toLowerCase();
       if(!hay.includes(q)) return false;
+    }else{
+      for(const f of catFilters){
+        const has = isRoleCat(f.cat) ? (m.rolle===f.cat) : (m.tags||[]).includes(f.cat);
+        if(f.val==="mit" && !has) return false; if(f.val==="ohne" && has) return false;
+      }
     }
     if(radiusOn && radiusM>0){
       if(haversine(m,radiusRefPoint) > radiusM) return false;
@@ -2436,7 +2484,7 @@ async function drawMixed(grp){
   if(!map) return;
   const items=[
     ...grp.R.map(m=>({lat:m.lat,lon:m.lon,to:start,color:"#16a34a"})),
-    ...grp.B.map(m=>({lat:m.lat,lon:m.lon,to:ziel, color:"#ea580c"}))
+    ...grp.B.map(m=>({lat:m.lat,lon:m.lon,to:ziel, color:"#7c3aed"}))
   ];
   if(!items.length) return;
   const myRun=++treffRunId;
@@ -2452,6 +2500,34 @@ async function drawMixed(grp){
   }
   setMapBusy(false);
 }
+/* Namensvorschläge im Mitarbeiter-Suchfeld – unabhängig von den Merkmal-/Rollen-Filtern.
+   Klick auf einen Vorschlag markiert/entmarkiert die Person direkt. */
+function renderEmpSuggest(){
+  const inp=document.getElementById("maSearch"), sug=document.getElementById("maSuggest");
+  if(!inp||!sug) return;
+  const q=inp.value.trim().toLowerCase();
+  if(!q){ sug.classList.remove("open"); sug.innerHTML=""; return; }
+  const matches=mitarbeiter.filter(m=>m.aktiv && (m.name+" "+m.adresse+" "+(m.gruppe||"")).toLowerCase().includes(q))
+    .sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de")).slice(0,8);
+  if(!matches.length){ sug.innerHTML='<div class="empty">Keine Treffer</div>'; sug.classList.add("open"); return; }
+  sug.innerHTML=matches.map(m=>'<div class="item" data-emp="'+m.id+'">'+(m._checked?"☑ ":"☐ ")+
+    '<b>'+escapeHtml(formatName(m.name))+'</b> <span style="color:#94a3b8;font-size:11px">'+escapeHtml(m.adresse)+'</span></div>').join("");
+  sug.classList.add("open");
+}
+/* Sinnvolle Vorbelegung der Einzel-Zuteilung (Gemischt):
+   der Nächste zur „Hub" (Start) fährt zur Hub; die übrigen zum jeweils näheren Ort.
+   Setzt nur noch nicht vom Nutzer belegte Einträge (undefined). */
+function autoPresetMixed(){
+  if(currentMode()!=="mixed" || !ziel) return;
+  const emps=selectedEmployees(); if(!emps.length) return;
+  let nearest=null, nd=Infinity;
+  emps.forEach(m=>{ const d=haversine(m,start); if(d<nd){ nd=d; nearest=m; } });
+  emps.forEach(m=>{
+    if(manualAssign[m.id]!==undefined) return;                 // vom Nutzer gesetzt -> nicht überschreiben
+    manualAssign[m.id] = (m===nearest) ? "rieck"
+                       : (haversine(m,start) <= haversine(m,ziel) ? "rieck" : "bau");
+  });
+}
 /* Baut die Zuteilungs-Liste – nur bei Kartenansicht „Gemischt", nur für markierte Mitarbeiter. */
 function renderAssignPanel(){
   const wrap=document.getElementById("assignWrap"); if(!wrap) return;
@@ -2466,14 +2542,16 @@ function renderAssignPanel(){
   if(block) block.style.display="block";
   const {hub,dest}=tripPlaces();
   const ah=document.getElementById("assignHint");
-  if(ah) ah.innerHTML='Für jeden markierten Mitarbeiter festlegen: <b style="color:#166534">zur '+hub+'</b> · <b style="color:#9a3412">direkt zur '+dest+'</b> · <b style="color:#1d4ed8">einsammeln</b> (Standard).';
+  if(ah) ah.innerHTML='Vorbelegt nach Fahrweg: der Nächste zur '+hub+' fährt zur '+hub+', die übrigen zum jeweils näheren Ort. Änderbar: <b style="color:#166534">zur '+hub+'</b> · <b style="color:#6d28d9">direkt zur '+dest+'</b> · <b style="color:#1d4ed8">einsammeln</b>.';
+  autoPresetMixed();                               // sinnvolle Vorbelegung je Mitarbeiter
   const emps=selectedEmployees().sort((a,b)=>formatName(a.name).localeCompare(formatName(b.name),"de"));
   if(cnt) cnt.textContent = emps.length ? "("+emps.length+" markiert)" : "";
   if(!emps.length){
     wrap.innerHTML='<div class="hint">Noch keine Mitarbeiter markiert – links in der Liste ankreuzen, dann erscheinen sie hier zur Zuteilung.</div>';
     return;
   }
-  const OPTS=[["","einsammeln"],["rieck","zur "+hub],["bau","zur "+dest]];
+  // Einsammeln steht ganz rechts (Vorbelegung nutzt „zur ‚Hub'" / „zur ‚Ziel'")
+  const OPTS=[["rieck","zur "+hub],["bau","zur "+dest],["","einsammeln"]];
   wrap.innerHTML='<div class="assign-grid">'+emps.map(m=>{
     const cur=manualAssign[m.id]||"";
     const segs=OPTS.map(([v,lbl])=>'<button type="button" data-assign="'+m.id+'" data-v="'+v+'"'+(v===cur?' class="on"':'')+'>'+lbl+'</button>').join("");
@@ -3351,6 +3429,9 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("click",e=>{ if(!menu.contains(e.target) && e.target!==menuBtn) openMenu(false); });
   document.getElementById("menuHelp").addEventListener("click",()=>{ openMenu(false); openHelp(); });
   document.getElementById("menuSettings").addEventListener("click",()=>{ openMenu(false); openSettings(); });
+  document.getElementById("menuProjSave").addEventListener("click",()=>{ openMenu(false); exportProject(); });
+  document.getElementById("menuProjLoad").addEventListener("click",()=>{ openMenu(false); document.getElementById("projFile").click(); });
+  document.getElementById("projFile").addEventListener("change",e=>{ if(e.target.files[0]) importProject(e.target.files[0]); e.target.value=""; });
 
   // Hilfe & Start-Erklärung
   document.getElementById("helpClose").addEventListener("click",closeHelp);
@@ -3436,7 +3517,16 @@ window.addEventListener("DOMContentLoaded",()=>{
   });
 
   // Suche / Filter
-  document.getElementById("maSearch").addEventListener("input",()=>{ syncCheckedState(); renderEmployees(); });
+  document.getElementById("maSearch").addEventListener("input",()=>{ syncCheckedState(); renderEmployees(); renderEmpSuggest(); });
+  document.getElementById("maSearch").addEventListener("focus",renderEmpSuggest);
+  document.getElementById("maSearch").addEventListener("blur",()=>setTimeout(()=>document.getElementById("maSuggest").classList.remove("open"),150));
+  document.getElementById("maSuggest").addEventListener("mousedown",e=>{
+    const it=e.target.closest(".item[data-emp]"); if(!it) return;
+    e.preventDefault();                                   // Fokus im Suchfeld behalten
+    const m=mitarbeiter.find(x=>x.id===it.dataset.emp); if(!m) return;
+    m._checked=!m._checked;
+    renderEmployees(); renderEmpSuggest(); flashEmpRow(m.id);
+  });
   document.getElementById("onlyActive").addEventListener("change",()=>{ syncCheckedState(); renderEmployees(); });
   document.getElementById("tagFilter").addEventListener("click",e=>{
     if(e.target.closest("#filtReset")){ resetFilters(); syncCheckedState(); renderEmployees(); return; }
