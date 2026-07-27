@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v63 (Geoapify) -->
+<!-- App-Version: v64 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1371,10 +1371,6 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
         <button type="button" class="panel-head" data-toggle-panel="filter">🔍 Filter &amp; Sortierung <span class="chev">▾</span></button>
         <div class="panel-body">
           <div class="ma-tools">
-            <div class="row" style="position:relative">
-              <input type="text" id="maSearch" autocomplete="off" placeholder="🔍 Suchen (Name, Adresse, Gruppe) …">
-              <div class="suggest" id="maSuggest"></div>
-            </div>
             <div class="filt-wrap" id="tagFilter"></div>
             <div class="hint" style="margin-top:-2px">Chip anklicken: 1× <b style="color:#166534">nur mit</b> · 2× <b style="color:#991b1b">ohne</b> · 3× egal (kein Filter).</div>
             <div class="row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
@@ -1407,6 +1403,10 @@ const MERKMALE = ["Solvay", "Wiederholt", "Werkstatt"];
     <!-- Spalte 2: Mitarbeiter -->
     <div class="card no-print" id="colEmps">
       <h2 style="margin-top:18px">Mitarbeiter <span class="count" id="maCount"></span></h2>
+      <div style="position:relative; margin-bottom:8px">
+        <input type="text" id="maSearch" autocomplete="off" placeholder="🔍 Mitarbeiter suchen (Name, Adresse) …" style="width:100%">
+        <div class="suggest" id="maSuggest"></div>
+      </div>
       <div class="emp-actions">
         <button type="button" class="linkbtn" id="selAll">Alle markieren</button>
         <button type="button" class="linkbtn" id="selNone">Keine</button>
@@ -1787,7 +1787,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v63";
+const APP_VERSION="v64";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
