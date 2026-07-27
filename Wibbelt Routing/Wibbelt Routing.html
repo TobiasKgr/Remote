@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v61 (Geoapify) -->
+<!-- App-Version: v62 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1006,7 +1006,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   /* Modal (Mitarbeiter hinzufügen/bearbeiten) */
   .modal-bg{position:fixed; inset:0; background:rgba(15,23,42,.55); display:none;
-            align-items:center; justify-content:center; z-index:2000; padding:16px}
+            align-items:center; justify-content:center; z-index:4000; padding:16px}
   .modal-bg.open{display:flex}
   .modal{background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.3);
          width:100%; max-width:440px; padding:22px}
@@ -1134,7 +1134,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .theme-toggle:hover{background:rgba(255,255,255,.28)}
   /* Drei-Balken-Menü */
   .menu-wrap{position:relative}
-  .menu-pop{position:absolute; right:0; top:44px; z-index:200; min-width:190px; padding:6px;
+  .menu-pop{position:absolute; right:0; top:44px; z-index:1500; min-width:190px; padding:6px;
     background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.25); display:none}
   .menu-pop.open{display:block}
   .menu-pop button{display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
@@ -1779,7 +1779,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v61";
+const APP_VERSION="v62";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
