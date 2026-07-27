@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wibbelt Routing</title>
-<!-- App-Version: v60 (Geoapify) -->
+<!-- App-Version: v61 (Geoapify) -->
 
 
 <!-- Leaflet 1.9.4 fest eingebettet (kein CDN nötig) – CSS + JS direkt in dieser Datei -->
@@ -1779,7 +1779,7 @@ function renderHistory(){
 const SETTINGS_KEY="wibbelt.einstellungen.v1";
 const SETTING_IDS=["profile","departTime","timeMode"];   // costKm/costH/seats kommen aus den Voreinstellungen (⚙️)
 /* Version / Hilfe / Start-Erklärung */
-const APP_VERSION="v60";
+const APP_VERSION="v61";
 const INTRO_KEY="wibbelt.intro.v1";
 function openHelp(){ document.getElementById("helpBg").classList.add("open"); }
 function closeHelp(){ document.getElementById("helpBg").classList.remove("open"); }
@@ -2061,7 +2061,7 @@ function renderMapEmployees(){
     const row = lastRows.find(r=>r.name===m.name);
     const meta=[m.rolle,m.gruppe].filter(Boolean).map(escapeHtml).join(" · ");
     let tip = "<b>"+escapeHtml(formatName(m.name))+"</b>"+(meta?" ("+meta+")":"")+"<br>"+escapeHtml(m.adresse);
-    if(row) tip += "<br>Entf. Start: "+nfKm(row.distStart)+"<br>Entf. Ziel: "+nfKm(row.distZiel)+"<br>Fahrzeit Ziel: "+fmtDauer(row.durZiel);
+    if(row) tip += "<br>Entf. Start: "+nfKm(row.distStart)+" ("+fmtDauer(row.durStart)+")<br>Entf. Ziel: "+nfKm(row.distZiel)+" ("+fmtDauer(row.durZiel)+")";
     tip += '<br><i>'+(m._checked?"✓ ausgewählt":"nicht ausgewählt")+' – klicken zum Umschalten</i>';
     const mk = L.marker([m.lat,m.lon],{icon:iconForEmp(m)}).bindTooltip(tip,{direction:"top",offset:[0,-24]});
     mk.on("click",()=>{ m._checked=!m._checked; mk.setIcon(iconForEmp(m)); renderEmployees(); flashEmpRow(m.id); });
@@ -2505,7 +2505,7 @@ async function getMatrix(emps, full){
     // sources/targets = [Start(0), Ziel(1), Mitarbeiter(2..)]
     const rows = emps.map((m,i)=>{ const gi=i+2;
       return { id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, rolle:m.rolle, tags:m.tags, lat:m.lat, lon:m.lon,
-        distStart:v(gi,0,"distance"), distZiel:v(gi,1,"distance"), durZiel:v(gi,1,"time") }; });
+        distStart:v(gi,0,"distance"), distZiel:v(gi,1,"distance"), durStart:v(gi,0,"time"), durZiel:v(gi,1,"time") }; });
     const N=2+emps.length, durations=[], distances=[];
     for(let i=0;i<N;i++){ durations[i]=[]; distances[i]=[];
       for(let j=0;j<N;j++){ durations[i][j]=v(i,j,"time")||0; distances[i][j]=v(i,j,"distance")||0; } }
@@ -2513,7 +2513,7 @@ async function getMatrix(emps, full){
   }
   // sources=Mitarbeiter, targets=[Start(0),Ziel(1)]
   return emps.map((m,i)=>({ id:m.id, name:m.name, adresse:m.adresse, gruppe:m.gruppe, rolle:m.rolle, tags:m.tags, lat:m.lat, lon:m.lon,
-    distStart:v(i,0,"distance"), distZiel:v(i,1,"distance"), durZiel:v(i,1,"time") }));
+    distStart:v(i,0,"distance"), distZiel:v(i,1,"distance"), durStart:v(i,0,"time"), durZiel:v(i,1,"time") }));
 }
 
 /* Offene Rundreise (TSP): von Start(0) über alle Mitarbeiter(2..N-1) zum Ziel(1),
@@ -2789,6 +2789,7 @@ function renderTable(){
   let html='<div style="overflow-x:auto"><table><thead><tr>'+
     '<th class="'+cls('name')+'" data-sort="name">Mitarbeiter <span class="arrow">'+arrow('name')+'</span></th>'+
     '<th class="'+cls('distStart')+'" data-sort="distStart">Entfernung Start <span class="arrow">'+arrow('distStart')+'</span></th>'+
+    '<th class="'+cls('durStart')+'" data-sort="durStart">Fahrzeit Start <span class="arrow">'+arrow('durStart')+'</span></th>'+
     '<th class="'+cls('distZiel')+'" data-sort="distZiel">Entfernung Ziel <span class="arrow">'+arrow('distZiel')+'</span></th>'+
     '<th class="'+cls('durZiel')+'" data-sort="durZiel">Fahrzeit Ziel <span class="arrow">'+arrow('durZiel')+'</span></th>'+
     (showCost?'<th class="cst '+cls('cost')+'" data-sort="cost">Fahrtkosten Ziel <span class="arrow">'+arrow('cost')+'</span></th>':'')+
@@ -2797,7 +2798,9 @@ function renderTable(){
     const near=(r.distZiel===minZiel);
     html+='<tr class="'+(near?'nearest':'')+'">'+
       '<td><span class="dot b"></span>'+escapeHtml(formatName(r.name))+(near?'<span class="badge">am nächsten</span>':'')+'</td>'+
-      '<td class="num">'+nfKm(r.distStart)+'</td><td class="num">'+nfKm(r.distZiel)+'</td>'+
+      '<td class="num">'+nfKm(r.distStart)+'</td>'+
+      '<td class="num">'+fmtDauer(r.durStart)+'</td>'+
+      '<td class="num">'+nfKm(r.distZiel)+'</td>'+
       '<td class="num">'+fmtDauer(r.durZiel)+'</td>'+
       (showCost?'<td class="num cst">'+fmtEuro(calcCost(r.distZiel,r.durZiel))+'</td>':'')+'</tr>';
   });
@@ -3002,7 +3005,7 @@ function renderVariants(emps, mode){
     '<div class="hint" style="margin-top:8px">Richtwert: Fahrer 1 Std./'+KM_FAHRER+' km, Beifahrer 1 Std./'+KM_BEIFAHRER+' km (15-Min-Takt), Anfahrt '+
     fmtEuro(ANFAHRT_EUR_KM)+'/km. '+(hasH?'„Gesamt €“ = Stunden × '+fmtEuro(r.h)+'/Std. + Anfahrt.':'Für einen €-Gesamtwert „€ / Std.“ in den Fahrt-Optionen setzen.')+'</div>';
   wrap.innerHTML=h;
-  best.textContent="Empfehlung: "+min.name;
+  best.textContent=N+" ausgewählte Mitarbeiter · Empfehlung: "+min.name;
   card.style.display="block";
 }
 
@@ -3061,12 +3064,12 @@ function exportCSV(){
   if(lastRows.length===0) return;
   const sep=";";
   const showCost=costEnabled();
-  const head=["Mitarbeiter","Rolle","Merkmale","Gruppe","Adresse","Entfernung Start (km)","Entfernung Ziel (km)","Fahrzeit Ziel"];
+  const head=["Mitarbeiter","Rolle","Merkmale","Gruppe","Adresse","Entfernung Start (km)","Fahrzeit Start","Entfernung Ziel (km)","Fahrzeit Ziel"];
   if(showCost) head.push("Fahrtkosten Ziel (€)");
   const lines=[head.join(sep)];
   sortedRows().forEach(r=>{
     const cells=['"'+formatName(r.name)+'"','"'+(r.rolle||"")+'"','"'+((r.tags||[]).join(", "))+'"','"'+(r.gruppe||"")+'"','"'+r.adresse+'"',
-      kmPlain(r.distStart),kmPlain(r.distZiel),'"'+fmtDauer(r.durZiel)+'"'];
+      kmPlain(r.distStart),'"'+fmtDauer(r.durStart)+'"',kmPlain(r.distZiel),'"'+fmtDauer(r.durZiel)+'"'];
     if(showCost) cells.push(euroPlain(calcCost(r.distZiel,r.durZiel)));
     lines.push(cells.join(sep));
   });
