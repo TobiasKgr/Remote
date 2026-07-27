@@ -1,0 +1,129 @@
+========================================================
+  WIBBELT ROUTING – Kurzanleitung / Installation
+========================================================
+
+WAS IST DAS?
+  Ein Werkzeug, das die Route vom Firmenstandort zu einer Zieladresse
+  anzeigt und dazu für ausgewählte Mitarbeiter die Entfernung zu Start
+  und Ziel sowie die Fahrzeit zum Ziel berechnet.
+
+
+-------------------------------------------------------
+1) EINMALIG: Geoapify-Schlüssel erstellen und eintragen
+-------------------------------------------------------
+  a) Key erstellen (kostenlos, 3.000 Anfragen/Tag, kommerziell erlaubt):
+     - https://www.geoapify.com/ öffnen -> "Get Started for Free"
+       bzw. "Sign Up". Registrieren (E-Mail oder Google/GitHub-Login).
+     - Nach dem Login im Bereich "Projects" ein Projekt anlegen
+       (z. B. "Wibbelt Routing"). Dafür wird automatisch ein API-Key
+       erzeugt. Diesen API-Key kopieren.
+
+  b) Key eintragen:
+     - "Wibbelt Routing.html" mit dem Editor öffnen (Rechtsklick ->
+       Öffnen mit -> Editor).
+     - Ganz oben die Zeile suchen:
+           const GEOAPIFY_KEY = "HIER_MEIN_KEY";
+       und HIER_MEIN_KEY durch den Key ersetzen, z. B.:
+           const GEOAPIFY_KEY = "a1b2c3...ihr-key...";
+     - Speichern. (Danach gilt der Key für alle, die die Datei öffnen.)
+
+
+-------------------------------------------------------
+2) AUF DEM NETZWERK-ORDNER BEREITSTELLEN
+-------------------------------------------------------
+  Legt diese beiden Dateien GEMEINSAM in EINEN Ordner der Freigabe:
+
+        Wibbelt Routing.html      (das Programm)
+        mitarbeiter.js            (die gemeinsame Mitarbeiter-Liste)
+
+  Optional: eine Bilddatei "logo.png" in denselben Ordner legen -> sie
+  erscheint automatisch oben im Kopf und im PDF-Ausdruck. Fehlt sie, bleibt
+  der Kopf ohne Logo.
+
+  Jeder Kollege öffnet einfach die "Wibbelt Routing.html" per Doppelklick
+  (öffnet im Standard-Browser). Es ist KEIN Server und KEINE Installation
+  nötig – nur eine bestehende Internet-Verbindung (für Karte und Routing).
+
+  Gleichzeitiges Öffnen durch mehrere Kollegen ist problemlos.
+
+
+-------------------------------------------------------
+3) MITARBEITER PFLEGEN (gemeinsam)
+-------------------------------------------------------
+  - In der App unter "Mitarbeiter" können Einträge hinzugefügt, bearbeitet,
+    aus-/eingeblendet (Auge-Symbol) und gelöscht werden. Die Adresse wird
+    automatisch in Koordinaten umgewandelt.
+  - STAMMDATEN VERWALTEN: Knopf "🗂 Stammdaten verwalten" öffnet eine große
+    Tabelle mit allen Mitarbeitern. Dort Rolle und Merkmale (Solvay,
+    Wiederholt, Werkstatt) direkt per Klick/Häkchen pflegen (wird sofort
+    gespeichert); Name/Adresse über das Stift-Symbol. Mit Suche und
+    Aktiv-Schalter. Praktisch bei vielen Mitarbeitern.
+  - Jeder Mitarbeiter kann eine ROLLE haben (Projektleiter oder Monteur)
+    und beliebige MERKMALE (z. B. Solvay, Wiederholt, Werkstatt). Nach beidem lässt
+    sich oben filtern und sortieren (praktisch bei vielen Personen).
+    Zusätzlich gibt es Freitext-Suche und einen Umkreis-Filter.
+    Ausgeblendete Mitarbeiter sammeln sich im eingeklappten Bereich
+    "Ausgeblendet (N)" unten in der Liste und lassen sich dort wieder
+    einblenden.
+  - Weitere Merkmale kannst du im Quelltext oben bei
+    'const MERKMALE = [...]' ergänzen.
+  - AUS EXCEL IMPORTIEREN: Knopf "⭱ Aus Excel importieren". In Excel die
+    Spalten Nachname / Vorname / Anschrift markieren, kopieren (Strg+C) und
+    im Dialog einfügen (Strg+V) - auch CSV mit Semikolon geht. Dann
+    "Hinzufügen" oder "Ersetzen". Die Anschriften werden automatisch in
+    Koordinaten umgewandelt (Adressen ohne Treffer werden übersprungen).
+  - Solange Änderungen nur lokal sind, erscheint der Hinweis
+    "Lokale Änderungen".
+  - Damit ALLE Kollegen die Änderung sehen:
+        1. Knopf "Für Server speichern" klicken
+        2. Die heruntergeladene Datei "mitarbeiter.js"
+        3. im Netzwerk-Ordner die alte "mitarbeiter.js" damit ersetzen.
+    Danach sehen alle beim nächsten Öffnen den neuen Stand.
+
+  Hinweis: Ein automatisches, gleichzeitiges Speichern für alle ist auf
+  einer reinen Ordner-Freigabe technisch nicht möglich (dafür bräuchte es
+  einen laufenden Server). Der Weg oben ist der einfache Ersatz dafür.
+
+
+-------------------------------------------------------
+4) BEDIENUNG – KURZ
+-------------------------------------------------------
+  - Zieladresse eintippen (ab 3 Zeichen kommen Vorschläge) und auswählen.
+  - Startpunkt ist vorbelegt, kann aber überschrieben werden.
+  - Mitarbeiter ankreuzen (oder direkt auf der Karte anklicken).
+  - "Route berechnen".
+  - Kartenansicht wählbar:
+      * "Treffpunkt Rieckstraße": jeder Mitarbeiter mit Linie/Entfernung zur
+        Rieckstraße, von dort eine Strecke zum Ziel (Linien laufen zusammen).
+      * "Einsammeln": eine Route vom Start über alle gewählten Mitarbeiter zum
+        Ziel, Reihenfolge automatisch optimiert.
+      * "Einer zur Rieckstraße, Rest direkt": ein Mitarbeiter (der nächste zur
+        Rieckstraße) fährt zur Rieckstraße, alle weiteren direkt zur Baustelle.
+  - Ergebnis: Karte, Kopfzeile mit Gesamtstrecke/Fahrzeit, Tabelle.
+  - Export: "Als PDF drucken" oder "Tabelle als CSV" (für Excel).
+  - Ganz unten: "Zusammenfassung (kopierbar)" – der gesamte Vorschlag als
+    Klartext mit Knopf "Kopieren" (z. B. für E-Mail oder Nachricht).
+
+  Suche/Filter über der Liste: Textsuche, "nur aktive", Rolle sowie
+  "im Umkreis X km um Ziel".
+
+  MITFAHR-KOSTEN (Fahrgemeinschaft): In den Fahrt-Optionen aktivierbar
+  (mit Feld "Sitzplätze je Fahrzeug"). Zeigt einen Vorschlag mit zwei Fällen:
+   - Fall 1 (Empfehlung): Treffpunkt Rieckstraße. Alle fahren selbst hin
+     (0,30 €/km Anfahrt), dann gemeinsam zum Ziel. Anzahl Autos ergibt sich
+     aus den Sitzplätzen; Fahrt = Fahrer/Beifahrer-Stunden.
+   - Fall 2 (Alternative): einer sammelt ein und fährt die Route zum Ziel.
+  Darunter je Mitarbeiter die Stunden für "selbst direkt", "selbst über den
+  Startpunkt" und "mitfahren" (Fahrer = 1 Std./70 km, Beifahrer = 1 Std./100 km,
+  abgerechnet in 15-Minuten-Schritten / 0,25-Std.-Takt),
+  günstigste Variante markiert. Die Kosten-Ansicht startet eingeklappt.
+
+
+-------------------------------------------------------
+FEHLERMELDUNGEN
+-------------------------------------------------------
+  "Geoapify-Key fehlt/ungültig" -> Schritt 1 prüfen.
+  "Adresse nicht gefunden"  -> Adresse genauer/anders schreiben.
+  "Quota erreicht"          -> Tageslimit des kostenlosen Kontos erreicht,
+                               am nächsten Tag wieder verfügbar.
+  "Keine Internetverbindung"-> Netzwerk/Internet prüfen.
