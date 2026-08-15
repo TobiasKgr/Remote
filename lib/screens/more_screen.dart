@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/apple_widgets.dart';
 import 'accounts_screen.dart';
-import 'assets_screen.dart';
 import 'backup_screen.dart';
-import 'budgets_screen.dart';
 import 'persons_screen.dart';
 import 'settings_screen.dart';
-import 'yearly_planner_screen.dart';
 
 /// Central hub for everything that isn't one of the main tabs - styled like
 /// the iOS Settings app (grouped sections, colored icon squares, chevrons)
@@ -40,29 +37,6 @@ class MoreScreen extends StatelessWidget {
                   iconColor: AppleColors.indigo,
                   title: 'Konten verwalten',
                   onTap: () => _push(context, const AccountsScreen()),
-                ),
-              ],
-            ),
-            const AppleSectionHeader('Finanzen'),
-            AppleGroupedSection(
-              children: [
-                AppleSettingsRow(
-                  icon: CupertinoIcons.chart_pie_fill,
-                  iconColor: AppleColors.green,
-                  title: 'Vermögensübersicht',
-                  onTap: () => _push(context, const AssetsScreen()),
-                ),
-                AppleSettingsRow(
-                  icon: CupertinoIcons.graph_circle_fill,
-                  iconColor: AppleColors.orange,
-                  title: 'Budgets verwalten',
-                  onTap: () => _push(context, const BudgetsScreen()),
-                ),
-                AppleSettingsRow(
-                  icon: CupertinoIcons.square_grid_3x2_fill,
-                  iconColor: AppleColors.purple,
-                  title: 'Jahresplaner',
-                  onTap: () => _push(context, const YearlyPlannerScreen()),
                 ),
               ],
             ),

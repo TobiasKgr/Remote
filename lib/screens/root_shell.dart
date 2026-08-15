@@ -12,6 +12,8 @@ import '../services/notification_service.dart';
 import '../services/optimization_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import 'assets_screen.dart';
+import 'budgets_screen.dart';
 import 'categories_screen.dart';
 import 'dashboard_screen.dart';
 import 'import_screen.dart';
@@ -19,6 +21,7 @@ import 'more_screen.dart';
 import 'salary_screen.dart';
 import 'transactions_screen.dart';
 import 'yearly_overview_screen.dart';
+import 'yearly_planner_screen.dart';
 
 class RootShell extends ConsumerStatefulWidget {
   const RootShell({super.key});
@@ -28,13 +31,19 @@ class RootShell extends ConsumerStatefulWidget {
 }
 
 class _RootShellState extends ConsumerState<RootShell> {
-  int _index = 0;
+  // Starts on "Übersicht" (Dashboard), not tab index 0 - the Vermögen/
+  // Budgets/Jahresplaner tabs sit to its left in the bar by request, but
+  // the app should still land on the dashboard on launch.
+  int _index = 3;
 
   /// Keys of budget-overrun/insight notifications already shown this app
   /// session, so the same condition doesn't re-notify on every rebuild.
   final Set<String> _notifiedKeys = {};
 
   static const _destinations = [
+    NavigationDestination(icon: Icon(CupertinoIcons.chart_pie), selectedIcon: Icon(CupertinoIcons.chart_pie_fill), label: 'Vermögen'),
+    NavigationDestination(icon: Icon(CupertinoIcons.graph_circle), selectedIcon: Icon(CupertinoIcons.graph_circle_fill), label: 'Budgets'),
+    NavigationDestination(icon: Icon(CupertinoIcons.square_grid_3x2), selectedIcon: Icon(CupertinoIcons.square_grid_3x2_fill), label: 'Jahresplaner'),
     NavigationDestination(icon: Icon(CupertinoIcons.house), selectedIcon: Icon(CupertinoIcons.house_fill), label: 'Übersicht'),
     NavigationDestination(icon: Icon(CupertinoIcons.list_bullet), selectedIcon: Icon(CupertinoIcons.list_bullet), label: 'Buchungen'),
     NavigationDestination(icon: Icon(CupertinoIcons.arrow_up_doc), selectedIcon: Icon(CupertinoIcons.arrow_up_doc_fill), label: 'Kontoauszug-Import'),
@@ -45,6 +54,9 @@ class _RootShellState extends ConsumerState<RootShell> {
   ];
 
   static const _screens = [
+    AssetsScreen(),
+    BudgetsScreen(),
+    YearlyPlannerScreen(),
     DashboardScreen(),
     TransactionsScreen(),
     ImportScreen(),

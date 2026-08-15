@@ -291,7 +291,7 @@ Neu-Rendern.
 
 ## Budgets / Sparziele
 
-Im **Mehr**-Tab → "Budgets verwalten" lässt
+Im **Budgets**-Tab lässt
 sich pro Ausgaben-Kategorie planen:
 
 - Ein **Standard-Limit**, das für jeden Monat gilt.
@@ -369,7 +369,7 @@ selbst.
 
 ## Jahresplaner
 
-Im **Mehr**-Tab → "Jahresplaner" gibt es
+Im **Jahresplaner**-Tab gibt es
 eine zusätzliche, tabellarische Jahresübersicht im Stil einer klassischen
 Haushaltsbuch-Tabelle (Zeilen = Zahlungen, Spalten = Monate) - unabhängig von
 der bestehenden Jahresübersicht (Diagramme) gedacht, für alle, die lieber eine
@@ -451,7 +451,7 @@ zeigt beide Varianten nebeneinander.
 
 ## Vermögensübersicht
 
-Im **Mehr**-Tab → "Vermögensübersicht" lässt
+Im **Vermögen**-Tab lässt
 sich das Netto-Vermögen über die reinen Bankkonten hinaus abbilden:
 
 - Zusätzlich zu den Konten lassen sich beliebig viele **Vermögenswerte**
