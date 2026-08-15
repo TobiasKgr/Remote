@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -89,6 +90,45 @@ class AppleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(padding: margin, child: Card(clipBehavior: Clip.antiAlias, child: child));
+  }
+}
+
+/// A single row in an iOS "Settings.app" style list: a colored, rounded-
+/// square icon on the left (as seen in Einstellungen/Settings), a title,
+/// an optional subtitle, and a trailing chevron when [onTap] is set - use
+/// inside an [AppleGroupedSection] to build a settings-style hub screen.
+class AppleSettingsRow extends StatelessWidget {
+  const AppleSettingsRow({
+    super.key,
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Container(
+        width: 29,
+        height: 29,
+        decoration: BoxDecoration(color: iconColor, borderRadius: BorderRadius.circular(7)),
+        child: Icon(icon, color: Colors.white, size: 17),
+      ),
+      title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle!),
+      trailing: trailing ?? (onTap == null ? null : Icon(CupertinoIcons.chevron_right, size: 15, color: context.appleColors.secondaryLabel)),
+      onTap: onTap,
+    );
   }
 }
 

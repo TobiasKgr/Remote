@@ -7,15 +7,6 @@ import '../models/category.dart';
 import '../providers/category_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/apple_widgets.dart';
-import 'accounts_screen.dart';
-import 'assets_screen.dart';
-import 'backup_screen.dart';
-import 'budgets_screen.dart';
-import 'persons_screen.dart';
-import 'settings_screen.dart';
-import 'yearly_planner_screen.dart';
-
-enum _CategoriesMenuAction { backup, budgets, persons, settings, accounts, assets, planner }
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -27,56 +18,7 @@ class CategoriesScreen extends ConsumerWidget {
     final expense = categories.where((c) => c.type == CategoryType.expense).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const SizedBox.shrink(),
-        actions: [
-          PopupMenuButton<_CategoriesMenuAction>(
-            tooltip: 'Verwaltung',
-            onSelected: (action) {
-              final Widget screen = switch (action) {
-                _CategoriesMenuAction.backup => const BackupScreen(),
-                _CategoriesMenuAction.budgets => const BudgetsScreen(),
-                _CategoriesMenuAction.persons => const PersonsScreen(),
-                _CategoriesMenuAction.settings => const SettingsScreen(),
-                _CategoriesMenuAction.accounts => const AccountsScreen(),
-                _CategoriesMenuAction.assets => const AssetsScreen(),
-                _CategoriesMenuAction.planner => const YearlyPlannerScreen(),
-              };
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: _CategoriesMenuAction.persons,
-                child: ListTile(leading: Icon(CupertinoIcons.person_2), title: Text('Personen verwalten')),
-              ),
-              PopupMenuItem(
-                value: _CategoriesMenuAction.accounts,
-                child: ListTile(leading: Icon(CupertinoIcons.building_2_fill), title: Text('Konten verwalten')),
-              ),
-              PopupMenuItem(
-                value: _CategoriesMenuAction.assets,
-                child: ListTile(leading: Icon(CupertinoIcons.chart_pie), title: Text('Vermögensübersicht')),
-              ),
-              PopupMenuItem(
-                value: _CategoriesMenuAction.budgets,
-                child: ListTile(leading: Icon(CupertinoIcons.graph_circle), title: Text('Budgets verwalten')),
-              ),
-              PopupMenuItem(
-                value: _CategoriesMenuAction.planner,
-                child: ListTile(leading: Icon(CupertinoIcons.square_grid_3x2_fill), title: Text('Jahresplaner')),
-              ),
-              PopupMenuItem(
-                value: _CategoriesMenuAction.backup,
-                child: ListTile(leading: Icon(CupertinoIcons.cloud_upload), title: Text('Backup exportieren/importieren')),
-              ),
-              PopupMenuItem(
-                value: _CategoriesMenuAction.settings,
-                child: ListTile(leading: Icon(CupertinoIcons.gear), title: Text('Einstellungen')),
-              ),
-            ],
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.only(bottom: 96),

@@ -15,6 +15,7 @@ import '../utils/formatters.dart';
 import 'categories_screen.dart';
 import 'dashboard_screen.dart';
 import 'import_screen.dart';
+import 'more_screen.dart';
 import 'salary_screen.dart';
 import 'transactions_screen.dart';
 import 'yearly_overview_screen.dart';
@@ -40,6 +41,7 @@ class _RootShellState extends ConsumerState<RootShell> {
     NavigationDestination(icon: Icon(CupertinoIcons.money_euro_circle), selectedIcon: Icon(CupertinoIcons.money_euro_circle_fill), label: 'Gehalt'),
     NavigationDestination(icon: Icon(CupertinoIcons.calendar), selectedIcon: Icon(CupertinoIcons.calendar), label: 'Jahr'),
     NavigationDestination(icon: Icon(CupertinoIcons.square_grid_2x2), selectedIcon: Icon(CupertinoIcons.square_grid_2x2_fill), label: 'Kategorien'),
+    NavigationDestination(icon: Icon(CupertinoIcons.ellipsis_circle), selectedIcon: Icon(CupertinoIcons.ellipsis_circle_fill), label: 'Mehr'),
   ];
 
   static const _screens = [
@@ -49,6 +51,7 @@ class _RootShellState extends ConsumerState<RootShell> {
     SalaryScreen(),
     YearlyOverviewScreen(),
     CategoriesScreen(),
+    MoreScreen(),
   ];
 
   @override

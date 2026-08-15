@@ -82,9 +82,9 @@ lib/
                   Formen, Komponenten-Themes) - siehe Abschnitt "Design"
   utils/          Formatierung, gemeinsame Beschreibungs-Normalisierung
                   (Kategorisierung/Wiederkehrend/Jahresplaner teilen sich dieselbe Logik)
-  screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien,
-                  Personen, Konten, Vermögensübersicht, Budgets, Backup, Einstellungen,
-                  Jahresübersicht, Jahresplaner
+  screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien, Mehr
+                  (Einstiegs-Hub), Personen, Konten, Vermögensübersicht, Budgets, Backup,
+                  Einstellungen, Jahresübersicht, Jahresplaner
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
                   Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, iOS-Grouped-List-
                   Bausteine, ...)
@@ -117,7 +117,7 @@ App auf allen Plattformen identisch verhält):
   Karten-Gruppen mit feinen Trennlinien und grauen Versal-Sektionstiteln - die
   klassische iOS "Grouped Table View". Die zugehörigen Bausteine
   (`AppleLargeTitle`, `AppleSectionHeader`, `AppleGroupedSection`, `AppleCard`,
-  `AppleHeroCard`) liegen in `lib/widgets/apple_widgets.dart`.
+  `AppleHeroCard`, `AppleSettingsRow`) liegen in `lib/widgets/apple_widgets.dart`.
 - **Formulare**: Speichern/Löschen als Textbuttons in der Nav-Bar-Ecke statt
   Fließtext-Buttons, Formularfelder randlos/gefüllt innerhalb der Gruppen-Karten
   (iOS-Formularlook).
@@ -211,7 +211,7 @@ Formular eintragen oder korrigieren.
 
 ## Zweite Person im Haushalt
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Personen verwalten"
+Im **Mehr**-Tab → "Personen verwalten"
 lassen sich beliebig viele Haushaltsmitglieder anlegen (Name + Farbe). Danach:
 
 - Jede Buchung (manuell, PDF-Import) und jede Gehaltsabrechnung kann optional
@@ -266,7 +266,7 @@ eigene Karte angezeigt; ohne Treffer erscheint der Abschnitt gar nicht.
 
 ## Erinnerungen (Benachrichtigungen)
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Einstellungen" lässt
+Im **Mehr**-Tab → "Einstellungen" lässt
 sich ein Schalter "Erinnerungen" umlegen (standardmäßig **aus** - reines
 Opt-in, damit keine Berechtigung ungefragt eingefordert wird). Ist er aktiv,
 zeigt die App eine lokale Benachrichtigung, sobald:
@@ -291,7 +291,7 @@ Neu-Rendern.
 
 ## Budgets / Sparziele
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Budgets verwalten" lässt
+Im **Mehr**-Tab → "Budgets verwalten" lässt
 sich pro Ausgaben-Kategorie planen:
 
 - Ein **Standard-Limit**, das für jeden Monat gilt.
@@ -312,7 +312,7 @@ der beiden Ansichten.
 
 ## Backup / Export & Import
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Backup exportieren/importieren"
+Im **Mehr**-Tab → "Backup exportieren/importieren"
 lassen sich alle lokal gespeicherten Daten (Buchungen, Kategorien,
 Gehaltsabrechnungen, Personen, Firmenwagen, Budgets, Konten, Vermögenswerte/Kredite)
 als eine JSON-Datei exportieren und auf einer anderen Installation (oder nach
@@ -369,7 +369,7 @@ selbst.
 
 ## Jahresplaner
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Jahresplaner" gibt es
+Im **Mehr**-Tab → "Jahresplaner" gibt es
 eine zusätzliche, tabellarische Jahresübersicht im Stil einer klassischen
 Haushaltsbuch-Tabelle (Zeilen = Zahlungen, Spalten = Monate) - unabhängig von
 der bestehenden Jahresübersicht (Diagramme) gedacht, für alle, die lieber eine
@@ -405,7 +405,7 @@ Reine Übersicht - Bearbeiten einzelner Buchungen bleibt wie gewohnt über
 
 ## Konten-Verwaltung
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Konten verwalten" lassen
+Im **Mehr**-Tab → "Konten verwalten" lassen
 sich beliebig viele Bankkonten anlegen (Name, **Kontotyp**, Startsaldo, Farbe,
 optional einer Person zugeordnet):
 
@@ -451,7 +451,7 @@ zeigt beide Varianten nebeneinander.
 
 ## Vermögensübersicht
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Vermögensübersicht" lässt
+Im **Mehr**-Tab → "Vermögensübersicht" lässt
 sich das Netto-Vermögen über die reinen Bankkonten hinaus abbilden:
 
 - Zusätzlich zu den Konten lassen sich beliebig viele **Vermögenswerte**
@@ -469,7 +469,7 @@ sich das Netto-Vermögen über die reinen Bankkonten hinaus abbilden:
 
 ## Demo-Modus
 
-Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Einstellungen" →
+Im **Mehr**-Tab → "Einstellungen" →
 "Demodaten laden" lässt sich die App sofort ausprobieren, ohne selbst etwas
 einzutragen:
 
