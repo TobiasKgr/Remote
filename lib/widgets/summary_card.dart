@@ -21,15 +21,22 @@ class SummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                if (icon != null) Icon(icon, color: color, size: 20),
-                if (icon != null) const SizedBox(width: 8),
-                Text(label, style: Theme.of(context).textTheme.labelLarge),
+                if (icon != null) Icon(icon, color: color, size: 16),
+                if (icon != null) const SizedBox(width: 6),
+                Expanded(
+                  child: Text(label, style: Theme.of(context).textTheme.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              currencyFormat.format(amount),
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.bold),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                currencyFormat.format(amount),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(color: color),
+                maxLines: 1,
+              ),
             ),
           ],
         ),
