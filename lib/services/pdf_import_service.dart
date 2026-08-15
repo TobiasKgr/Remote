@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'pdf_text_extractor.dart';
+import 'targobank_finanzstatus_parser.dart';
 
 /// One line item parsed out of a bank statement PDF, still awaiting user
 /// confirmation before it becomes a real [Transaction].
@@ -37,6 +38,13 @@ class PdfImportService {
   Future<String> extractText(Uint8List bytes) => extractPdfText(bytes);
 
   List<ParsedTransaction> parse(String text) {
+    if (looksLikeTargobankFinanzstatus(text)) {
+      return parseTargobankFinanzstatus(text);
+    }
+    return _parseGenericStatement(text);
+  }
+
+  List<ParsedTransaction> _parseGenericStatement(String text) {
     final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
 
     final results = <ParsedTransaction>[];

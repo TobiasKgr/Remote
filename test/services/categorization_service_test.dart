@@ -84,6 +84,16 @@ void main() {
     expect(match.subcategoryId, 'fixkosten_streaming');
   });
 
+  test('erkennt ein mehrteiliges Schlüsselwort auch, wenn im Text alle Leerzeichen fehlen', () {
+    // Manche PDF-Exporte (z.B. flachgedrückte Kontoauszug-Tabellen) reihen
+    // Wörter ohne jedes Leerzeichen aneinander, z.B. "...zahlungdmdrogerie
+    // sagtdanke...". Das Schlüsselwort "dm drogerie" enthält selbst ein
+    // Leerzeichen und muss trotzdem noch treffen.
+    final match = service.suggest('NFCKARTENZAHLUNGDMDROGERIESAGTDANKE/Beckum//69717998AM30.04.2026');
+    expect(match!.categoryId, 'shopping');
+    expect(match.subcategoryId, 'shopping_drogerie');
+  });
+
   test('Historie ohne Treffer für unbekannte Kategorie-ID wird ignoriert', () {
     final history = [
       Transaction(

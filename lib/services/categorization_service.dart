@@ -64,6 +64,13 @@ class CategorizationService {
 
   CategoryMatch? _suggestFromKeywords(String description) {
     final lower = description.toLowerCase();
+    // Some PDF exports (e.g. flattened multi-column bank statements) strip
+    // every space between words, so a merchant name that ran into
+    // surrounding text ("...zahlungdmdrogeriesagtdanke...") would never
+    // match a keyword that itself contains a space or hyphen ("dm
+    // drogerie"). Comparing a whitespace/hyphen-free version of both sides
+    // catches those without weakening the plain substring match above.
+    final compactDescription = _compact(lower);
     CategoryMatch? best;
     var bestKeywordLength = 0;
 
@@ -71,7 +78,10 @@ class CategorizationService {
       for (final subcategory in category.subcategories) {
         for (final keyword in subcategory.keywords) {
           if (keyword.isEmpty) continue;
-          if (keyword.length > bestKeywordLength && lower.contains(keyword.toLowerCase())) {
+          if (keyword.length <= bestKeywordLength) continue;
+          final lowerKeyword = keyword.toLowerCase();
+          final matches = lower.contains(lowerKeyword) || compactDescription.contains(_compact(lowerKeyword));
+          if (matches) {
             best = CategoryMatch(category.id, subcategory.id);
             bestKeywordLength = keyword.length;
           }
@@ -80,6 +90,8 @@ class CategorizationService {
     }
     return best;
   }
+
+  static String _compact(String s) => s.replaceAll(RegExp(r'[^a-z0-9äöüß]'), '');
 
   /// Fallback category id used when nothing matches.
   String fallbackCategoryId(bool isIncome) {

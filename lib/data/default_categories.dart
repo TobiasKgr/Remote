@@ -29,7 +29,10 @@ List<Category> buildDefaultCategories() {
         Subcategory(
           id: 'income_transfer',
           name: 'Überweisung erhalten',
-          keywords: ['erstattung', 'rückerstattung', 'rückzahlung', 'auszahlung', 'gutschrift', 'rueckerstattung', 'rueckzahlung'],
+          keywords: [
+            'erstattung', 'rückerstattung', 'rückzahlung', 'auszahlung', 'gutschrift', 'einzahlung',
+            'rueckerstattung', 'rueckzahlung',
+          ],
         ),
         Subcategory(id: 'income_other', name: 'Sonstige Einnahmen', keywords: []),
       ],
@@ -50,7 +53,7 @@ List<Category> buildDefaultCategories() {
         Subcategory(
           id: 'wohnen_einrichtung',
           name: 'Einrichtung / Haushalt',
-          keywords: ['ikea', 'poco', 'roller', 'mömax', 'porta', 'xxxlutz', 'dänisches bettenlager', 'hornbach', 'obi', 'bauhaus', 'toom', 'hagebau', 'baumarkt', 'möbel', 'moemax', 'daenisches bettenlager', 'moebel'],
+          keywords: ['ikea', 'poco', 'roller', 'mömax', 'porta', 'xxxlutz', 'dänisches bettenlager', 'hornbach', 'obi', 'bauhaus', 'toom', 'hagebau', 'baumarkt', 'hellweg', 'möbel', 'moemax', 'daenisches bettenlager', 'moebel'],
         ),
       ],
     ),
@@ -73,7 +76,7 @@ List<Category> buildDefaultCategories() {
           id: 'fixkosten_mobilfunk',
           name: 'Mobilfunk / Internet',
           keywords: [
-            'telekom', 'vodafone', 'o2', 'mobilfunk', 'internet', '1&1', 'congstar', 'aldi talk', 'blau.de',
+            'telekom', 'vodafone', 'o2', 'mobilfunk', 'internet', '1&1', '1+1', 'congstar', 'aldi talk', 'blau.de',
             'freenet', 'mobilcom', 'lidl connect', 'otelo', 'winsim', 'simyo', 'drillisch', 'klarmobil',
             'unitymedia', 'deutsche glasfaser', 'telefonica', 'penny mobil', 'lycamobile',
           ],
@@ -88,7 +91,8 @@ List<Category> buildDefaultCategories() {
           name: 'Mitgliedschaften',
           keywords: [
             'fitnessstudio', 'mitgliedschaft', 'verein', 'mcfit', 'fitx', 'clever fit', 'kieser', 'urban sports club',
-            'adac', 'gewerkschaft', 'volkshochschule', 'vhs', 'jahresbeitrag',
+            'adac', 'gewerkschaft', 'volkshochschule', 'vhs', 'jahresbeitrag', 'mitgliedsbeitrag', 'gruppenbeitrag',
+            'sportclub', 'sport club', 'rundfunkbeitrag', 'gez',
           ],
         ),
         Subcategory(
@@ -96,7 +100,8 @@ List<Category> buildDefaultCategories() {
           name: 'Software-Abos',
           keywords: [
             'icloud', 'google one', 'google storage', 'dropbox', 'microsoft 365', 'office 365', 'adobe', 'canva',
-            'notion', 'chatgpt', 'openai', 'claude.ai', 'anthropic', 'github', 'app store', 'google play', 'playstation plus',
+            'notion', 'chatgpt', 'openai', 'claude.ai', 'anthropic', 'github', 'app store', 'google play',
+            'google payment', 'googlepayment', 'playstation plus',
             'xbox game pass', 'nintendo', 'steam', 'nordvpn', 'expressvpn', 'antivirus',
           ],
         ),
@@ -114,13 +119,13 @@ List<Category> buildDefaultCategories() {
           keywords: [
             'rewe', 'edeka', 'aldi', 'lidl', 'kaufland', 'netto', 'penny', 'real,-', 'norma', 'denns', 'dennree',
             'alnatura', 'bio company', 'tegut', 'globus', 'marktkauf', 'famila', 'combi', 'nahkauf', 'basic bio',
-            'hit markt', 'e center', 'e-center', 'wasgau', 'feneberg',
+            'hit markt', 'e center', 'e-center', 'wasgau', 'feneberg', 'albert heijn', 'albertheijn',
           ],
         ),
         Subcategory(
           id: 'lebensmittel_restaurant',
           name: 'Restaurant / Café',
-          keywords: ['restaurant', 'café', 'cafe', 'bistro', 'imbiss', 'mcdonald', 'burger king', 'kfc', 'subway', 'vapiano', 'dean & david', 'starbucks', 'l\'osteria', 'domino', 'pizza hut', 'nordsee', 'sushi', 'lieferando', 'wolt', 'uber eats', 'flink', 'gorillas', 'coffee fellow', 'tchibo', 'bäckerei', 'konditorei', 'metzgerei', 'baeckerei'],
+          keywords: ['restaurant', 'café', 'cafe', 'bistro', 'imbiss', 'mcdonald', 'burger king', 'kfc', 'subway', 'vapiano', 'dean & david', 'starbucks', 'l\'osteria', 'domino', 'pizza hut', 'nordsee', 'sushi', 'lieferando', 'wolt', 'uber eats', 'takeaway.com', 'flink', 'gorillas', 'coffee fellow', 'tchibo', 'bäckerei', 'konditorei', 'metzgerei', 'baeckerei'],
         ),
       ],
     ),
@@ -133,7 +138,7 @@ List<Category> buildDefaultCategories() {
         Subcategory(
           id: 'mobilitaet_tanken',
           name: 'Tanken',
-          keywords: ['tankstelle', 'aral', 'shell', 'esso', 'jet tankstelle', 'total energies', 'star tankstelle', 'agip', 'eni', 'omv', 'avia', 'sprint tankstelle', 'westfalen ag', 'tank & rast', 'supercharger', 'ladesäule', 'ladesaeule'],
+          keywords: ['tankstelle', 'tankst.', 'aral', 'shell', 'esso', 'jet tankstelle', 'total energies', 'star tankstelle', 'agip', 'eni', 'omv', 'avia', 'sprint tankstelle', 'westfalen ag', 'tank & rast', 'supercharger', 'ladesäule', 'ladesaeule'],
         ),
         Subcategory(
           id: 'mobilitaet_oepnv',
@@ -148,7 +153,7 @@ List<Category> buildDefaultCategories() {
           name: 'KFZ-Versicherung / Werkstatt',
           keywords: ['kfz', 'werkstatt', 'tüv', 'dekra', 'atu', 'euromaster', 'vergölst', 'pkw-versicherung', 'autohaus', 'reifen', 'point s', 'mobil oil', 'tuev', 'vergoelst'],
         ),
-        Subcategory(id: 'mobilitaet_firmenwagen', name: 'Firmenwagen', keywords: ['firmenwagen', 'leasingrate', 'dienstwagen']),
+        Subcategory(id: 'mobilitaet_firmenwagen', name: 'Firmenwagen', keywords: ['firmenwagen', 'leasingrate', 'dienstwagen', 'leasing']),
         Subcategory(
           id: 'mobilitaet_sharing',
           name: 'Carsharing / Fahrrad',
@@ -205,6 +210,12 @@ List<Category> buildDefaultCategories() {
           keywords: ['dm-drogerie', 'dm drogerie', 'rossmann', 'müller drogerie', 'douglas', 'flaconi', 'parfümerie', 'mueller drogerie', 'parfuemerie'],
         ),
         Subcategory(id: 'shopping_bücher', name: 'Bücher / Medien', keywords: ['thalia', 'hugendubel', 'weltbild', 'buchhandlung', 'saturn media']),
+        // Fallback for online payments routed through a payment service
+        // rather than a merchant name (e.g. a PDF export that only shows
+        // "PayPal ... Ihr Einkauf bei" with the actual shop left blank).
+        // Kept last/shortest on purpose so any more specific merchant
+        // keyword elsewhere always wins first.
+        Subcategory(id: 'shopping_online', name: 'Online-Zahlung', keywords: ['paypal', 'klarna']),
       ],
     ),
     Category(
@@ -230,7 +241,7 @@ List<Category> buildDefaultCategories() {
           name: 'Kontoführung / Gebühren',
           keywords: ['kontoführung', 'kontoführungsgebühr', 'entgelt', 'dispozinsen', 'überziehungszinsen', 'kreditkartengebühr', 'auslandseinsatzentgelt', 'buchungsgebühr', 'jahresgebühr karte', 'kontofuehrung', 'kontofuehrungsgebuehr', 'ueberziehungszinsen', 'kreditkartengebuehr', 'buchungsgebuehr', 'jahresgebuehr karte'],
         ),
-        Subcategory(id: 'bank_zinsen', name: 'Kredit / Zinsen', keywords: ['zinsen', 'darlehen', 'ratenkredit', 'kreditrate', 'tilgung', 'baufinanzierung']),
+        Subcategory(id: 'bank_zinsen', name: 'Kredit / Zinsen', keywords: ['zinsen', 'darlehen', 'ratenkredit', 'kreditrate', 'tilgung', 'baufinanzierung', 'consorsfinanz', 'consors finanz']),
       ],
     ),
     Category(
@@ -274,7 +285,7 @@ List<Category> buildDefaultCategories() {
       type: CategoryType.expense,
       colorValue: AppleColors.gray2.toARGB32(),
       subcategories: [
-        Subcategory(id: 'sonstiges_diverses', name: 'Diverses', keywords: []),
+        Subcategory(id: 'sonstiges_diverses', name: 'Diverses', keywords: ['geldautomat', 'bargeldauszahlung']),
       ],
     ),
     // Used exclusively by the transfer flow on the Konten screen - not meant
