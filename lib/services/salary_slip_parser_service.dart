@@ -35,6 +35,23 @@ class SalarySlipParseResult {
 class SalarySlipParserService {
   static final _amountRegex = RegExp(r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*[-+]?\s*$');
   static final _monthYearRegex = RegExp(r'\b(\d{2})[./](\d{4})\b');
+
+  /// Matches a German IBAN (as printed on the "Bank/Konto" line of a
+  /// payslip) so the payout amount at the end of that same line can be
+  /// used as a fallback for the net payout when no "Auszahlungsbetrag"
+  /// keyword is found nearby (some DATEV-style layouts print the label and
+  /// the value in separate, far-apart table cells that end up on
+  /// completely different lines once the PDF text is flattened).
+  static final _ibanRegex = RegExp(r'\bDE\d{2}(?:\s?\d){16,20}\b');
+
+  /// Matches a "Brutto-Bezüge" component line, e.g.
+  /// "2000 Gehalt ... L  L  J       4.900,00" - the two single-letter
+  /// markers (Lohnart-/Steuerart-Kennzeichen) followed by "J" identify a
+  /// line item that counts toward the Gesamt-Brutto per the payslip's own
+  /// legend ("J = Bestandteil des Gesamt-Bruttos"). Used as a fallback
+  /// when the "Gesamt-Brutto" label and its amount end up on different
+  /// lines.
+  static final _grossComponentRegex = RegExp(r'\b[A-Z]\s+[A-Z]\s+J\s+\d{1,3}(?:\.\d{3})*,\d{2}\s*$');
   static final _germanMonthRegex = RegExp(
     r'(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+(\d{4})',
     caseSensitive: false,
@@ -70,6 +87,7 @@ class SalarySlipParserService {
   SalarySlipParseResult parse(String text) {
     final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
     final result = SalarySlipParseResult();
+    double grossComponentsSum = 0;
 
     for (final line in lines) {
       final lower = line.toLowerCase();
@@ -88,7 +106,15 @@ class SalarySlipParserService {
         result.incomeTax += amount;
       } else if (_socialSecurityKeywords.any(lower.contains)) {
         result.socialSecurity += amount;
+      } else if (result.net == null && _ibanRegex.hasMatch(line)) {
+        result.net = amount;
+      } else if (_grossComponentRegex.hasMatch(line)) {
+        grossComponentsSum += amount;
       }
+    }
+
+    if (result.gross == null && grossComponentsSum > 0) {
+      result.gross = grossComponentsSum;
     }
 
     return result;

@@ -38,4 +38,26 @@ void main() {
     expect(result.incomeTax, 0);
     expect(result.socialSecurity, 0);
   });
+
+  test('DATEV-Layout ohne Betrag neben "Gesamt-Brutto"/"Auszahlungsbetrag": '
+      'Brutto aus Lohnart-Komponenten summiert, Netto aus der IBAN-Zeile übernommen', () {
+    // Nachgebildeter Zeilenumbruch einer typischen "Abrechnung der
+    // Brutto/Netto-Bezüge" (Form.-Nr. LNGN16): Label und Betrag von
+    // Gesamt-Brutto/Auszahlungsbetrag stehen wegen der Tabellen-Extraktion
+    // auf unterschiedlichen Zeilen, anders als in den anderen Tests oben.
+    final result = service.parse(
+      'für März 2026\n'
+      'Gesamt-BruttoSteuerrechtliche AbzügeNetto-Verdienst\n'
+      '2000 Gehalt                                                     L  L  J       4.900,00\n'
+      '2410 Privatfahrten                                              L  L  J         136,00\n'
+      '3100 AG-Anteil VWL,lfd                                          L  L  J          26,00\n'
+      '                                                                              5.062,00\n'
+      'TARGOBANK Düsseldorf\n'
+      'DE02 3002 0900 5330 9009 16            1.13406                            2.166,11',
+    );
+
+    expect(result.period, DateTime(2026, 3));
+    expect(result.gross, closeTo(5062.00, 0.001));
+    expect(result.net, closeTo(2166.11, 0.001));
+  });
 }
