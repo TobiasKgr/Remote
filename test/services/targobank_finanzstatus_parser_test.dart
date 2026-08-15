@@ -62,4 +62,30 @@ void main() {
     expect(parseTargobankFinanzstatus(''), isEmpty);
     expect(parseTargobankFinanzstatus('Beliebiger Text ohne Tabellenstruktur'), isEmpty);
   });
+
+  test('Quartals-Rechnungsabschluss-Layout: kein Zeilenumbruch zwischen Buchungen, '
+      'Betrag+Saldo stehen am Zeilenende statt am Anfang, Tag.Monat hat einen Punkt', () {
+    // Bei manchen Finanzstatus-PDFs (beobachtet beim quartalsweisen
+    // "Rechnungsabschluss" Ende März/Juni/September/Dezember) liefert die
+    // PDF-Text-Extraktion pro Seite praktisch keine Zeilenumbrüche mehr, und
+    // Betrag+Saldo stehen hinter statt vor dem Buchungstext.
+    const noNewlineText = 'TARGOBANK AG F I N A N Z S T A T U S vom 01.06.2026 - 30.06.2026 '
+        'Transaktionen DatumTagBuchungstextBelastungenGutschriftenGuthaben/Kredit '
+        '31.05.SOANFANGSSALDO1.000,00'
+        '01.06.MORESERV. BETRAG POS EUR 76,98AUTORISIERUNGSNR 592636KARTENNUMMERtoom BM Warendorf DE1.000,00'
+        '01.06.MOAUSFÜHRUNG DAUERAUFTRAG AUFTRAGSNUMMER 0300007 MIETE KONRAD-ADENAUER-RING915,0085,00'
+        '15.06.MOLOHN / GEHALT / RENTEWibbelt GmbHAbrechnung 05/20262.165,112.250,11'
+        '30.06.DIENDSALDO2.250,11'
+        'Guthaben/Kredit';
+
+    final result = parseTargobankFinanzstatus(noNewlineText);
+
+    expect(result, hasLength(2));
+    expect(result[0].date, DateTime(2026, 6, 1));
+    expect(result[0].amount, closeTo(-915.00, 0.001));
+    expect(result[0].description, contains('MIETE'));
+    expect(result[1].date, DateTime(2026, 6, 15));
+    expect(result[1].amount, closeTo(2165.11, 0.001));
+    expect(result[1].description, contains('LOHN'));
+  });
 }

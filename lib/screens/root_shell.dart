@@ -37,8 +37,8 @@ class _RootShellState extends ConsumerState<RootShell> {
   static const _destinations = [
     NavigationDestination(icon: Icon(CupertinoIcons.house), selectedIcon: Icon(CupertinoIcons.house_fill), label: 'Übersicht'),
     NavigationDestination(icon: Icon(CupertinoIcons.list_bullet), selectedIcon: Icon(CupertinoIcons.list_bullet), label: 'Buchungen'),
-    NavigationDestination(icon: Icon(CupertinoIcons.arrow_up_doc), selectedIcon: Icon(CupertinoIcons.arrow_up_doc_fill), label: 'Import'),
-    NavigationDestination(icon: Icon(CupertinoIcons.money_euro_circle), selectedIcon: Icon(CupertinoIcons.money_euro_circle_fill), label: 'Gehalt'),
+    NavigationDestination(icon: Icon(CupertinoIcons.arrow_up_doc), selectedIcon: Icon(CupertinoIcons.arrow_up_doc_fill), label: 'Kontoauszug-Import'),
+    NavigationDestination(icon: Icon(CupertinoIcons.money_euro_circle), selectedIcon: Icon(CupertinoIcons.money_euro_circle_fill), label: 'Gehalt-Import'),
     NavigationDestination(icon: Icon(CupertinoIcons.calendar), selectedIcon: Icon(CupertinoIcons.calendar), label: 'Jahr'),
     NavigationDestination(icon: Icon(CupertinoIcons.square_grid_2x2), selectedIcon: Icon(CupertinoIcons.square_grid_2x2_fill), label: 'Kategorien'),
     NavigationDestination(icon: Icon(CupertinoIcons.ellipsis_circle), selectedIcon: Icon(CupertinoIcons.ellipsis_circle_fill), label: 'Mehr'),

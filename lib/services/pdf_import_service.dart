@@ -39,7 +39,16 @@ class PdfImportService {
 
   List<ParsedTransaction> parse(String text) {
     if (looksLikeTargobankFinanzstatus(text)) {
-      return parseTargobankFinanzstatus(text);
+      final parsed = parseTargobankFinanzstatus(text);
+      // Fallback: a document can still be correctly detected as a
+      // TARGOBANK Finanzstatus while using some row layout the dedicated
+      // parser doesn't recognize yet (as happened with the quarterly
+      // "Rechnungsabschluss" layout). Rather than surfacing zero rows,
+      // fall back to the generic line-based heuristic - it won't
+      // understand the balance-column format, but it has still picked up
+      // real bookings on genuine Kontoauszug-style lines in the past.
+      if (parsed.isNotEmpty) return parsed;
+      return _parseGenericStatement(text);
     }
     return _parseGenericStatement(text);
   }
