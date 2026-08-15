@@ -169,6 +169,7 @@ class _CategoryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return AppleCard(
       child: ExpansionTile(
+        initiallyExpanded: true,
         leading: CircleAvatar(backgroundColor: Color(category.colorValue), radius: 12),
         title: Text(category.name),
         children: [
