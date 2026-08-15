@@ -53,9 +53,17 @@ Future<void> initHive() async {
     for (final category in buildDefaultCategories()) {
       await categoryBox.put(category.id, category);
     }
-  } else if (!categoryBox.containsKey('umbuchung')) {
-    // Added after initial release: back-fill the system category used by
-    // the account transfer flow onto installs seeded before it existed.
-    await categoryBox.put('umbuchung', buildDefaultCategories().firstWhere((c) => c.id == 'umbuchung'));
+  } else {
+    // Back-fill default categories added after initial release (e.g. the
+    // system "Umbuchung" category, or new expense categories like "Bank &
+    // Gebühren") onto installs seeded before they existed. Categories the
+    // user already has (even if renamed/edited) are left untouched - this
+    // only adds entries that are completely missing by id, never overwrites
+    // existing ones, respecting that categories are freely user-editable.
+    for (final category in buildDefaultCategories()) {
+      if (!categoryBox.containsKey(category.id)) {
+        await categoryBox.put(category.id, category);
+      }
+    }
   }
 }

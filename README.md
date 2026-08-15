@@ -156,6 +156,22 @@ Die Kategorie-Vorschläge dabei kommen aus `CategorizationService`
    hinterlegten Suchbegriffe. Bei mehreren Treffern gewinnt der **längste**
    (spezifischste) Begriff, z. B. "amazon prime" statt nur "amazon".
 
+**Hohe Trefferquote**: Die Standard-Kategorien (`lib/data/default_categories.dart`)
+enthalten bewusst sehr breite Suchbegriff-Listen (reale Marken-/Anbieternamen,
+wie sie in echten Kontoauszügen auftauchen), inkl. vier zusätzlicher Kategorien
+für Bereiche, die sonst pauschal in "Sonstiges" gelandet wären: **Bank &
+Gebühren**, **Bildung & Kinder**, **Spenden & Kirche**, **Haustiere**. Für jedes
+Suchwort mit Umlaut/ß wird automatisch auch die in Bankauszügen übliche
+ASCII-Schreibweise (ä→ae, ö→oe, ü→ue, ß→ss) mitgeführt, z. B. "bäckerei" und
+"baeckerei". Ein Regressionstest (`test/services/categorization_coverage_test.dart`)
+prüft das gegen eine breite, realistische Stichprobe von über 70
+Buchungstexten und stellt sicher, dass zukünftige Änderungen die Trefferquote
+nicht wieder senken. Eine absolute Zahl wie "99 % Trefferquote" lässt sich für
+echte, unbekannte Bankdaten naturgemäß nicht garantieren – trifft ein Anbieter
+mal nicht zu, genügt es, das fehlende Schlüsselwort einmal in den
+Kategorien-Einstellungen zu ergänzen (oder die Buchung einmal manuell zu
+kategorisieren, wonach sie über die gelernte Historie automatisch erkannt wird).
+
 **Lizenzhinweis**: `syncfusion_flutter_pdf` ist über die kostenlose Syncfusion
 Community License nutzbar (u. a. für Einzelpersonen und kleine Unternehmen mit
 < 1 Mio. USD Jahresumsatz). Für eine geplante kommerzielle Veröffentlichung
