@@ -48,6 +48,9 @@ Umgesetzt:
 - Demo-Modus: realistische Beispieldaten über 3 Monate laden (Personen, Konten,
   Buchungen, Firmenwagen, Gehaltsabrechnungen, Vermögenswerte), um alle Funktionen
   ohne eigene Eingaben auszuprobieren, jederzeit gesammelt wieder entfernbar
+- Jahresplaner: zusätzliche, tabellarische Jahresübersicht (Excel-artig) - jede
+  wiederkehrende/eindeutige Zahlung als eigene Zeile mit Betrag je Monat, nach
+  Kategorie gruppiert, inkl. Gesamteinnahmen/-ausgaben/Saldo je Monat
 - Lokale Speicherung (Hive), keine Cloud/kein Server nötig
 
 Damit ist die ursprünglich geplante Feature-Liste sowie die anschließend
@@ -70,15 +73,18 @@ lib/
   data/           Hive-Setup, Standard-Kategorien (Seed-Daten)
   repositories/   CRUD auf den Hive-Boxen
   providers/      Riverpod-Provider/Notifier, Monats-/Jahresfilter, Personen-Filter,
-                  Insights, Budget-Fortschritt, Konto-Fortschritt/-Saldo, Netto-Vermögen
+                  Insights, Budget-Fortschritt, Konto-Fortschritt/-Saldo, Netto-Vermögen,
+                  Jahresplaner-Pivot
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
                   (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk,
                   Backup-Export/Import, Demo-Daten, plattformspezifisches Datei-Speichern
   theme/          Zentrales Apple/iOS-inspiriertes App-Theme (Farben, Typografie,
                   Formen, Komponenten-Themes) - siehe Abschnitt "Design"
+  utils/          Formatierung, gemeinsame Beschreibungs-Normalisierung
+                  (Kategorisierung/Wiederkehrend/Jahresplaner teilen sich dieselbe Logik)
   screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien,
                   Personen, Konten, Vermögensübersicht, Budgets, Backup, Einstellungen,
-                  Jahresübersicht
+                  Jahresübersicht, Jahresplaner
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
                   Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, iOS-Grouped-List-
                   Bausteine, ...)
@@ -360,6 +366,42 @@ Monat/Personen-Filter; "Zurücksetzen" im Filter-Dialog setzt Kategorie und
 Betragsbereich zurück. Andere Ansichten (Dashboard, Budgets, Jahresübersicht)
 sind davon nicht betroffen - Suche/Filter gelten nur für die Buchungsliste
 selbst.
+
+## Jahresplaner
+
+Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Jahresplaner" gibt es
+eine zusätzliche, tabellarische Jahresübersicht im Stil einer klassischen
+Haushaltsbuch-Tabelle (Zeilen = Zahlungen, Spalten = Monate) - unabhängig von
+der bestehenden Jahresübersicht (Diagramme) gedacht, für alle, die lieber eine
+Tabelle als Charts durchschauen:
+
+- **Eine Zeile pro wiederkehrender/eindeutiger Zahlung**: Buchungen werden
+  dafür nach demselben normalisierten Beschreibungstext gruppiert wie bei der
+  gelernten Kategorisierung und den automatisch generierten wiederkehrenden
+  Buchungen (`lib/utils/description_normalizer.dart`) - "REWE SAGT DANKE 3141"
+  und "REWE SAGT DANKE 8827" landen so in derselben "Rewe"-Zeile, mit dem
+  Betrag pro Monat in der jeweiligen Spalte und der Jahressumme ganz rechts.
+  Bei mehreren Buchungen derselben Zahlung im gleichen Monat wird addiert.
+- **Nach Kategorie gruppiert**: Jede Zahlungs-Zeile erscheint unter der
+  Kategorie ihrer jeweils **letzten** Buchung im Jahr (z. B. "Miete" unter
+  "Wohnen", "Netflix" unter "Fixkosten & Abos") - farbiger Gruppenkopf mit
+  Kategoriefarbe und -Jahressumme, Zeilen innerhalb einer Gruppe absteigend
+  nach Jahressumme sortiert, Gruppen selbst ebenso.
+- **Termin- und %-Spalte**: "Termin" zeigt den Tag der jeweils letzten
+  Buchung dieser Zeile (grober Hinweis, keine feste Fälligkeit); "in %" den
+  Anteil der Zeile an der Jahressumme **ihrer eigenen Sektion** (Einnahmen
+  bzw. Ausgaben getrennt betrachtet).
+- Oben stehen **Gesamteinnahmen**, **Gesamtausgaben** und **Saldo** je Monat
+  und für das Jahr; Ausgabenbeträge werden - anders als in der Buchungsliste -
+  hier durchgehend als positiver Betrag dargestellt, wie in einer klassischen
+  Haushaltsbuch-Tabelle üblich.
+- Interne Umbuchungen zwischen eigenen Konten werden komplett ausgeblendet,
+  respektiert den Jahres- und Personen-Filter wie die übrige App. Die Tabelle
+  ist in beide Richtungen scrollbar (12 Monatsspalten passen selten auf einen
+  Handy-Bildschirm).
+
+Reine Übersicht - Bearbeiten einzelner Buchungen bleibt wie gewohnt über
+**Buchungen** oder **Kategorien**.
 
 ## Konten-Verwaltung
 

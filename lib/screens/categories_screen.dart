@@ -13,8 +13,9 @@ import 'backup_screen.dart';
 import 'budgets_screen.dart';
 import 'persons_screen.dart';
 import 'settings_screen.dart';
+import 'yearly_planner_screen.dart';
 
-enum _CategoriesMenuAction { backup, budgets, persons, settings, accounts, assets }
+enum _CategoriesMenuAction { backup, budgets, persons, settings, accounts, assets, planner }
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -39,6 +40,7 @@ class CategoriesScreen extends ConsumerWidget {
                 _CategoriesMenuAction.settings => const SettingsScreen(),
                 _CategoriesMenuAction.accounts => const AccountsScreen(),
                 _CategoriesMenuAction.assets => const AssetsScreen(),
+                _CategoriesMenuAction.planner => const YearlyPlannerScreen(),
               };
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
             },
@@ -58,6 +60,10 @@ class CategoriesScreen extends ConsumerWidget {
               PopupMenuItem(
                 value: _CategoriesMenuAction.budgets,
                 child: ListTile(leading: Icon(CupertinoIcons.graph_circle), title: Text('Budgets verwalten')),
+              ),
+              PopupMenuItem(
+                value: _CategoriesMenuAction.planner,
+                child: ListTile(leading: Icon(CupertinoIcons.square_grid_3x2_fill), title: Text('Jahresplaner')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.backup,

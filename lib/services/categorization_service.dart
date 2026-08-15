@@ -1,5 +1,6 @@
 import '../models/category.dart';
 import '../models/transaction.dart';
+import '../utils/description_normalizer.dart';
 
 class CategoryMatch {
   const CategoryMatch(this.categoryId, this.subcategoryId);
@@ -33,14 +34,14 @@ class CategorizationService {
   }
 
   CategoryMatch? _suggestFromHistory(String description) {
-    final normalized = _normalize(description);
+    final normalized = normalizeDescription(description);
     if (normalized.isEmpty) return null;
 
     final validCategoryIds = categories.map((c) => c.id).toSet();
     final tally = <String, ({int count, DateTime lastSeen})>{};
 
     for (final t in history) {
-      if (_normalize(t.description) != normalized) continue;
+      if (normalizeDescription(t.description) != normalized) continue;
       if (!validCategoryIds.contains(t.categoryId)) continue;
 
       final key = '${t.categoryId}::${t.subcategoryId ?? ''}';
@@ -89,16 +90,5 @@ class CategorizationService {
     final sonstiges = categories.where((c) => c.id == 'sonstiges');
     if (sonstiges.isNotEmpty) return sonstiges.first.id;
     return categories.first.id;
-  }
-
-  /// Strips digits and punctuation so "REWE SAGT DANKE 3141" and
-  /// "REWE SAGT DANKE 8827" normalize to the same key.
-  String _normalize(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll(RegExp(r'[0-9]+'), '')
-        .replaceAll(RegExp(r'[^a-zäöüß\s]'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
   }
 }

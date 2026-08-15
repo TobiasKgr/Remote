@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 
 import '../models/transaction.dart';
+import '../utils/description_normalizer.dart';
 
 /// Generates the missing booking(s) for recurring transactions so a
 /// subscription/Abo doesn't have to be re-entered or re-imported by hand
@@ -45,13 +46,7 @@ class RecurringTransactionService {
   }
 
   String _seriesKey(Transaction t) {
-    final normalizedDescription = t.description
-        .toLowerCase()
-        .replaceAll(RegExp(r'[0-9]+'), '')
-        .replaceAll(RegExp(r'[^a-zäöüß\s]'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    return '${t.categoryId}::${t.subcategoryId ?? ''}::${t.personId ?? ''}::$normalizedDescription';
+    return '${t.categoryId}::${t.subcategoryId ?? ''}::${t.personId ?? ''}::${normalizeDescription(t.description)}';
   }
 
   Transaction _copyForMonth(Transaction source, DateTime month) {
