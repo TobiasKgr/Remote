@@ -10,6 +10,7 @@ import '../providers/person_providers.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
+import 'accounts_screen.dart' show accountTypeIcon, accountTypeLabel;
 
 String assetCategoryLabel(AssetCategory category) => switch (category) {
       AssetCategory.investment => 'Investment/Depot',
@@ -52,8 +53,9 @@ class AssetsScreen extends ConsumerWidget {
                 children: [
                   for (final account in accounts)
                     ListTile(
-                      leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: const Icon(CupertinoIcons.building_2_fill, color: Colors.white, size: 18)),
+                      leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: Icon(accountTypeIcon(account.type), color: Colors.white, size: 18)),
                       title: Text(account.name),
+                      subtitle: Text(accountTypeLabel(account.type)),
                       trailing: Text(currencyFormat.format(accountBalances[account.id] ?? 0)),
                     ),
                 ],

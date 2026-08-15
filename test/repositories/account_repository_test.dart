@@ -15,6 +15,7 @@ void main() {
     tempDir = await Directory.systemTemp.createTemp('finance_analyzer_test');
     Hive.init(tempDir.path);
     if (!Hive.isAdapterRegistered(9)) Hive.registerAdapter(AccountAdapter());
+    if (!Hive.isAdapterRegistered(12)) Hive.registerAdapter(AccountTypeAdapter());
     box = await Hive.openBox<Account>('accounts_test_${boxCounter++}');
     repository = AccountRepository(box);
   });
@@ -43,5 +44,14 @@ void main() {
     await repository.save(Account(id: 'a', name: 'Sparkonto', personId: 'alice'));
     final saved = repository.getAll().single;
     expect(saved.personId, 'alice');
+  });
+
+  test('type round-trips through the Hive adapter, defaults to girokonto', () async {
+    await repository.save(Account(id: 'a', name: 'Girokonto'));
+    await repository.save(Account(id: 'b', name: 'Kreditkarte', type: AccountType.kreditkarte, startingBalance: -300));
+    final byId = {for (final a in repository.getAll()) a.id: a};
+    expect(byId['a']!.type, AccountType.girokonto);
+    expect(byId['b']!.type, AccountType.kreditkarte);
+    expect(byId['b']!.startingBalance, -300);
   });
 }

@@ -11,19 +11,41 @@ import '../providers/transaction_providers.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
+import '../widgets/person_filter_bar.dart';
+
+String accountTypeLabel(AccountType type) => switch (type) {
+      AccountType.girokonto => 'Girokonto',
+      AccountType.tagesgeld => 'Tagesgeldkonto',
+      AccountType.kreditkarte => 'Kreditkarte',
+      AccountType.kredit => 'Kredit',
+    };
+
+IconData accountTypeIcon(AccountType type) => switch (type) {
+      AccountType.girokonto => CupertinoIcons.building_2_fill,
+      AccountType.tagesgeld => CupertinoIcons.graph_circle_fill,
+      AccountType.kreditkarte => CupertinoIcons.creditcard_fill,
+      AccountType.kredit => CupertinoIcons.arrow_down_right_circle_fill,
+    };
 
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accounts = ref.watch(accountNotifierProvider);
+    final allAccounts = ref.watch(accountNotifierProvider);
     final balances = ref.watch(accountBalancesProvider);
+    final personFilter = ref.watch(selectedPersonFilterProvider);
+    final accounts = filterByPerson(allAccounts, personFilter, (a) => a.personId).toList();
+
+    final groups = <AccountType, List<Account>>{};
+    for (final account in accounts) {
+      groups.putIfAbsent(account.type, () => []).add(account);
+    }
 
     return Scaffold(
       appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
-        child: accounts.isEmpty
+        child: allAccounts.isEmpty
             ? ListView(
                 children: [
                   const AppleLargeTitle('Konten'),
@@ -38,12 +60,30 @@ class AccountsScreen extends ConsumerWidget {
                   ),
                 ],
               )
-            : ListView(
-                padding: const EdgeInsets.only(bottom: 96),
+            : Column(
                 children: [
                   const AppleLargeTitle('Konten'),
-                  AppleGroupedSection(
-                    children: [for (final account in accounts) _AccountTile(account: account, balance: balances[account.id] ?? 0)],
+                  const PersonFilterBar(),
+                  Expanded(
+                    child: accounts.isEmpty
+                        ? Center(
+                            child: Text(
+                              'Keine Konten für diesen Filter.',
+                              style: TextStyle(color: context.appleColors.secondaryLabel),
+                            ),
+                          )
+                        : ListView(
+                            padding: const EdgeInsets.only(bottom: 96, top: 8),
+                            children: [
+                              for (final type in AccountType.values)
+                                if (groups[type] != null) ...[
+                                  AppleSectionHeader(accountTypeLabel(type)),
+                                  AppleGroupedSection(
+                                    children: [for (final account in groups[type]!) _AccountTile(account: account, balance: balances[account.id] ?? 0)],
+                                  ),
+                                ],
+                            ],
+                          ),
                   ),
                 ],
               ),
@@ -51,10 +91,10 @@ class AccountsScreen extends ConsumerWidget {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (accounts.length >= 2)
+          if (allAccounts.length >= 2)
             FloatingActionButton.extended(
               heroTag: 'account_transfer',
-              onPressed: () => _showTransferDialog(context, ref, accounts),
+              onPressed: () => _showTransferDialog(context, ref, allAccounts),
               icon: const Icon(CupertinoIcons.arrow_right_arrow_left),
               label: const Text('Umbuchung'),
             ),
@@ -78,6 +118,7 @@ Future<void> _showAccountDialog(BuildContext context, WidgetRef ref, {Account? e
   );
   final persons = ref.read(personNotifierProvider);
   String? personId = existing?.personId;
+  AccountType type = existing?.type ?? AccountType.girokonto;
   Color color = existing != null ? Color(existing.colorValue) : AppleColors.pickerPalette.first;
 
   final saved = await showDialog<bool>(
@@ -92,11 +133,20 @@ Future<void> _showAccountDialog(BuildContext context, WidgetRef ref, {Account? e
             children: [
               TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name (z. B. Girokonto)')),
               const SizedBox(height: 12),
+              DropdownButtonFormField<AccountType>(
+                initialValue: type,
+                decoration: const InputDecoration(labelText: 'Art'),
+                items: AccountType.values.map((t) => DropdownMenuItem(value: t, child: Text(accountTypeLabel(t)))).toList(),
+                onChanged: (v) => setStateDialog(() => type = v!),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: startingBalanceController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Startguthaben (€)',
-                  helperText: 'Kontostand zum Zeitpunkt, ab dem Buchungen hier erfasst werden.',
+                  helperText: type == AccountType.kreditkarte || type == AccountType.kredit
+                      ? 'Bereits vorhandene Schulden als negativer Betrag eintragen (z. B. -500).'
+                      : 'Kontostand zum Zeitpunkt, ab dem Buchungen hier erfasst werden.',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
               ),
@@ -144,6 +194,7 @@ Future<void> _showAccountDialog(BuildContext context, WidgetRef ref, {Account? e
       startingBalance: double.tryParse(startingBalanceController.text.replaceAll(',', '.')) ?? 0,
       colorValue: color.toARGB32(),
       personId: personId,
+      type: type,
     );
     await ref.read(accountNotifierProvider.notifier).upsert(account);
   }
@@ -260,9 +311,9 @@ class _AccountTile extends ConsumerWidget {
     final colors = context.appleColors;
 
     return ListTile(
-      leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: const Icon(CupertinoIcons.building_2_fill, color: Colors.white, size: 18)),
+      leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: Icon(accountTypeIcon(account.type), color: Colors.white, size: 18)),
       title: Text(account.name),
-      subtitle: person != null ? Text(person.name) : null,
+      subtitle: Text(person != null ? '${accountTypeLabel(account.type)} · ${person.name}' : accountTypeLabel(account.type)),
       trailing: Text(
         currencyFormat.format(balance),
         style: TextStyle(fontWeight: FontWeight.bold, color: balance >= 0 ? colors.success : colors.danger),

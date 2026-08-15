@@ -348,20 +348,31 @@ selbst.
 ## Konten-Verwaltung
 
 Über das Verwaltungsmenü (⋮) im **Kategorien**-Tab → "Konten verwalten" lassen
-sich beliebig viele Bankkonten anlegen (Name, Startsaldo, Farbe, optional einer
-Person zugeordnet):
+sich beliebig viele Bankkonten anlegen (Name, **Kontotyp**, Startsaldo, Farbe,
+optional einer Person zugeordnet):
 
+- **Kontotyp** (`AccountType` in `lib/models/account.dart`): Girokonto,
+  Tagesgeldkonto, Kreditkarte oder Kredit. Der Typ bestimmt nur Icon/Label und
+  Gruppierung in der Liste - die Saldoberechnung ist für alle Typen identisch
+  (Startguthaben + Buchungssumme), sodass sich z. B. ein Kreditkarten- oder
+  Kredit-Konto ganz normal mit negativem Startguthaben anlegen und über
+  Buchungen/Umbuchungen führen lässt.
 - Der angezeigte **Kontostand** ist keine eigene gespeicherte Zahl, sondern wird
   laufend aus Startsaldo + Summe aller diesem Konto zugeordneten Buchungen
   berechnet (`computeAccountBalance` in `lib/providers/account_providers.dart`).
 - Jede Buchung (manuell, PDF-Import) kann optional einem Konto zugeordnet
   werden. Solange kein Konto angelegt ist, bleibt die Konto-Auswahl in den
   Formularen unsichtbar.
-- **Umbuchung**: Über den zusätzlichen FAB "Umbuchung" (ab zwei Konten sichtbar)
-  lässt sich Geld zwischen zwei eigenen Konten verschieben. Das erzeugt zwei
-  verknüpfte Buchungen (gegenläufiger Betrag, gemeinsame `transferGroupId`,
-  Kategorie "Umbuchung", Flag `isTransfer`) - eine je Konto, damit beide
-  Kontostände stimmen.
+- **Personen-Filter**: Der Konten-Screen zeigt dieselbe Filterleiste
+  (Alle/Gemeinsam/pro Person) wie Dashboard, Buchungen & Co. und blendet die
+  Liste entsprechend ein - z. B. nur die Konten von Person A.
+- **Umbuchung**: Über den zusätzlichen FAB "Umbuchung" (ab zwei Konten sichtbar,
+  unabhängig vom aktuellen Personen-Filter) lässt sich Geld zwischen zwei
+  eigenen Konten verschieben - auch zwischen Konten unterschiedlicher Personen
+  oder als Tilgungsrate auf ein Kredit-Konto. Das erzeugt zwei verknüpfte
+  Buchungen (gegenläufiger Betrag, gemeinsame `transferGroupId`, Kategorie
+  "Umbuchung", Flag `isTransfer`) - eine je Konto, damit beide Kontostände
+  stimmen.
 - Umbuchungen zählen **nicht doppelt** als Ein-/Ausgabe: Dashboard,
   Jahresübersicht, Budget-Fortschritt (Monat + Jahr) und Optimierungsvorschläge
   blenden Buchungen mit `isTransfer = true` konsequent aus ihren Summen aus -
@@ -371,6 +382,14 @@ Person zugeordnet):
   Gegenbuchung auf dem anderen Konto automatisch mitgelöscht.
 - Löscht man ein Konto selbst, bleiben dessen bisherige Buchungen erhalten,
   gelten danach aber als keinem Konto zugeordnet.
+
+Für einen Kredit gibt es damit zwei Möglichkeiten, je nach gewünschter Genauigkeit:
+ein **Kredit-Konto** (`AccountType.kredit`) mit negativem Startguthaben, das über
+Tilgungs-Umbuchungen buchungsgenau geführt wird, oder ein einfacher, manuell
+gepflegter Eintrag als **Vermögenswert** (`AssetCategory.liability`, siehe
+nächster Abschnitt) ohne Buchungshistorie - z. B. für eine grob geschätzte
+Restschuld, die nur gelegentlich aktualisiert wird. Der Demo-Modus (siehe unten)
+zeigt beide Varianten nebeneinander.
 
 ## Vermögensübersicht
 
@@ -397,12 +416,14 @@ sich das Netto-Vermögen über die reinen Bankkonten hinaus abbilden:
 einzutragen:
 
 - Lädt realistische Beispieldaten (`lib/services/demo_data_service.dart`):
-  zwei Personen, zwei Konten, drei Monate an Buchungen (Miete, Nebenkosten,
-  Streaming-Abos, Supermarkt, Tanken, Gehalt, ...), einen Firmenwagen, zwei
-  Gehaltsabrechnungen, ein Investment-Depot und einen Kredit - abgestimmt
-  darauf, dass dabei auch die Optimierungsvorschläge (doppelte Streaming-Abos,
-  eine Ausgabenspitze) und eine Umbuchung zwischen den beiden Demo-Konten
-  sichtbar werden.
+  zwei Personen (je mit eigenem Girokonto), ein gemeinsames Tagesgeldkonto,
+  eine Kreditkarte, ein per Tilgungs-Umbuchungen buchungsgenau geführtes
+  Kredit-Konto, drei Monate an Buchungen (Miete, Nebenkosten, Streaming-Abos,
+  Supermarkt, Tanken, Gehalt, Kreditkartenkäufe, ...), einen Firmenwagen, zwei
+  Gehaltsabrechnungen, ein Investment-Depot und eine manuell geschätzte
+  Baufinanzierung als Vermögenswert - abgestimmt darauf, dass dabei auch die
+  Optimierungsvorschläge (doppelte Streaming-Abos, eine Ausgabenspitze) und
+  mehrere Umbuchungen zwischen den Demo-Konten sichtbar werden.
 - Alle erzeugten Einträge tragen eine `demo_`-ID und sind im Namen mit
   "(Demo)" gekennzeichnet. Erneutes Laden überschreibt dieselben Einträge
   (kein Duplizieren); "Demodaten entfernen" löscht ausschließlich Einträge

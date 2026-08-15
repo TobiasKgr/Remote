@@ -35,6 +35,7 @@ Future<void> initHive() async {
   Hive.registerAdapter(CompanyCarAdapter());
   Hive.registerAdapter(BudgetAdapter());
   Hive.registerAdapter(AccountAdapter());
+  Hive.registerAdapter(AccountTypeAdapter());
   Hive.registerAdapter(AssetAdapter());
   Hive.registerAdapter(AssetCategoryAdapter());
 

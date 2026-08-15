@@ -8,7 +8,10 @@ import '../theme/app_theme.dart';
 
 /// A ready-to-save bundle of realistic sample data, used to let a new user
 /// try out every feature (categorization, budgets*, insights, accounts,
-/// net worth, ...) without typing anything in first.
+/// net worth, ...) without typing anything in first. Deliberately covers
+/// two household members with their own accounts plus a credit card, a
+/// savings account and a tracked loan, so that scenario is demonstrated
+/// out of the box rather than just described in the README.
 ///
 /// (*Budgets are intentionally left out: a default budget's id is just its
 /// categoryId, so seeding one could silently overwrite a real budget the
@@ -40,11 +43,16 @@ class DemoDataService {
 
   static const personAliceId = 'demo_person_alice';
   static const personBobId = 'demo_person_bob';
-  static const accountGiroId = 'demo_account_giro';
-  static const accountSparId = 'demo_account_spar';
+
+  static const accountGiroAliceId = 'demo_account_giro_alice';
+  static const accountGiroBobId = 'demo_account_giro_bob';
+  static const accountTagesgeldId = 'demo_account_tagesgeld';
+  static const accountKreditkarteId = 'demo_account_kreditkarte';
+  static const accountKreditId = 'demo_account_kredit';
+
   static const carId = 'demo_car';
   static const assetEtfId = 'demo_asset_etf';
-  static const assetLoanId = 'demo_asset_loan';
+  static const assetMortgageId = 'demo_asset_mortgage';
 
   DemoDataBundle build({DateTime? now}) {
     final reference = now ?? DateTime.now();
@@ -63,9 +71,48 @@ class DemoDataService {
         Person(id: personBobId, name: 'Bob (Demo)', colorValue: AppleColors.teal.toARGB32()),
       ];
 
+  /// Five accounts covering the exact "mehrere Konten" scenario: a checking
+  /// account per person, a shared savings account, one person's credit card
+  /// and a tracked loan (negative starting balance, reduced by repayment
+  /// Umbuchungen further below - see [_transactions]).
   List<Account> _accounts() => [
-        Account(id: accountGiroId, name: 'Girokonto (Demo)', startingBalance: 1500, colorValue: AppleColors.blue.toARGB32()),
-        Account(id: accountSparId, name: 'Sparkonto (Demo)', startingBalance: 5000, colorValue: AppleColors.green.toARGB32()),
+        Account(
+          id: accountGiroAliceId,
+          name: 'Girokonto Alice (Demo)',
+          startingBalance: 1500,
+          colorValue: AppleColors.blue.toARGB32(),
+          personId: personAliceId,
+        ),
+        Account(
+          id: accountGiroBobId,
+          name: 'Girokonto Bob (Demo)',
+          startingBalance: 900,
+          colorValue: AppleColors.orange.toARGB32(),
+          personId: personBobId,
+        ),
+        Account(
+          id: accountTagesgeldId,
+          name: 'Tagesgeldkonto (Demo)',
+          startingBalance: 5000,
+          colorValue: AppleColors.green.toARGB32(),
+          type: AccountType.tagesgeld,
+        ),
+        Account(
+          id: accountKreditkarteId,
+          name: 'Kreditkarte Bob (Demo)',
+          startingBalance: 0,
+          colorValue: AppleColors.pink.toARGB32(),
+          personId: personBobId,
+          type: AccountType.kreditkarte,
+        ),
+        Account(
+          id: accountKreditId,
+          name: 'Autokredit (Demo)',
+          startingBalance: -12000,
+          colorValue: AppleColors.red.toARGB32(),
+          personId: personAliceId,
+          type: AccountType.kredit,
+        ),
       ];
 
   List<CompanyCar> _companyCars() => [
@@ -79,9 +126,19 @@ class DemoDataService {
         ),
       ];
 
+  /// Alongside the fully transaction-tracked [AccountType.kredit] account
+  /// above, this also shows the alternative for a debt you don't want
+  /// booking-by-booking: a plain manually-updated liability entry.
   List<Asset> _assets() => [
         Asset(id: assetEtfId, name: 'ETF-Depot (Demo)', category: AssetCategory.investment, value: 8000, colorValue: AppleColors.indigo.toARGB32()),
-        Asset(id: assetLoanId, name: 'Autokredit (Demo)', category: AssetCategory.liability, value: 12000, colorValue: AppleColors.red.toARGB32()),
+        Asset(
+          id: assetMortgageId,
+          name: 'Baufinanzierung (Demo, geschätzt)',
+          category: AssetCategory.liability,
+          value: 45000,
+          colorValue: AppleColors.brown.toARGB32(),
+          notes: 'Nicht buchungsbasiert - Restschuld wird hier nur gelegentlich manuell aktualisiert.',
+        ),
       ];
 
   List<SalarySlip> _salarySlips(DateTime now) {
@@ -118,7 +175,7 @@ class DemoDataService {
           subcategoryId: 'income_gehalt',
           isRecurring: true,
           personId: personAliceId,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -128,7 +185,7 @@ class DemoDataService {
           categoryId: 'wohnen',
           subcategoryId: 'wohnen_miete',
           isRecurring: true,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -138,7 +195,7 @@ class DemoDataService {
           categoryId: 'wohnen',
           subcategoryId: 'wohnen_nebenkosten',
           isRecurring: true,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -148,7 +205,7 @@ class DemoDataService {
           categoryId: 'wohnen',
           subcategoryId: 'wohnen_energie',
           isRecurring: true,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -158,7 +215,7 @@ class DemoDataService {
           categoryId: 'fixkosten',
           subcategoryId: 'fixkosten_streaming',
           isRecurring: true,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -168,7 +225,7 @@ class DemoDataService {
           categoryId: 'fixkosten',
           subcategoryId: 'fixkosten_streaming',
           isRecurring: true,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -178,7 +235,7 @@ class DemoDataService {
           categoryId: 'fixkosten',
           subcategoryId: 'fixkosten_mobilfunk',
           isRecurring: true,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -189,7 +246,7 @@ class DemoDataService {
           subcategoryId: 'mobilitaet_firmenwagen',
           isRecurring: true,
           personId: personAliceId,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -198,7 +255,7 @@ class DemoDataService {
           description: 'Tankstelle Aral (Demo)',
           categoryId: 'mobilitaet',
           subcategoryId: 'mobilitaet_tanken',
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -207,7 +264,7 @@ class DemoDataService {
           description: 'Bahn Ticket (Demo)',
           categoryId: 'mobilitaet',
           subcategoryId: 'mobilitaet_oepnv',
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -219,7 +276,7 @@ class DemoDataService {
           categoryId: 'lebensmittel',
           subcategoryId: 'lebensmittel_supermarkt',
           personId: personAliceId,
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -229,7 +286,7 @@ class DemoDataService {
           categoryId: 'lebensmittel',
           subcategoryId: 'lebensmittel_supermarkt',
           personId: personBobId,
-          accountId: accountGiroId,
+          accountId: accountGiroBobId,
         ),
         Transaction(
           id: nextId(),
@@ -238,7 +295,7 @@ class DemoDataService {
           description: 'Restaurant (Demo)',
           categoryId: 'lebensmittel',
           subcategoryId: 'lebensmittel_restaurant',
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
         ),
         Transaction(
           id: nextId(),
@@ -247,7 +304,40 @@ class DemoDataService {
           description: 'Apotheke (Demo)',
           categoryId: 'gesundheit',
           subcategoryId: 'gesundheit_apotheke',
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
+        ),
+        // Bob's credit card - a couple of purchases booked directly against it.
+        Transaction(
+          id: nextId(),
+          date: dateAt(monthsAgo, 16),
+          amount: -45.00,
+          description: 'Media Markt (Demo)',
+          categoryId: 'shopping',
+          subcategoryId: 'shopping_elektronik',
+          personId: personBobId,
+          accountId: accountKreditkarteId,
+        ),
+        // Autokredit-Tilgung: an Umbuchung from Alice's checking account to
+        // the tracked loan account, reducing its (negative) balance over time.
+        Transaction(
+          id: nextId(),
+          date: dateAt(monthsAgo, 27),
+          amount: -300,
+          description: 'Autokredit Tilgung (Demo)',
+          categoryId: 'umbuchung',
+          accountId: accountGiroAliceId,
+          isTransfer: true,
+          transferGroupId: 'demo_transfer_kredit_$monthsAgo',
+        ),
+        Transaction(
+          id: nextId(),
+          date: dateAt(monthsAgo, 27),
+          amount: 300,
+          description: 'Autokredit Tilgung (Demo)',
+          categoryId: 'umbuchung',
+          accountId: accountKreditId,
+          isTransfer: true,
+          transferGroupId: 'demo_transfer_kredit_$monthsAgo',
         ),
       ]);
 
@@ -260,15 +350,15 @@ class DemoDataService {
           categoryId: 'shopping',
           subcategoryId: 'shopping_kleidung',
           personId: personBobId,
-          accountId: accountGiroId,
+          accountId: accountKreditkarteId,
         ));
         transactions.add(Transaction(
           id: nextId(),
           date: dateAt(0, 15),
           amount: -200,
-          description: 'Umbuchung zu Sparkonto (Demo)',
+          description: 'Umbuchung zu Tagesgeldkonto (Demo)',
           categoryId: 'umbuchung',
-          accountId: accountGiroId,
+          accountId: accountGiroAliceId,
           isTransfer: true,
           transferGroupId: 'demo_transfer_0',
         ));
@@ -278,7 +368,7 @@ class DemoDataService {
           amount: 200,
           description: 'Umbuchung von Girokonto (Demo)',
           categoryId: 'umbuchung',
-          accountId: accountSparId,
+          accountId: accountTagesgeldId,
           isTransfer: true,
           transferGroupId: 'demo_transfer_0',
         ));
