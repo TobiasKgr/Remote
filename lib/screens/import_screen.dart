@@ -13,7 +13,7 @@ import '../providers/category_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
-import '../services/pdf_import_service.dart';
+import '../services/pdf_import_service.dart' show PdfImportService, ParsedTransaction;
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
@@ -68,39 +68,62 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         type: FileType.custom,
         allowedExtensions: ['pdf'],
         withData: true,
+        allowMultiple: true,
       );
-      if (result == null || result.files.isEmpty || result.files.single.bytes == null) {
+      if (result == null || result.files.isEmpty) {
         setState(() => _loading = false);
         return;
       }
-      final bytes = result.files.single.bytes!;
-      final parsed = await _pdfImportService.importFromBytes(bytes);
+
       final categories = ref.read(categoryNotifierProvider);
       final history = ref.read(transactionNotifierProvider);
       final categorizer = CategorizationService(categories, history: history);
 
       final drafts = <_DraftRow>[];
-      for (final p in parsed) {
-        final draft = _DraftRow(date: p.date, description: p.description, amount: p.amount, ambiguous: p.amountAmbiguous);
-        final match = categorizer.suggest(p.description);
-        draft.categoryId = match?.categoryId ?? categorizer.fallbackCategoryId(p.amount >= 0);
-        draft.subcategoryId = match?.subcategoryId;
-        drafts.add(draft);
+      final failedFiles = <String>[];
+      for (final file in result.files) {
+        final bytes = file.bytes;
+        if (bytes == null) {
+          failedFiles.add(file.name);
+          continue;
+        }
+        List<ParsedTransaction> parsed;
+        try {
+          parsed = await _pdfImportService.importFromBytes(bytes);
+        } catch (_) {
+          failedFiles.add(file.name);
+          continue;
+        }
+        if (parsed.isEmpty) {
+          failedFiles.add(file.name);
+          continue;
+        }
+        for (final p in parsed) {
+          final draft = _DraftRow(date: p.date, description: p.description, amount: p.amount, ambiguous: p.amountAmbiguous);
+          final match = categorizer.suggest(p.description);
+          draft.categoryId = match?.categoryId ?? categorizer.fallbackCategoryId(p.amount >= 0);
+          draft.subcategoryId = match?.subcategoryId;
+          drafts.add(draft);
+        }
       }
 
       setState(() {
         _drafts = drafts;
         _loading = false;
+        if (failedFiles.isEmpty) {
+          _error = null;
+        } else if (drafts.isEmpty) {
+          _error = 'Es konnten keine Buchungen aus ${failedFiles.length == 1 ? "der PDF-Datei" : "den PDF-Dateien"} erkannt werden '
+              '(${failedFiles.join(", ")}). Das PDF-Format dieser Bank wird evtl. noch nicht unterstützt.';
+        } else {
+          _error = 'Bei ${failedFiles.length} von ${result.files.length} Dateien konnten keine Buchungen erkannt werden: '
+              '${failedFiles.join(", ")}.';
+        }
       });
-
-      if (drafts.isEmpty && mounted) {
-        setState(() => _error = 'Es konnten keine Buchungen aus der PDF-Datei erkannt werden. '
-            'Das PDF-Format dieser Bank wird evtl. noch nicht unterstützt.');
-      }
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Fehler beim Einlesen der PDF-Datei: $e';
+        _error = 'Fehler beim Einlesen der PDF-Datei(en): $e';
       });
     }
   }
@@ -195,6 +218,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               ),
               const SizedBox(height: 8),
               Text(
+                'Es können mehrere PDF-Dateien auf einmal ausgewählt werden. '
                 'Die Erkennung ist eine Heuristik für gängige deutsche Kontoauszug-Layouts. '
                 'Bitte alle erkannten Buchungen vor dem Speichern prüfen.',
                 textAlign: TextAlign.center,
