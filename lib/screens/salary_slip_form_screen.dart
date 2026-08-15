@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/import_batch.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
 import '../providers/category_providers.dart';
+import '../providers/import_batch_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/salary_slip_providers.dart';
 import '../providers/transaction_providers.dart';
@@ -45,11 +47,14 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
     final prefill = widget.prefill;
     final now = DateTime.now();
 
-    _period = existing?.period ?? prefill?.period ?? DateTime(now.year, now.month);
-    _grossController = TextEditingController(text: _fmt(existing?.gross ?? prefill?.gross));
-    _netController = TextEditingController(text: _fmt(existing?.net ?? prefill?.net));
-    _incomeTaxController = TextEditingController(text: _fmt(existing?.incomeTax ?? prefill?.incomeTax));
-    _socialSecurityController = TextEditingController(text: _fmt(existing?.socialSecurity ?? prefill?.socialSecurity));
+    // A PDF re-import (existing != null *and* prefill != null, i.e. a slip
+    // for this Abrechnungsmonat was already saved) should show the freshly
+    // parsed numbers, not the stale ones already on disk - prefill wins.
+    _period = prefill?.period ?? existing?.period ?? DateTime(now.year, now.month);
+    _grossController = TextEditingController(text: _fmt(prefill?.gross ?? existing?.gross));
+    _netController = TextEditingController(text: _fmt(prefill?.net ?? existing?.net));
+    _incomeTaxController = TextEditingController(text: _fmt(prefill?.incomeTax ?? existing?.incomeTax));
+    _socialSecurityController = TextEditingController(text: _fmt(prefill?.socialSecurity ?? existing?.socialSecurity));
     _employerController = TextEditingController(text: existing?.employer ?? '');
     _createTransaction = existing == null || existing.linkedTransactionId != null;
     _personId = existing?.personId;
@@ -106,8 +111,10 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
-                  'Aus PDF erkannt - bitte alle Werte prüfen, bevor du speicherst.',
-                  style: TextStyle(color: context.appleColors.secondaryLabel),
+                  widget.existing != null
+                      ? 'Für ${monthYearFormat.format(_period)} gibt es bereits eine Abrechnung - sie wird beim Speichern mit diesen Werten aktualisiert statt doppelt angelegt.'
+                      : 'Aus PDF erkannt - bitte alle Werte prüfen, bevor du speicherst.',
+                  style: TextStyle(color: widget.existing != null ? context.appleColors.warning : context.appleColors.secondaryLabel),
                 ),
               ),
             const AppleSectionHeader('Zeitraum', padding: EdgeInsets.fromLTRB(20, 0, 20, 6)),
@@ -263,6 +270,22 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
     }
 
     await ref.read(salarySlipNotifierProvider.notifier).upsert(slip);
+
+    // Only a brand-new import (not a manual entry, and not a re-import that
+    // updated an already-existing slip in place) gets its own undo-able
+    // history entry - an in-place update doesn't cleanly "undo" back to a
+    // single prior state, so it's left out of the history for now.
+    if (widget.prefill != null && widget.existing == null) {
+      await ref.read(importBatchNotifierProvider.notifier).add(ImportBatch(
+            id: const Uuid().v4(),
+            timestamp: DateTime.now(),
+            source: ImportSource.gehalt,
+            label: 'Gehaltsabrechnung ${monthYearFormat.format(slip.period)}',
+            salarySlipIds: [slip.id],
+            transactionIds: slip.linkedTransactionId != null ? [slip.linkedTransactionId!] : [],
+          ));
+    }
+
     if (mounted) Navigator.of(context).pop();
   }
 }

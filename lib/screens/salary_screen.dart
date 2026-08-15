@@ -36,8 +36,17 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
       final parsed = await SalarySlipParserService().parseFromBytes(result.files.single.bytes!);
       setState(() => _importing = false);
       if (!mounted) return;
+
+      // If a slip for the same Abrechnungsmonat already exists (re-importing
+      // the same or an overlapping PDF), edit that one with the freshly
+      // parsed values instead of creating a duplicate entry.
+      final period = parsed.period;
+      final existing = period == null
+          ? null
+          : ref.read(salarySlipNotifierProvider).where((s) => s.period.year == period.year && s.period.month == period.month).firstOrNull;
+
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => SalarySlipFormScreen(prefill: parsed)),
+        MaterialPageRoute(builder: (_) => SalarySlipFormScreen(existing: existing, prefill: parsed)),
       );
     } catch (e) {
       setState(() => _importing = false);

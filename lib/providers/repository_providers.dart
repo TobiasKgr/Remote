@@ -7,6 +7,7 @@ import '../models/asset.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/company_car.dart';
+import '../models/import_batch.dart';
 import '../models/person.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
@@ -15,6 +16,7 @@ import '../repositories/asset_repository.dart';
 import '../repositories/budget_repository.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/company_car_repository.dart';
+import '../repositories/import_batch_repository.dart';
 import '../repositories/person_repository.dart';
 import '../repositories/salary_slip_repository.dart';
 import '../repositories/transaction_repository.dart';
@@ -36,6 +38,8 @@ final budgetBoxProvider = Provider<Box<Budget>>((ref) => Hive.box<Budget>(budget
 final accountBoxProvider = Provider<Box<Account>>((ref) => Hive.box<Account>(accountBoxName));
 
 final assetBoxProvider = Provider<Box<Asset>>((ref) => Hive.box<Asset>(assetBoxName));
+
+final importBatchBoxProvider = Provider<Box<ImportBatch>>((ref) => Hive.box<ImportBatch>(importBatchBoxName));
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository(ref.watch(categoryBoxProvider));
@@ -67,4 +71,8 @@ final accountRepositoryProvider = Provider<AccountRepository>((ref) {
 
 final assetRepositoryProvider = Provider<AssetRepository>((ref) {
   return AssetRepository(ref.watch(assetBoxProvider));
+});
+
+final importBatchRepositoryProvider = Provider<ImportBatchRepository>((ref) {
+  return ImportBatchRepository(ref.watch(importBatchBoxProvider));
 });

@@ -68,7 +68,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             AppleHeroCard(
-              label: 'Saldo (Gehalt vs. Ausgaben)',
+              label: 'Saldo',
               value: currencyFormat.format(balance),
               valueColor: balance >= 0 ? colors.success : colors.danger,
             ),

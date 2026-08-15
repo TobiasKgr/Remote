@@ -5,6 +5,7 @@ import '../models/asset.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/company_car.dart';
+import '../models/import_batch.dart';
 import '../models/person.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
@@ -19,6 +20,7 @@ const budgetBoxName = 'budgets';
 const settingsBoxName = 'settings';
 const accountBoxName = 'accounts';
 const assetBoxName = 'assets';
+const importBatchBoxName = 'import_batches';
 
 /// Initializes Hive, registers all [TypeAdapter]s, opens the boxes used by
 /// the app and seeds default categories on first launch.
@@ -38,6 +40,8 @@ Future<void> initHive() async {
   Hive.registerAdapter(AccountTypeAdapter());
   Hive.registerAdapter(AssetAdapter());
   Hive.registerAdapter(AssetCategoryAdapter());
+  Hive.registerAdapter(ImportBatchAdapter());
+  Hive.registerAdapter(ImportSourceAdapter());
 
   final categoryBox = await Hive.openBox<Category>(categoryBoxName);
   await Hive.openBox<Transaction>(transactionBoxName);
@@ -48,6 +52,7 @@ Future<void> initHive() async {
   await Hive.openBox(settingsBoxName);
   await Hive.openBox<Account>(accountBoxName);
   await Hive.openBox<Asset>(assetBoxName);
+  await Hive.openBox<ImportBatch>(importBatchBoxName);
 
   if (categoryBox.isEmpty) {
     for (final category in buildDefaultCategories()) {

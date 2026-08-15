@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/apple_widgets.dart';
 import 'accounts_screen.dart';
 import 'backup_screen.dart';
+import 'import_history_screen.dart';
 import 'persons_screen.dart';
 import 'settings_screen.dart';
 
@@ -48,6 +49,12 @@ class MoreScreen extends StatelessWidget {
                   iconColor: AppleColors.teal,
                   title: 'Backup exportieren/importieren',
                   onTap: () => _push(context, const BackupScreen()),
+                ),
+                AppleSettingsRow(
+                  icon: CupertinoIcons.clock_fill,
+                  iconColor: AppleColors.brown,
+                  title: 'Import-Verlauf',
+                  onTap: () => _push(context, const ImportHistoryScreen()),
                 ),
               ],
             ),

@@ -139,7 +139,7 @@ class YearlyPlannerScreen extends ConsumerWidget {
         decoration: BoxDecoration(color: colors.secondaryGroupedBackground),
         children: [
           Padding(padding: const EdgeInsets.only(top: 16, bottom: 4), child: _cell(title, titleStyle)),
-          for (var i = 0; i < 14; i++) _cell('', titleStyle),
+          for (var i = 0; i < 15; i++) _cell('', titleStyle),
         ],
       ),
     ];
@@ -168,7 +168,7 @@ class YearlyPlannerScreen extends ConsumerWidget {
           children: [
             Padding(padding: const EdgeInsets.only(left: 24), child: _cell(row.label, rowStyle)),
             _cell('${row.dueDay}.', percentStyle, align: TextAlign.center),
-            _cell('${(row.percentOfTotal * 100).toStringAsFixed(1)}%', percentStyle, align: TextAlign.center),
+            _cell('${(row.percentOfTotal * 100).toStringAsFixed(2)}%', percentStyle, align: TextAlign.center),
             for (final v in row.monthlyAmounts) _cell(v == 0 ? '—' : currencyFormat.format(v), rowStyle, align: TextAlign.right),
             _cell(currencyFormat.format(row.yearTotal), rowStyle?.copyWith(fontWeight: FontWeight.w600), align: TextAlign.right),
           ],

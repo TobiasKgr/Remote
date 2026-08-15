@@ -6,30 +6,40 @@ import 'package:uuid/uuid.dart';
 
 import '../models/account.dart';
 import '../models/category.dart';
+import '../models/import_batch.dart';
 import '../models/person.dart';
 import '../models/transaction.dart';
 import '../providers/account_providers.dart';
 import '../providers/category_providers.dart';
+import '../providers/import_batch_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
+import '../services/duplicate_detection_service.dart';
 import '../services/pdf_import_service.dart' show PdfImportService, ParsedTransaction;
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
 
 class _DraftRow {
-  _DraftRow({required this.date, required String description, required double amount, this.ambiguous = false})
+  _DraftRow({required this.date, required String description, required double amount, this.ambiguous = false, this.isDuplicate = false})
       : descriptionController = TextEditingController(text: description),
         amountController = TextEditingController(text: amount.abs().toStringAsFixed(2)),
-        isIncome = amount >= 0;
+        isIncome = amount >= 0,
+        selected = !isDuplicate;
 
-  bool selected = true;
+  bool selected;
   final DateTime date;
   final TextEditingController descriptionController;
   final TextEditingController amountController;
   bool isIncome;
   bool ambiguous;
+
+  /// True when a booking with the same date, amount and description
+  /// already exists (either already saved, or earlier in this same
+  /// picked batch) - pre-unchecked so it isn't booked twice by accident,
+  /// but still shown and editable in case it's a legitimate repeat charge.
+  bool isDuplicate;
   String? categoryId;
   String? subcategoryId;
   String? personId;
@@ -79,6 +89,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final history = ref.read(transactionNotifierProvider);
       final categorizer = CategorizationService(categories, history: history);
 
+      // Checked against as each new draft is produced, so duplicates are
+      // caught both against already-saved bookings and against earlier
+      // rows within this same picked batch (e.g. two files whose date
+      // ranges overlap).
+      final seenSoFar = <Transaction>[...history];
+
       final drafts = <_DraftRow>[];
       final failedFiles = <String>[];
       for (final file in result.files) {
@@ -99,11 +115,13 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           continue;
         }
         for (final p in parsed) {
-          final draft = _DraftRow(date: p.date, description: p.description, amount: p.amount, ambiguous: p.amountAmbiguous);
+          final isDuplicate = isDuplicateBooking(date: p.date, amount: p.amount, description: p.description, existing: seenSoFar);
+          final draft = _DraftRow(date: p.date, description: p.description, amount: p.amount, ambiguous: p.amountAmbiguous, isDuplicate: isDuplicate);
           final match = categorizer.suggest(p.description);
           draft.categoryId = match?.categoryId ?? categorizer.fallbackCategoryId(p.amount >= 0);
           draft.subcategoryId = match?.subcategoryId;
           drafts.add(draft);
+          seenSoFar.add(Transaction(id: 'seen', date: p.date, amount: p.amount, description: p.description, categoryId: 'sonstiges'));
         }
       }
 
@@ -151,6 +169,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
 
     await ref.read(transactionNotifierProvider.notifier).upsertAll(transactions);
+
+    if (transactions.isNotEmpty) {
+      await ref.read(importBatchNotifierProvider.notifier).add(ImportBatch(
+            id: const Uuid().v4(),
+            timestamp: DateTime.now(),
+            source: ImportSource.kontoauszug,
+            label: '${transactions.length} Buchungen importiert',
+            transactionIds: transactions.map((t) => t.id).toList(),
+          ));
+    }
 
     if (!mounted) return;
     for (final d in _drafts) {
@@ -260,12 +288,24 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final colors = context.appleColors;
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      color: draft.ambiguous ? colors.warning.withValues(alpha: 0.1) : null,
+      color: draft.isDuplicate ? colors.warning.withValues(alpha: 0.15) : (draft.ambiguous ? colors.warning.withValues(alpha: 0.1) : null),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (draft.isDuplicate)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(CupertinoIcons.exclamationmark_triangle_fill, color: colors.warning, size: 16),
+                    const SizedBox(width: 6),
+                    Text('Bereits vorhanden - vermutlich Duplikat', style: TextStyle(color: colors.warning, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
             Row(
               children: [
                 Checkbox(value: draft.selected, onChanged: (v) => setState(() => draft.selected = v ?? true)),
