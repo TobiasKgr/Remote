@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -10,7 +11,9 @@ import '../providers/salary_slip_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
 import '../services/salary_slip_parser_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 
 class SalarySlipFormScreen extends ConsumerStatefulWidget {
   const SalarySlipFormScreen({super.key, this.existing, this.prefill});
@@ -81,7 +84,7 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
         actions: [
           if (widget.existing != null)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: Icon(CupertinoIcons.trash, color: context.appleColors.danger),
               onPressed: () async {
                 final existing = widget.existing!;
                 if (existing.linkedTransactionId != null) {
@@ -91,100 +94,121 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
                 if (context.mounted) Navigator.of(context).pop();
               },
             ),
+          TextButton(onPressed: _save, child: const Text('Sichern')),
         ],
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
             if (widget.prefill != null)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
                   'Aus PDF erkannt - bitte alle Werte prüfen, bevor du speicherst.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: context.appleColors.secondaryLabel),
                 ),
               ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Abrechnungsmonat'),
-              subtitle: Text(monthYearFormat.format(_period)),
-              trailing: const Icon(Icons.calendar_month),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _period,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                  initialDatePickerMode: DatePickerMode.year,
-                );
-                if (picked != null) setState(() => _period = DateTime(picked.year, picked.month));
-              },
+            const AppleSectionHeader('Zeitraum', padding: EdgeInsets.fromLTRB(20, 0, 20, 6)),
+            AppleGroupedSection(
+              children: [
+                ListTile(
+                  title: const Text('Abrechnungsmonat'),
+                  subtitle: Text(monthYearFormat.format(_period)),
+                  trailing: const Icon(CupertinoIcons.calendar),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _period,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                      initialDatePickerMode: DatePickerMode.year,
+                    );
+                    if (picked != null) setState(() => _period = DateTime(picked.year, picked.month));
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _employerController,
+                    decoration: const InputDecoration(labelText: 'Arbeitgeber (optional)', filled: false, border: InputBorder.none),
+                  ),
+                ),
+                if (persons.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _personId,
+                      decoration: const InputDecoration(labelText: 'Person', filled: false, border: InputBorder.none),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Gemeinsam')),
+                        ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+                      ],
+                      onChanged: (v) => setState(() => _personId = v),
+                    ),
+                  ),
+              ],
             ),
-            TextFormField(
-              controller: _employerController,
-              decoration: const InputDecoration(labelText: 'Arbeitgeber (optional)'),
+            const AppleSectionHeader('Beträge'),
+            AppleGroupedSection(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _grossController,
+                    decoration: const InputDecoration(labelText: 'Brutto (€)', filled: false, border: InputBorder.none),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) => (double.tryParse((v ?? '').replaceAll(',', '.')) ?? 0) <= 0 ? 'Bitte angeben' : null,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _netController,
+                    decoration: const InputDecoration(labelText: 'Netto / Auszahlungsbetrag (€)', filled: false, border: InputBorder.none),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) => (double.tryParse((v ?? '').replaceAll(',', '.')) ?? 0) <= 0 ? 'Bitte angeben' : null,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _incomeTaxController,
+                    decoration: const InputDecoration(labelText: 'Steuern (Lohnsteuer, Soli, Kirchensteuer) (€)', filled: false, border: InputBorder.none),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _socialSecurityController,
+                    decoration: const InputDecoration(labelText: 'Sozialversicherung (KV/RV/AV/PV) (€)', filled: false, border: InputBorder.none),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                ListTile(
+                  title: const Text('Sonstige Abzüge (berechnet)'),
+                  subtitle: const Text('Brutto − Netto − Steuern − Sozialversicherung'),
+                  trailing: Text(currencyFormat.format(otherDeductions)),
+                ),
+              ],
             ),
-            if (persons.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _personId,
-                decoration: const InputDecoration(labelText: 'Person'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Gemeinsam')),
-                  ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
-                ],
-                onChanged: (v) => setState(() => _personId = v),
-              ),
-            ],
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _grossController,
-              decoration: const InputDecoration(labelText: 'Brutto (€)'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (v) => (double.tryParse((v ?? '').replaceAll(',', '.')) ?? 0) <= 0 ? 'Bitte angeben' : null,
-              onChanged: (_) => setState(() {}),
+            const AppleSectionHeader('Buchung'),
+            AppleGroupedSection(
+              children: [
+                SwitchListTile(
+                  title: const Text('Auch als Einnahme in Buchungen erfassen'),
+                  subtitle: const Text('Legt/aktualisiert eine Buchung über den Netto-Betrag im Monat der Abrechnung.'),
+                  value: _createTransaction,
+                  onChanged: (v) => setState(() => _createTransaction = v),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _netController,
-              decoration: const InputDecoration(labelText: 'Netto / Auszahlungsbetrag (€)'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (v) => (double.tryParse((v ?? '').replaceAll(',', '.')) ?? 0) <= 0 ? 'Bitte angeben' : null,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _incomeTaxController,
-              decoration: const InputDecoration(labelText: 'Steuern (Lohnsteuer, Soli, Kirchensteuer) (€)'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _socialSecurityController,
-              decoration: const InputDecoration(labelText: 'Sozialversicherung (KV/RV/AV/PV) (€)'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Sonstige Abzüge (berechnet)'),
-              subtitle: const Text('Brutto − Netto − Steuern − Sozialversicherung'),
-              trailing: Text(currencyFormat.format(otherDeductions)),
-            ),
-            const Divider(height: 32),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Auch als Einnahme in Buchungen erfassen'),
-              subtitle: const Text('Legt/aktualisiert eine Buchung über den Netto-Betrag im Monat der Abrechnung.'),
-              value: _createTransaction,
-              onChanged: (v) => setState(() => _createTransaction = v),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(onPressed: _save, child: const Text('Speichern')),
           ],
         ),
       ),

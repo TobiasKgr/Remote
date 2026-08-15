@@ -73,13 +73,58 @@ lib/
                   Insights, Budget-Fortschritt, Konto-Fortschritt/-Saldo, Netto-Vermögen
   services/       Auto-Kategorisierung (Keyword-Matching), PDF-Import-Parser
                   (Kontoauszug), Gehaltsabrechnungs-Parser, Optimierungs-Regelwerk,
-                  Backup-Export/Import, plattformspezifisches Datei-Speichern
+                  Backup-Export/Import, Demo-Daten, plattformspezifisches Datei-Speichern
+  theme/          Zentrales Apple/iOS-inspiriertes App-Theme (Farben, Typografie,
+                  Formen, Komponenten-Themes) - siehe Abschnitt "Design"
   screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien,
                   Personen, Konten, Vermögensübersicht, Budgets, Backup, Einstellungen,
                   Jahresübersicht
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
-                  Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, ...)
+                  Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, iOS-Grouped-List-
+                  Bausteine, ...)
 ```
+
+## Design
+
+Die App ist bewusst so gestaltet, als hätte Apple sie entworfen - Look & Feel
+orientiert sich an den iOS Human Interface Guidelines, umgesetzt rein über
+Flutters Material-Widgets (kein Wechsel auf Cupertino-Widgets, damit sich die
+App auf allen Plattformen identisch verhält):
+
+- **Zentrales Theme** (`lib/theme/app_theme.dart`): eigene Light/Dark-Farbpalette
+  aus den iOS-Systemfarben (System Blue, systemGroupedBackground `#F2F2F7` hell /
+  `#000000` dunkel, ...), eine an die iOS-Typografie-Skala angelehnte `TextTheme`
+  (Large Title, Title 1–3, Headline, Body, Footnote, ...), großzügige Eckenradien
+  (12–20px) und durchgängige Komponenten-Themes (AppBar, Card, Buttons, Switches,
+  Textfelder, Dialoge, Sheets, Navigation) statt Material-Standardlook.
+- **`platform: TargetPlatform.iOS`** ist im Theme fest gesetzt: dadurch nutzt die
+  App auf **jeder** Plattform (auch Android/Windows/Web) iOS-Seitenübergänge
+  (Swipe-to-go-back) und das Verhalten adaptiver Widgets.
+- **iOS-Icons**: Durchgängig `CupertinoIcons` statt Material Icons.
+- **iOS-Navigation**: Bottom-Tab-Bar mit Blur/Transluzenz (`BackdropFilter`) und
+  Hairline-Trennlinie statt Material-Schatten; jeder Screen zeigt einen großen,
+  linksbündigen Titel im Content statt in der (kompakten, halbtransparenten)
+  AppBar - die iOS "Large Title"-Optik, ohne eine vollständige Sliver-Nav-Bar
+  nachzubauen.
+- **iOS-Listen**: Einstellungs-/Verwaltungs-Screens (Konten, Vermögensübersicht,
+  Budgets, Personen, Einstellungen, Formulare, ...) nutzen abgesetzte, abgerundete
+  Karten-Gruppen mit feinen Trennlinien und grauen Versal-Sektionstiteln - die
+  klassische iOS "Grouped Table View". Die zugehörigen Bausteine
+  (`AppleLargeTitle`, `AppleSectionHeader`, `AppleGroupedSection`, `AppleCard`,
+  `AppleHeroCard`) liegen in `lib/widgets/apple_widgets.dart`.
+- **Formulare**: Speichern/Löschen als Textbuttons in der Nav-Bar-Ecke statt
+  Fließtext-Buttons, Formularfelder randlos/gefüllt innerhalb der Gruppen-Karten
+  (iOS-Formularlook).
+- **Konsistente Semantikfarben**: Ein/Ausgaben, Erfolg/Fehler/Warnung greifen
+  überall auf dieselben iOS-Systemfarben zurück (`context.appleColors` –
+  `AppleSemantics`-Theme-Extension in `lib/theme/app_theme.dart`), Farbwähler
+  (Kategorien, Konten, Personen, Vermögenswerte) bieten dieselbe iOS-Palette an.
+
+Da die echte San-Francisco-Schrift Apple-lizenziert ist und in dieser
+Sandbox-Umgebung keine Schriften nachgeladen werden können, verwendet die App
+weiterhin die jeweilige Plattform-Standardschrift - die "Apple-Optik" kommt
+über Größen, Schriftschnitte, Laufweiten, Formen und Layout zustande, nicht
+über eine exakte Schriftnachbildung.
 
 ## Wichtiger Hinweis zum PDF-Import
 

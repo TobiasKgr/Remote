@@ -1,11 +1,10 @@
-import 'package:flutter/material.dart';
-
 import '../models/account.dart';
 import '../models/asset.dart';
 import '../models/company_car.dart';
 import '../models/person.dart';
 import '../models/salary_slip.dart';
 import '../models/transaction.dart';
+import '../theme/app_theme.dart';
 
 /// A ready-to-save bundle of realistic sample data, used to let a new user
 /// try out every feature (categorization, budgets*, insights, accounts,
@@ -60,13 +59,13 @@ class DemoDataService {
   }
 
   List<Person> _persons() => [
-        Person(id: personAliceId, name: 'Alice (Demo)', colorValue: Colors.deepPurple.toARGB32()),
-        Person(id: personBobId, name: 'Bob (Demo)', colorValue: Colors.teal.toARGB32()),
+        Person(id: personAliceId, name: 'Alice (Demo)', colorValue: AppleColors.purple.toARGB32()),
+        Person(id: personBobId, name: 'Bob (Demo)', colorValue: AppleColors.teal.toARGB32()),
       ];
 
   List<Account> _accounts() => [
-        Account(id: accountGiroId, name: 'Girokonto (Demo)', startingBalance: 1500, colorValue: Colors.blue.toARGB32()),
-        Account(id: accountSparId, name: 'Sparkonto (Demo)', startingBalance: 5000, colorValue: Colors.green.toARGB32()),
+        Account(id: accountGiroId, name: 'Girokonto (Demo)', startingBalance: 1500, colorValue: AppleColors.blue.toARGB32()),
+        Account(id: accountSparId, name: 'Sparkonto (Demo)', startingBalance: 5000, colorValue: AppleColors.green.toARGB32()),
       ];
 
   List<CompanyCar> _companyCars() => [
@@ -81,8 +80,8 @@ class DemoDataService {
       ];
 
   List<Asset> _assets() => [
-        Asset(id: assetEtfId, name: 'ETF-Depot (Demo)', category: AssetCategory.investment, value: 8000, colorValue: Colors.indigo.toARGB32()),
-        Asset(id: assetLoanId, name: 'Autokredit (Demo)', category: AssetCategory.liability, value: 12000, colorValue: Colors.red.toARGB32()),
+        Asset(id: assetEtfId, name: 'ETF-Depot (Demo)', category: AssetCategory.investment, value: 8000, colorValue: AppleColors.indigo.toARGB32()),
+        Asset(id: assetLoanId, name: 'Autokredit (Demo)', category: AssetCategory.liability, value: 12000, colorValue: AppleColors.red.toARGB32()),
       ];
 
   List<SalarySlip> _salarySlips(DateTime now) {

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,7 +7,9 @@ import '../models/category.dart';
 import '../providers/budget_providers.dart';
 import '../providers/category_providers.dart';
 import '../providers/transaction_providers.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 import '../widgets/month_selector.dart';
 
 class BudgetsScreen extends ConsumerWidget {
@@ -19,21 +22,26 @@ class BudgetsScreen extends ConsumerWidget {
     final budgets = ref.watch(budgetNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Budgets / Sparziele')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.only(bottom: 24),
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            const AppleLargeTitle('Budgets / Sparziele'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 'Standard-Limit gilt für jeden Monat. Zusätzlich kannst du für einzelne '
                 'Monate (z. B. Dezember) ein abweichendes Limit planen - das hat dann Vorrang.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: context.appleColors.secondaryLabel),
               ),
             ),
-            MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
+            ),
+            const SizedBox(height: 4),
             for (final category in categories)
               _BudgetTile(
                 category: category,
@@ -70,7 +78,8 @@ class _BudgetTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
+    final colors = context.appleColors;
+    return AppleCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
@@ -87,13 +96,13 @@ class _BudgetTile extends ConsumerWidget {
                 children: [
                   IconButton(
                     tooltip: 'Standard-Budget bearbeiten',
-                    icon: const Icon(Icons.edit_outlined),
+                    icon: const Icon(CupertinoIcons.pencil),
                     onPressed: () => _editDefault(context, ref),
                   ),
                   if (defaultBudget != null)
                     IconButton(
                       tooltip: 'Standard-Budget löschen',
-                      icon: const Icon(Icons.delete_outline),
+                      icon: Icon(CupertinoIcons.trash, color: colors.danger),
                       onPressed: () => ref.read(budgetNotifierProvider.notifier).remove(defaultBudget!.id),
                     ),
                 ],
@@ -108,18 +117,18 @@ class _BudgetTile extends ConsumerWidget {
                       monthOverride == null
                           ? 'Keine Abweichung für ${monthYearFormat.format(month)}'
                           : 'Abweichung ${monthYearFormat.format(month)}: ${currencyFormat.format(monthOverride!.monthlyLimit)}',
-                      style: TextStyle(color: monthOverride == null ? Colors.grey : Theme.of(context).colorScheme.primary),
+                      style: TextStyle(color: monthOverride == null ? colors.secondaryLabel : Theme.of(context).colorScheme.primary),
                     ),
                   ),
                   IconButton(
                     tooltip: monthOverride == null ? 'Abweichung planen' : 'Abweichung bearbeiten',
-                    icon: Icon(monthOverride == null ? Icons.add_circle_outline : Icons.edit_outlined, size: 20),
+                    icon: Icon(monthOverride == null ? CupertinoIcons.add_circled : CupertinoIcons.pencil, size: 20),
                     onPressed: () => _editOverride(context, ref),
                   ),
                   if (monthOverride != null)
                     IconButton(
                       tooltip: 'Abweichung löschen',
-                      icon: const Icon(Icons.delete_outline, size: 20),
+                      icon: Icon(CupertinoIcons.trash, size: 20, color: colors.danger),
                       onPressed: () => ref.read(budgetNotifierProvider.notifier).remove(monthOverride!.id),
                     ),
                 ],

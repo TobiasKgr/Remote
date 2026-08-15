@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,7 +8,9 @@ import '../models/salary_slip.dart';
 import '../providers/salary_slip_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/salary_slip_parser_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 import '../widgets/person_filter_bar.dart';
 import 'company_car_screen.dart';
 import 'salary_slip_form_screen.dart';
@@ -52,16 +55,17 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gehalt'),
+        title: const SizedBox.shrink(),
         actions: [
           IconButton(
             tooltip: 'Firmenwagen verwalten',
-            icon: const Icon(Icons.directions_car_outlined),
+            icon: const Icon(CupertinoIcons.car_fill),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompanyCarScreen())),
           ),
-          IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => ref.read(selectedYearProvider.notifier).state = year - 1),
+          IconButton(icon: const Icon(CupertinoIcons.chevron_left), onPressed: () => ref.read(selectedYearProvider.notifier).state = year - 1),
           Center(child: Text('$year', style: Theme.of(context).textTheme.titleMedium)),
-          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => ref.read(selectedYearProvider.notifier).state = year + 1),
+          IconButton(icon: const Icon(CupertinoIcons.chevron_right), onPressed: () => ref.read(selectedYearProvider.notifier).state = year + 1),
+          const SizedBox(width: 4),
         ],
       ),
       body: SafeArea(
@@ -72,18 +76,22 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
               child: _importing
                   ? const Center(child: CircularProgressIndicator())
                   : slips.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text('Keine Gehaltsabrechnungen für $year erfasst.', textAlign: TextAlign.center),
-                          ),
+                      ? ListView(
+                          children: [
+                            const AppleLargeTitle('Gehalt'),
+                            Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text('Keine Gehaltsabrechnungen für $year erfasst.', textAlign: TextAlign.center),
+                            ),
+                          ],
                         )
                       : ListView(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.only(bottom: 96),
                           children: [
+                            const AppleLargeTitle('Gehalt'),
                             _BreakdownChart(slips: slips),
-                            const SizedBox(height: 16),
-                            for (final slip in slips) _SalarySlipTile(slip: slip),
+                            const AppleSectionHeader('Gehaltsabrechnungen'),
+                            AppleGroupedSection(children: [for (final slip in slips) _SalarySlipTile(slip: slip)]),
                           ],
                         ),
             ),
@@ -96,14 +104,14 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
           FloatingActionButton.extended(
             heroTag: 'salary_pdf',
             onPressed: _importPdf,
-            icon: const Icon(Icons.upload_file),
+            icon: const Icon(CupertinoIcons.arrow_up_doc_fill),
             label: const Text('PDF importieren'),
           ),
           const SizedBox(height: 12),
           FloatingActionButton.extended(
             heroTag: 'salary_manual',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SalarySlipFormScreen())),
-            icon: const Icon(Icons.add),
+            icon: const Icon(CupertinoIcons.add),
             label: const Text('Manuell'),
           ),
         ],
@@ -120,14 +128,15 @@ class _BreakdownChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxY = slips.fold<double>(0, (m, s) => s.gross > m ? s.gross : m);
+    final colors = context.appleColors;
 
-    return Card(
+    return AppleCard(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Brutto vs. Netto pro Monat', style: Theme.of(context).textTheme.titleMedium),
+            Text('Brutto vs. Netto pro Monat', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 12),
             SizedBox(
               height: 220,
@@ -137,8 +146,8 @@ class _BreakdownChart extends StatelessWidget {
                   barGroups: [
                     for (final slip in slips)
                       BarChartGroupData(x: slip.period.month, barRods: [
-                        BarChartRodData(toY: slip.gross, color: Colors.blueGrey, width: 8),
-                        BarChartRodData(toY: slip.net, color: Colors.green, width: 8),
+                        BarChartRodData(toY: slip.gross, color: AppleColors.gray, width: 8, borderRadius: BorderRadius.circular(3)),
+                        BarChartRodData(toY: slip.net, color: colors.success, width: 8, borderRadius: BorderRadius.circular(3)),
                       ]),
                   ],
                   titlesData: FlTitlesData(
@@ -167,9 +176,9 @@ class _BreakdownChart extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                _legendDot(Colors.blueGrey, 'Brutto'),
+                _legendDot(AppleColors.gray, 'Brutto'),
                 const SizedBox(width: 16),
-                _legendDot(Colors.green, 'Netto'),
+                _legendDot(colors.success, 'Netto'),
               ],
             ),
           ],
@@ -182,7 +191,7 @@ class _BreakdownChart extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 12, height: 12, color: color),
+        DecoratedBox(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)), child: const SizedBox(width: 12, height: 12)),
         const SizedBox(width: 6),
         Text(label),
       ],
@@ -197,20 +206,18 @@ class _SalarySlipTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: ListTile(
-        title: Text(monthYearFormat.format(slip.period)),
-        subtitle: Text(
-          'Brutto ${currencyFormat.format(slip.gross)} · Steuern ${currencyFormat.format(slip.incomeTax)} · '
-          'SV ${currencyFormat.format(slip.socialSecurity)}${slip.employer != null ? ' · ${slip.employer}' : ''}',
-        ),
-        trailing: Text(
-          currencyFormat.format(slip.net),
-          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-        ),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => SalarySlipFormScreen(existing: slip)),
-        ),
+    return ListTile(
+      title: Text(monthYearFormat.format(slip.period)),
+      subtitle: Text(
+        'Brutto ${currencyFormat.format(slip.gross)} · Steuern ${currencyFormat.format(slip.incomeTax)} · '
+        'SV ${currencyFormat.format(slip.socialSecurity)}${slip.employer != null ? ' · ${slip.employer}' : ''}',
+      ),
+      trailing: Text(
+        currencyFormat.format(slip.net),
+        style: TextStyle(color: context.appleColors.success, fontWeight: FontWeight.bold),
+      ),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => SalarySlipFormScreen(existing: slip)),
       ),
     );
   }

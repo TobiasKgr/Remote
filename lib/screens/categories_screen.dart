@@ -1,9 +1,12 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/category.dart';
 import '../providers/category_providers.dart';
+import '../theme/app_theme.dart';
+import '../widgets/apple_widgets.dart';
 import 'accounts_screen.dart';
 import 'assets_screen.dart';
 import 'backup_screen.dart';
@@ -12,21 +15,6 @@ import 'persons_screen.dart';
 import 'settings_screen.dart';
 
 enum _CategoriesMenuAction { backup, budgets, persons, settings, accounts, assets }
-
-const _availableColors = [
-  Colors.red,
-  Colors.orange,
-  Colors.amber,
-  Colors.green,
-  Colors.teal,
-  Colors.blue,
-  Colors.indigo,
-  Colors.purple,
-  Colors.pink,
-  Colors.brown,
-  Colors.blueGrey,
-  Colors.grey,
-];
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -39,7 +27,7 @@ class CategoriesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kategorien'),
+        title: const SizedBox.shrink(),
         actions: [
           PopupMenuButton<_CategoriesMenuAction>(
             tooltip: 'Verwaltung',
@@ -57,27 +45,27 @@ class CategoriesScreen extends ConsumerWidget {
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: _CategoriesMenuAction.persons,
-                child: ListTile(leading: Icon(Icons.people_outline), title: Text('Personen verwalten')),
+                child: ListTile(leading: Icon(CupertinoIcons.person_2), title: Text('Personen verwalten')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.accounts,
-                child: ListTile(leading: Icon(Icons.account_balance_outlined), title: Text('Konten verwalten')),
+                child: ListTile(leading: Icon(CupertinoIcons.building_2_fill), title: Text('Konten verwalten')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.assets,
-                child: ListTile(leading: Icon(Icons.pie_chart_outline), title: Text('Vermögensübersicht')),
+                child: ListTile(leading: Icon(CupertinoIcons.chart_pie), title: Text('Vermögensübersicht')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.budgets,
-                child: ListTile(leading: Icon(Icons.savings_outlined), title: Text('Budgets verwalten')),
+                child: ListTile(leading: Icon(CupertinoIcons.graph_circle), title: Text('Budgets verwalten')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.backup,
-                child: ListTile(leading: Icon(Icons.backup_outlined), title: Text('Backup exportieren/importieren')),
+                child: ListTile(leading: Icon(CupertinoIcons.cloud_upload), title: Text('Backup exportieren/importieren')),
               ),
               PopupMenuItem(
                 value: _CategoriesMenuAction.settings,
-                child: ListTile(leading: Icon(Icons.settings_outlined), title: Text('Einstellungen')),
+                child: ListTile(leading: Icon(CupertinoIcons.gear), title: Text('Einstellungen')),
               ),
             ],
           ),
@@ -85,19 +73,19 @@ class CategoriesScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.only(bottom: 96),
           children: [
-            Text('Einnahmen', style: Theme.of(context).textTheme.titleMedium),
+            const AppleLargeTitle('Kategorien'),
+            const AppleSectionHeader('Einnahmen'),
             ...income.map((c) => _CategoryTile(category: c)),
-            const SizedBox(height: 16),
-            Text('Ausgaben', style: Theme.of(context).textTheme.titleMedium),
+            const AppleSectionHeader('Ausgaben'),
             ...expense.map((c) => _CategoryTile(category: c)),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCategoryDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(CupertinoIcons.add),
         label: const Text('Kategorie'),
       ),
     );
@@ -106,7 +94,7 @@ class CategoriesScreen extends ConsumerWidget {
   Future<void> _showCategoryDialog(BuildContext context, WidgetRef ref, {Category? existing}) async {
     final nameController = TextEditingController(text: existing?.name ?? '');
     CategoryType type = existing?.type ?? CategoryType.expense;
-    Color color = existing != null ? Color(existing.colorValue) : _availableColors.first;
+    Color color = existing != null ? Color(existing.colorValue) : AppleColors.pickerPalette.first;
 
     final saved = await showDialog<bool>(
       context: context,
@@ -131,13 +119,13 @@ class CategoriesScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 8,
-                  children: _availableColors
+                  children: AppleColors.pickerPalette
                       .map((c) => GestureDetector(
                             onTap: () => setStateDialog(() => color = c),
                             child: CircleAvatar(
                               backgroundColor: c,
                               radius: 16,
-                              child: color.toARGB32() == c.toARGB32() ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                              child: color.toARGB32() == c.toARGB32() ? const Icon(CupertinoIcons.check_mark, color: Colors.white, size: 18) : null,
                             ),
                           ))
                       .toList(),
@@ -173,7 +161,7 @@ class _CategoryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
+    return AppleCard(
       child: ExpansionTile(
         leading: CircleAvatar(backgroundColor: Color(category.colorValue), radius: 12),
         title: Text(category.name),
@@ -184,7 +172,7 @@ class _CategoryTile extends ConsumerWidget {
               title: Text(sub.name),
               subtitle: sub.keywords.isNotEmpty ? Text(sub.keywords.join(', ')) : null,
               trailing: IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
+                icon: const Icon(CupertinoIcons.trash, size: 20),
                 onPressed: () async {
                   category.subcategories.removeWhere((s) => s.id == sub.id);
                   await ref.read(categoryNotifierProvider.notifier).upsert(category);
@@ -194,7 +182,7 @@ class _CategoryTile extends ConsumerWidget {
             ),
           ListTile(
             dense: true,
-            leading: const Icon(Icons.add, size: 20),
+            leading: const Icon(CupertinoIcons.add, size: 20),
             title: const Text('Unterkategorie hinzufügen'),
             onTap: () => _showSubcategoryDialog(context, ref, category),
           ),
@@ -202,8 +190,8 @@ class _CategoryTile extends ConsumerWidget {
             alignment: MainAxisAlignment.end,
             children: [
               TextButton.icon(
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Kategorie löschen'),
+                icon: Icon(CupertinoIcons.trash, color: context.appleColors.danger),
+                label: Text('Kategorie löschen', style: TextStyle(color: context.appleColors.danger)),
                 onPressed: () async {
                   await ref.read(categoryNotifierProvider.notifier).remove(category.id);
                 },

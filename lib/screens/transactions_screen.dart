@@ -1,14 +1,40 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../models/transaction.dart';
 import '../providers/category_providers.dart';
 import '../providers/transaction_filter_providers.dart';
 import '../providers/transaction_providers.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 import '../widgets/month_selector.dart';
 import '../widgets/person_filter_bar.dart';
 import 'transaction_form_screen.dart';
+
+final _weekdayDateFormat = DateFormat('EEEE, d. MMMM', 'de_DE');
+
+/// Groups already date-sorted transactions into same-day buckets, preserving
+/// their existing order (newest day first).
+List<MapEntry<DateTime, List<Transaction>>> _groupByDay(List<Transaction> transactions) {
+  final groups = <DateTime, List<Transaction>>{};
+  for (final t in transactions) {
+    final day = DateTime(t.date.year, t.date.month, t.date.day);
+    groups.putIfAbsent(day, () => []).add(t);
+  }
+  return groups.entries.toList();
+}
+
+String _dayLabel(DateTime day) {
+  final today = DateTime.now();
+  final todayDay = DateTime(today.year, today.month, today.day);
+  final yesterday = todayDay.subtract(const Duration(days: 1));
+  if (day == todayDay) return 'Heute';
+  if (day == yesterday) return 'Gestern';
+  return _weekdayDateFormat.format(day);
+}
 
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
@@ -21,14 +47,15 @@ class TransactionsScreen extends ConsumerWidget {
     final categoryFilter = ref.watch(transactionCategoryFilterProvider);
     final amountRange = ref.watch(transactionAmountRangeProvider);
     final filtersActive = categoryFilter != null || amountRange.isActive;
+    final groups = _groupByDay(filteredTransactions);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buchungen'),
+        title: const SizedBox.shrink(),
         actions: [
           IconButton(
             tooltip: 'Filter',
-            icon: Badge(isLabelVisible: filtersActive, child: const Icon(Icons.filter_list)),
+            icon: Badge(isLabelVisible: filtersActive, child: const Icon(CupertinoIcons.slider_horizontal_3)),
             onPressed: () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -40,11 +67,11 @@ class TransactionsScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 8),
+            const AppleLargeTitle('Buchungen'),
             MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
             const PersonFilterBar(),
             const _SearchField(),
-            const Divider(height: 1),
+            const SizedBox(height: 4),
             Expanded(
               child: filteredTransactions.isEmpty
                   ? Center(
@@ -52,10 +79,16 @@ class TransactionsScreen extends ConsumerWidget {
                         monthTransactions.isEmpty ? 'Keine Buchungen in diesem Monat.' : 'Keine Buchungen entsprechen den Filtern.',
                       ),
                     )
-                  : ListView.separated(
-                      itemCount: filteredTransactions.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
-                      itemBuilder: (context, index) => _TransactionTile(transaction: filteredTransactions[index]),
+                  : ListView(
+                      padding: const EdgeInsets.only(bottom: 96),
+                      children: [
+                        for (final group in groups) ...[
+                          AppleSectionHeader(_dayLabel(group.key)),
+                          AppleGroupedSection(
+                            children: [for (final t in group.value) _TransactionTile(transaction: t)],
+                          ),
+                        ],
+                      ],
                     ),
             ),
           ],
@@ -65,7 +98,7 @@ class TransactionsScreen extends ConsumerWidget {
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const TransactionFormScreen()),
         ),
-        icon: const Icon(Icons.add),
+        icon: const Icon(CupertinoIcons.add),
         label: const Text('Buchung'),
       ),
     );
@@ -97,16 +130,16 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: TextField(
         controller: _controller,
         decoration: InputDecoration(
           hintText: 'Suche nach Beschreibung...',
-          prefixIcon: const Icon(Icons.search),
+          prefixIcon: const Icon(CupertinoIcons.search, size: 20),
           suffixIcon: _controller.text.isEmpty
               ? null
               : IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(CupertinoIcons.clear_circled_solid, size: 18),
                   onPressed: () {
                     _controller.clear();
                     ref.read(transactionSearchQueryProvider.notifier).state = '';
@@ -114,7 +147,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
                   },
                 ),
           isDense: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppleRadii.pill), borderSide: BorderSide.none),
         ),
         onChanged: (value) {
           ref.read(transactionSearchQueryProvider.notifier).state = value;
@@ -243,20 +276,22 @@ class _TransactionTile extends ConsumerWidget {
       }
     }
 
+    final colors = context.appleColors;
+
     return Dismissible(
       key: ValueKey(transaction.id),
       direction: DismissDirection.endToStart,
       background: Container(
-        color: Colors.red,
+        color: colors.danger,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(CupertinoIcons.delete_simple, color: Colors.white),
       ),
       onDismissed: (_) => ref.read(transactionNotifierProvider.notifier).remove(transaction.id),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: category != null ? Color(category.colorValue) : Colors.grey,
-          child: Icon(transaction.isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: Colors.white, size: 18),
+          backgroundColor: category != null ? Color(category.colorValue) : colors.secondaryLabel,
+          child: Icon(transaction.isIncome ? CupertinoIcons.arrow_down : CupertinoIcons.arrow_up, color: Colors.white, size: 18),
         ),
         title: Row(
           children: [
@@ -265,7 +300,7 @@ class _TransactionTile extends ConsumerWidget {
               const SizedBox(width: 6),
               Tooltip(
                 message: 'Automatisch als wiederkehrende Buchung erzeugt',
-                child: Icon(Icons.autorenew, size: 16, color: Theme.of(context).colorScheme.primary),
+                child: Icon(CupertinoIcons.refresh, size: 16, color: Theme.of(context).colorScheme.primary),
               ),
             ],
           ],
@@ -278,7 +313,7 @@ class _TransactionTile extends ConsumerWidget {
         trailing: Text(
           currencyFormat.format(transaction.amount),
           style: TextStyle(
-            color: transaction.isIncome ? Colors.green : Colors.red,
+            color: transaction.isIncome ? colors.success : colors.danger,
             fontWeight: FontWeight.bold,
           ),
         ),

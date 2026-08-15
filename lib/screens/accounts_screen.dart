@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -7,18 +8,9 @@ import '../models/transaction.dart';
 import '../providers/account_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
-
-const _availableColors = [
-  Colors.blue,
-  Colors.teal,
-  Colors.green,
-  Colors.orange,
-  Colors.purple,
-  Colors.brown,
-  Colors.blueGrey,
-  Colors.pink,
-];
+import '../widgets/apple_widgets.dart';
 
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
@@ -29,23 +21,30 @@ class AccountsScreen extends ConsumerWidget {
     final balances = ref.watch(accountBalancesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Konten')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
         child: accounts.isEmpty
-            ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Noch keine Konten angelegt. Lege Konten an, um Kontostände zu verfolgen und '
-                    'interne Überträge (Umbuchungen) nicht doppelt als Ein-/Ausgabe zu zählen.',
-                    textAlign: TextAlign.center,
+            ? ListView(
+                children: [
+                  const AppleLargeTitle('Konten'),
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Noch keine Konten angelegt. Lege Konten an, um Kontostände zu verfolgen und '
+                      'interne Überträge (Umbuchungen) nicht doppelt als Ein-/Ausgabe zu zählen.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.appleColors.secondaryLabel),
+                    ),
                   ),
-                ),
+                ],
               )
             : ListView(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.only(bottom: 96),
                 children: [
-                  for (final account in accounts) _AccountTile(account: account, balance: balances[account.id] ?? 0),
+                  const AppleLargeTitle('Konten'),
+                  AppleGroupedSection(
+                    children: [for (final account in accounts) _AccountTile(account: account, balance: balances[account.id] ?? 0)],
+                  ),
                 ],
               ),
       ),
@@ -56,14 +55,14 @@ class AccountsScreen extends ConsumerWidget {
             FloatingActionButton.extended(
               heroTag: 'account_transfer',
               onPressed: () => _showTransferDialog(context, ref, accounts),
-              icon: const Icon(Icons.swap_horiz),
+              icon: const Icon(CupertinoIcons.arrow_right_arrow_left),
               label: const Text('Umbuchung'),
             ),
           const SizedBox(height: 12),
           FloatingActionButton.extended(
             heroTag: 'account_add',
             onPressed: () => _showAccountDialog(context, ref),
-            icon: const Icon(Icons.add),
+            icon: const Icon(CupertinoIcons.add),
             label: const Text('Konto'),
           ),
         ],
@@ -79,7 +78,7 @@ Future<void> _showAccountDialog(BuildContext context, WidgetRef ref, {Account? e
   );
   final persons = ref.read(personNotifierProvider);
   String? personId = existing?.personId;
-  Color color = existing != null ? Color(existing.colorValue) : _availableColors.first;
+  Color color = existing != null ? Color(existing.colorValue) : AppleColors.pickerPalette.first;
 
   final saved = await showDialog<bool>(
     context: context,
@@ -116,13 +115,13 @@ Future<void> _showAccountDialog(BuildContext context, WidgetRef ref, {Account? e
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
-                children: _availableColors
+                children: AppleColors.pickerPalette
                     .map((c) => GestureDetector(
                           onTap: () => setStateDialog(() => color = c),
                           child: CircleAvatar(
                             backgroundColor: c,
                             radius: 16,
-                            child: color.toARGB32() == c.toARGB32() ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                            child: color.toARGB32() == c.toARGB32() ? const Icon(CupertinoIcons.check_mark, color: Colors.white, size: 18) : null,
                           ),
                         ))
                     .toList(),
@@ -258,37 +257,36 @@ class _AccountTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final person = account.personId != null ? ref.watch(personByIdProvider(account.personId!)) : null;
+    final colors = context.appleColors;
 
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: const Icon(Icons.account_balance, color: Colors.white, size: 18)),
-        title: Text(account.name),
-        subtitle: person != null ? Text(person.name) : null,
-        trailing: Text(
-          currencyFormat.format(balance),
-          style: TextStyle(fontWeight: FontWeight.bold, color: balance >= 0 ? Colors.green : Colors.red),
-        ),
-        onTap: () => _showAccountDialog(context, ref, existing: account),
-        onLongPress: () async {
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Konto löschen?'),
-              content: Text(
-                '"${account.name}" löschen? Bereits zugeordnete Buchungen bleiben erhalten, '
-                'gelten danach aber als keinem Konto zugeordnet.',
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Abbrechen')),
-                FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Löschen')),
-              ],
-            ),
-          );
-          if (confirmed == true) {
-            await ref.read(accountNotifierProvider.notifier).remove(account.id);
-          }
-        },
+    return ListTile(
+      leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: const Icon(CupertinoIcons.building_2_fill, color: Colors.white, size: 18)),
+      title: Text(account.name),
+      subtitle: person != null ? Text(person.name) : null,
+      trailing: Text(
+        currencyFormat.format(balance),
+        style: TextStyle(fontWeight: FontWeight.bold, color: balance >= 0 ? colors.success : colors.danger),
       ),
+      onTap: () => _showAccountDialog(context, ref, existing: account),
+      onLongPress: () async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Konto löschen?'),
+            content: Text(
+              '"${account.name}" löschen? Bereits zugeordnete Buchungen bleiben erhalten, '
+              'gelten danach aber als keinem Konto zugeordnet.',
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Abbrechen')),
+              FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Löschen')),
+            ],
+          ),
+        );
+        if (confirmed == true) {
+          await ref.read(accountNotifierProvider.notifier).remove(account.id);
+        }
+      },
     );
   }
 }

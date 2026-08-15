@@ -1,9 +1,13 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/category_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../models/category.dart';
+import '../theme/app_theme.dart';
+import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 import '../widgets/budget_progress_section.dart';
 import '../widgets/category_breakdown_chart.dart';
 import '../widgets/insights_section.dart';
@@ -19,6 +23,7 @@ class DashboardScreen extends ConsumerWidget {
     final month = ref.watch(selectedMonthProvider);
     final transactions = ref.watch(transactionsForSelectedMonthProvider).where((t) => !t.isTransfer);
     final categories = ref.watch(categoryNotifierProvider);
+    final colors = context.appleColors;
 
     final income = transactions.where((t) => t.isIncome).fold<double>(0, (s, t) => s + t.amount);
     final expenses = transactions.where((t) => !t.isIncome).fold<double>(0, (s, t) => s + t.amount.abs());
@@ -34,41 +39,50 @@ class DashboardScreen extends ConsumerWidget {
         .toList()
       ..sort((a, b) => b.total.compareTo(a.total));
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
-          const PersonFilterBar(),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: SummaryCard(label: 'Einnahmen', amount: income, color: Colors.green, icon: Icons.arrow_downward)),
-              const SizedBox(width: 12),
-              Expanded(child: SummaryCard(label: 'Ausgaben', amount: expenses, color: Colors.red, icon: Icons.arrow_upward)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SummaryCard(
-            label: 'Saldo (Gehalt vs. Ausgaben)',
-            amount: balance,
-            color: balance >= 0 ? Colors.green : Colors.red,
-            icon: Icons.account_balance_wallet_outlined,
-          ),
-          const SizedBox(height: 24),
-          Text('Ausgaben nach Kategorie', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CategoryBreakdownChart(totals: breakdown),
+    return Scaffold(
+      appBar: AppBar(title: const SizedBox.shrink()),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            const AppleLargeTitle('Übersicht'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
+                  const PersonFilterBar(),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const BudgetProgressSection(),
-          const SizedBox(height: 24),
-          const InsightsSection(),
-        ],
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(child: SummaryCard(label: 'Einnahmen', amount: income, color: colors.success, icon: CupertinoIcons.arrow_down)),
+                  const SizedBox(width: 12),
+                  Expanded(child: SummaryCard(label: 'Ausgaben', amount: expenses, color: colors.danger, icon: CupertinoIcons.arrow_up)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            AppleHeroCard(
+              label: 'Saldo (Gehalt vs. Ausgaben)',
+              value: currencyFormat.format(balance),
+              valueColor: balance >= 0 ? colors.success : colors.danger,
+            ),
+            AppleSectionHeader('Ausgaben nach Kategorie'),
+            AppleCard(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: CategoryBreakdownChart(totals: breakdown),
+              ),
+            ),
+            const BudgetProgressSection(),
+            const InsightsSection(),
+          ],
+        ),
       ),
     );
   }

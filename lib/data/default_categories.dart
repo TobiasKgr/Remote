@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-
 import '../models/category.dart';
+import '../theme/app_theme.dart';
 
 /// Seed data shown on first launch. Users can freely rename, extend or
 /// delete these afterwards via the Categories screen.
@@ -10,7 +9,7 @@ List<Category> buildDefaultCategories() {
       id: 'income',
       name: 'Einkommen',
       type: CategoryType.income,
-      colorValue: Colors.green.toARGB32(),
+      colorValue: AppleColors.green.toARGB32(),
       subcategories: [
         Subcategory(id: 'income_gehalt', name: 'Gehalt', keywords: ['gehalt', 'lohn', 'lohnzahlung']),
         Subcategory(id: 'income_bonus', name: 'Bonus / Prämie', keywords: ['bonus', 'prämie']),
@@ -21,7 +20,7 @@ List<Category> buildDefaultCategories() {
       id: 'wohnen',
       name: 'Wohnen',
       type: CategoryType.expense,
-      colorValue: Colors.brown.toARGB32(),
+      colorValue: AppleColors.brown.toARGB32(),
       subcategories: [
         Subcategory(id: 'wohnen_miete', name: 'Miete', keywords: ['miete', 'kaltmiete']),
         Subcategory(id: 'wohnen_nebenkosten', name: 'Nebenkosten', keywords: ['nebenkosten', 'hausgeld']),
@@ -32,7 +31,7 @@ List<Category> buildDefaultCategories() {
       id: 'fixkosten',
       name: 'Fixkosten & Abos',
       type: CategoryType.expense,
-      colorValue: Colors.indigo.toARGB32(),
+      colorValue: AppleColors.indigo.toARGB32(),
       subcategories: [
         Subcategory(
           id: 'fixkosten_streaming',
@@ -48,7 +47,7 @@ List<Category> buildDefaultCategories() {
       id: 'lebensmittel',
       name: 'Lebensmittel',
       type: CategoryType.expense,
-      colorValue: Colors.orange.toARGB32(),
+      colorValue: AppleColors.orange.toARGB32(),
       subcategories: [
         Subcategory(id: 'lebensmittel_supermarkt', name: 'Supermarkt', keywords: ['rewe', 'edeka', 'aldi', 'lidl', 'kaufland', 'netto']),
         Subcategory(id: 'lebensmittel_restaurant', name: 'Restaurant / Café', keywords: ['restaurant', 'café', 'bar', 'imbiss']),
@@ -58,7 +57,7 @@ List<Category> buildDefaultCategories() {
       id: 'mobilitaet',
       name: 'Mobilität',
       type: CategoryType.expense,
-      colorValue: Colors.blueGrey.toARGB32(),
+      colorValue: AppleColors.gray.toARGB32(),
       subcategories: [
         Subcategory(id: 'mobilitaet_tanken', name: 'Tanken', keywords: ['tankstelle', 'aral', 'shell', 'esso', 'jet']),
         Subcategory(id: 'mobilitaet_oepnv', name: 'ÖPNV', keywords: ['bahn', 'bvg', 'vvo', 'mvv', 'ticket']),
@@ -70,7 +69,7 @@ List<Category> buildDefaultCategories() {
       id: 'freizeit',
       name: 'Freizeit & Hobby',
       type: CategoryType.expense,
-      colorValue: Colors.purple.toARGB32(),
+      colorValue: AppleColors.purple.toARGB32(),
       subcategories: [
         Subcategory(id: 'freizeit_hobby', name: 'Hobby', keywords: []),
         Subcategory(id: 'freizeit_urlaub', name: 'Urlaub', keywords: ['reise', 'hotel', 'flug']),
@@ -80,7 +79,7 @@ List<Category> buildDefaultCategories() {
       id: 'shopping',
       name: 'Shopping',
       type: CategoryType.expense,
-      colorValue: Colors.pink.toARGB32(),
+      colorValue: AppleColors.pink.toARGB32(),
       subcategories: [
         Subcategory(id: 'shopping_kleidung', name: 'Kleidung', keywords: ['zalando', 'h&m', 'zara']),
         Subcategory(id: 'shopping_elektronik', name: 'Elektronik', keywords: ['media markt', 'saturn', 'amazon']),
@@ -90,7 +89,7 @@ List<Category> buildDefaultCategories() {
       id: 'gesundheit',
       name: 'Gesundheit',
       type: CategoryType.expense,
-      colorValue: Colors.teal.toARGB32(),
+      colorValue: AppleColors.teal.toARGB32(),
       subcategories: [
         Subcategory(id: 'gesundheit_apotheke', name: 'Apotheke', keywords: ['apotheke']),
         Subcategory(id: 'gesundheit_arzt', name: 'Arzt', keywords: ['praxis', 'arzt']),
@@ -100,7 +99,7 @@ List<Category> buildDefaultCategories() {
       id: 'sonstiges',
       name: 'Sonstiges',
       type: CategoryType.expense,
-      colorValue: Colors.grey.toARGB32(),
+      colorValue: AppleColors.gray2.toARGB32(),
       subcategories: [
         Subcategory(id: 'sonstiges_diverses', name: 'Diverses', keywords: []),
       ],
@@ -111,7 +110,7 @@ List<Category> buildDefaultCategories() {
       id: 'umbuchung',
       name: 'Umbuchung',
       type: CategoryType.expense,
-      colorValue: Colors.blueGrey.toARGB32(),
+      colorValue: AppleColors.gray.toARGB32(),
     ),
   ];
 }

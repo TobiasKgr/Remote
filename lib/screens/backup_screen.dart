@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,6 +16,8 @@ import '../providers/salary_slip_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/backup_service.dart';
 import '../services/file_saver.dart';
+import '../theme/app_theme.dart';
+import '../widgets/apple_widgets.dart';
 
 class BackupScreen extends ConsumerStatefulWidget {
   const BackupScreen({super.key});
@@ -140,38 +143,47 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Backup')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: _busy
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  children: [
-                    const Text(
+        child: _busy
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                children: [
+                  const AppleLargeTitle('Backup'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
                       'Exportiert alle lokal gespeicherten Daten (Buchungen, Kategorien, Gehaltsabrechnungen, '
                       'Personen, Firmenwagen, Budgets, Konten, Vermögenswerte/Kredite) als JSON-Datei. Diese Datei '
                       'kannst du sichern oder auf einer anderen Installation wieder importieren.',
+                      style: TextStyle(color: context.appleColors.secondaryLabel),
                     ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _export,
-                      icon: const Icon(Icons.download_outlined),
-                      label: const Text('Backup exportieren'),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _export,
+                          icon: const Icon(CupertinoIcons.arrow_down_doc),
+                          label: const Text('Backup exportieren'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: _import,
+                          icon: const Icon(CupertinoIcons.square_arrow_up),
+                          label: const Text('Backup importieren'),
+                        ),
+                        if (_message != null) ...[
+                          const SizedBox(height: 16),
+                          Text(_message!, style: TextStyle(color: _messageIsError ? context.appleColors.danger : null)),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _import,
-                      icon: const Icon(Icons.upload_outlined),
-                      label: const Text('Backup importieren'),
-                    ),
-                    if (_message != null) ...[
-                      const SizedBox(height: 16),
-                      Text(_message!, style: TextStyle(color: _messageIsError ? Colors.red : null)),
-                    ],
-                  ],
-                ),
-        ),
+                  ),
+                ],
+              ),
       ),
     );
   }

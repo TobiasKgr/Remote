@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/budget_providers.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import 'apple_widgets.dart';
 
 /// Shows a progress bar per category with a budget set, for the currently
 /// selected month/person filter. Renders nothing when no budgets exist.
@@ -41,9 +43,8 @@ class BudgetProgressList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Card(
+        AppleSectionHeader(title),
+        AppleCard(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
@@ -63,11 +64,12 @@ class _BudgetProgressRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appleColors;
     final color = progress.ratio >= 1
-        ? Colors.red
+        ? colors.danger
         : progress.ratio >= 0.8
-            ? Colors.amber.shade800
-            : Colors.green;
+            ? colors.warning
+            : colors.success;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),

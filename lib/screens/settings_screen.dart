@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +12,8 @@ import '../providers/settings_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/demo_data_service.dart';
 import '../services/notification_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/apple_widgets.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -117,53 +120,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final notificationsEnabled = ref.watch(notificationsEnabledProvider);
     final demoDataLoaded = _demoDataLoaded;
 
+    final colors = context.appleColors;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Einstellungen')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
         child: _busy
             ? const Center(child: CircularProgressIndicator())
             : ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(bottom: 24),
                 children: [
-                  SwitchListTile(
-                    title: const Text('Erinnerungen'),
-                    subtitle: const Text(
-                      'Benachrichtigt dich, während die App geöffnet ist, wenn ein Budget '
-                      'überschritten oder eine Ausgabenspitze erkannt wird. Keine '
-                      'Hintergrund-Benachrichtigungen bei geschlossener App; unter Windows '
-                      'derzeit nicht unterstützt.',
-                    ),
-                    value: notificationsEnabled,
-                    onChanged: (value) async {
-                      if (value) {
-                        await const NotificationService().initialize();
-                      }
-                      await ref.read(notificationsEnabledProvider.notifier).setEnabled(value);
-                    },
+                  const AppleLargeTitle('Einstellungen'),
+                  const AppleSectionHeader('Erinnerungen'),
+                  AppleGroupedSection(
+                    children: [
+                      SwitchListTile(
+                        title: const Text('Erinnerungen'),
+                        subtitle: const Text(
+                          'Benachrichtigt dich, während die App geöffnet ist, wenn ein Budget '
+                          'überschritten oder eine Ausgabenspitze erkannt wird. Keine '
+                          'Hintergrund-Benachrichtigungen bei geschlossener App; unter Windows '
+                          'derzeit nicht unterstützt.',
+                        ),
+                        value: notificationsEnabled,
+                        onChanged: (value) async {
+                          if (value) {
+                            await const NotificationService().initialize();
+                          }
+                          await ref.read(notificationsEnabledProvider.notifier).setEnabled(value);
+                        },
+                      ),
+                    ],
                   ),
-                  const Divider(height: 32),
-                  Text('Demo-Modus', style: Theme.of(context).textTheme.titleMedium),
+                  const AppleSectionHeader('Demo-Modus'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Lädt realistische Beispieldaten (Personen, Konten, Buchungen über 3 Monate, '
+                      'Firmenwagen, Gehaltsabrechnungen, Vermögenswerte) zum Ausprobieren aller Funktionen. '
+                      'Alle Demo-Einträge sind klar mit "(Demo)" gekennzeichnet und lassen sich jederzeit '
+                      'gesammelt wieder entfernen, ohne eigene Daten zu berühren.',
+                      style: TextStyle(color: colors.secondaryLabel),
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Lädt realistische Beispieldaten (Personen, Konten, Buchungen über 3 Monate, '
-                    'Firmenwagen, Gehaltsabrechnungen, Vermögenswerte) zum Ausprobieren aller Funktionen. '
-                    'Alle Demo-Einträge sind klar mit "(Demo)" gekennzeichnet und lassen sich jederzeit '
-                    'gesammelt wieder entfernen, ohne eigene Daten zu berühren.',
+                  AppleGroupedSection(
+                    children: [
+                      ListTile(
+                        leading: const Icon(CupertinoIcons.sparkles),
+                        title: Text(demoDataLoaded ? 'Demodaten aktualisieren' : 'Demodaten laden'),
+                        onTap: _loadDemoData,
+                      ),
+                      if (demoDataLoaded)
+                        ListTile(
+                          leading: Icon(CupertinoIcons.trash, color: colors.danger),
+                          title: Text('Demodaten entfernen', style: TextStyle(color: colors.danger)),
+                          onTap: _removeDemoData,
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: _loadDemoData,
-                    icon: const Icon(Icons.auto_awesome_outlined),
-                    label: Text(demoDataLoaded ? 'Demodaten aktualisieren' : 'Demodaten laden'),
-                  ),
-                  if (demoDataLoaded) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _removeDemoData,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Demodaten entfernen'),
-                    ),
-                  ],
                 ],
               ),
       ),

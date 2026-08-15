@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -8,7 +9,9 @@ import '../providers/category_providers.dart';
 import '../providers/company_car_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 import '../widgets/month_selector.dart';
 
 const _firmenwagenCategoryId = 'mobilitaet';
@@ -31,26 +34,31 @@ class CompanyCarScreen extends ConsumerWidget {
         .where((t) => t.categoryId == _firmenwagenCategoryId && t.subcategoryId == _firmenwagenSubcategoryId)
         .fold<double>(0, (s, t) => s + t.amount.abs());
 
+    final colors = context.appleColors;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Firmenwagen')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(bottom: 96),
           children: [
-            MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
-            const SizedBox(height: 12),
-            Card(
+            const AppleLargeTitle('Firmenwagen'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: MonthSelector(month: month, onChanged: (m) => ref.read(selectedMonthProvider.notifier).state = m),
+            ),
+            AppleCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Tatsächliche Firmenwagen-Kosten', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Tatsächliche Firmenwagen-Kosten', style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Summe aller Buchungen in Kategorie "Mobilität → Firmenwagen" '
                       '(z. B. Eigenanteil, Kraftstoff, Versicherung).',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      style: TextStyle(color: colors.secondaryLabel, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -71,13 +79,11 @@ class CompanyCarScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text('Fahrzeuge', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const AppleSectionHeader('Fahrzeuge'),
             if (cars.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Noch kein Firmenwagen erfasst.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Text('Noch kein Firmenwagen erfasst.', style: TextStyle(color: colors.secondaryLabel)),
               )
             else
               for (final car in cars) _CompanyCarTile(car: car, month: month),
@@ -86,7 +92,7 @@ class CompanyCarScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCarDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(CupertinoIcons.add),
         label: const Text('Firmenwagen'),
       ),
     );
@@ -181,8 +187,9 @@ class _CompanyCarTile extends ConsumerWidget {
     final person = car.personId != null ? ref.watch(personByIdProvider(car.personId!)) : null;
     final firmenwagenCategory = ref.watch(categoryByIdProvider(_firmenwagenCategoryId));
     final hasFirmenwagenSubcategory = firmenwagenCategory?.subcategories.any((s) => s.id == _firmenwagenSubcategoryId) ?? false;
+    final colors = context.appleColors;
 
-    return Card(
+    return AppleCard(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -195,16 +202,16 @@ class _CompanyCarTile extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(car.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      if (person != null) Text(person.name, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      if (person != null) Text(person.name, style: TextStyle(color: colors.secondaryLabel, fontSize: 12)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const Icon(CupertinoIcons.pencil),
                   onPressed: () => _showCarDialog(context, ref, existing: car),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline),
+                  icon: Icon(CupertinoIcons.trash, color: colors.danger),
                   onPressed: () async {
                     await ref.read(companyCarNotifierProvider.notifier).remove(car.id);
                   },
@@ -228,7 +235,7 @@ class _CompanyCarTile extends ConsumerWidget {
             ),
             if (car.notes != null) ...[
               const SizedBox(height: 4),
-              Text(car.notes!, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Text(car.notes!, style: TextStyle(color: colors.secondaryLabel, fontSize: 12)),
             ],
             if (car.monthlyEmployeeContribution > 0) ...[
               const SizedBox(height: 8),
@@ -236,7 +243,7 @@ class _CompanyCarTile extends ConsumerWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: OutlinedButton.icon(
-                    icon: const Icon(Icons.add),
+                    icon: const Icon(CupertinoIcons.add),
                     label: Text('Eigenanteil für ${monthYearFormat.format(month)} erfassen'),
                     onPressed: () async {
                       final transaction = Transaction(
@@ -259,10 +266,10 @@ class _CompanyCarTile extends ConsumerWidget {
                   ),
                 )
               else
-                const Text(
+                Text(
                   'Kategorie "Mobilität → Firmenwagen" wurde gelöscht/umbenannt - bitte in den '
                   'Kategorien wiederherstellen, um den Eigenanteil hier direkt erfassen zu können.',
-                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                  style: TextStyle(color: colors.warning, fontSize: 12),
                 ),
             ],
           ],

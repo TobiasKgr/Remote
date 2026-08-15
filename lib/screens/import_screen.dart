@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -13,7 +14,9 @@ import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
 import '../services/pdf_import_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 
 class _DraftRow {
   _DraftRow({required this.date, required String description, required double amount, this.ambiguous = false})
@@ -146,12 +149,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PDF-Import'),
+        title: const SizedBox.shrink(),
         actions: [
           if (_drafts.isNotEmpty)
             TextButton(
               onPressed: selectedCount == 0 ? null : _saveSelected,
-              child: Text('Speichern ($selectedCount)', style: const TextStyle(color: Colors.white)),
+              child: Text('Speichern ($selectedCount)'),
             ),
         ],
       ),
@@ -161,48 +164,56 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             : _drafts.isEmpty
                 ? _buildEmptyState(context)
                 : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _drafts.length,
-                    itemBuilder: (context, index) => _buildDraftCard(context, _drafts[index], categories, persons, accounts),
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: _drafts.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) return const AppleLargeTitle('PDF-Import');
+                      return _buildDraftCard(context, _drafts[index - 1], categories, persons, accounts);
+                    },
                   ),
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.picture_as_pdf_outlined, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              'Kontoauszug als PDF importieren',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Die Erkennung ist eine Heuristik für gängige deutsche Kontoauszug-Layouts. '
-              'Bitte alle erkannten Buchungen vor dem Speichern prüfen.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
+    final colors = context.appleColors;
+    return ListView(
+      children: [
+        const AppleLargeTitle('PDF-Import'),
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 24),
+              Icon(CupertinoIcons.doc_text, size: 64, color: colors.secondaryLabel),
+              const SizedBox(height: 16),
+              Text(
+                'Kontoauszug als PDF importieren',
+                style: Theme.of(context).textTheme.headlineMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Die Erkennung ist eine Heuristik für gängige deutsche Kontoauszug-Layouts. '
+                'Bitte alle erkannten Buchungen vor dem Speichern prüfen.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: colors.danger)),
+              ],
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _pickAndParse,
+                icon: const Icon(CupertinoIcons.arrow_up_doc_fill),
+                label: const Text('PDF auswählen'),
+              ),
             ],
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _pickAndParse,
-              icon: const Icon(Icons.upload_file),
-              label: const Text('PDF auswählen'),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -222,8 +233,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       draft.subcategoryId = null;
     }
 
+    final colors = context.appleColors;
     return Card(
-      color: draft.ambiguous ? Colors.amber.withValues(alpha: 0.08) : null,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      color: draft.ambiguous ? colors.warning.withValues(alpha: 0.1) : null,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -235,9 +248,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 Text(dateFormat.format(draft.date)),
                 const Spacer(),
                 if (draft.ambiguous)
-                  const Tooltip(
+                  Tooltip(
                     message: 'Vorzeichen (Einnahme/Ausgabe) konnte nicht sicher erkannt werden - bitte prüfen.',
-                    child: Icon(Icons.warning_amber, color: Colors.amber, size: 20),
+                    child: Icon(CupertinoIcons.exclamationmark_triangle, color: colors.warning, size: 20),
                   ),
                 const SizedBox(width: 8),
                 ChoiceChip(

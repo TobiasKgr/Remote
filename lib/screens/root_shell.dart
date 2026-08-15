@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +10,7 @@ import '../providers/settings_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/notification_service.dart';
 import '../services/optimization_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import 'categories_screen.dart';
 import 'dashboard_screen.dart';
@@ -30,12 +34,12 @@ class _RootShellState extends ConsumerState<RootShell> {
   final Set<String> _notifiedKeys = {};
 
   static const _destinations = [
-    NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Übersicht'),
-    NavigationDestination(icon: Icon(Icons.list_alt_outlined), selectedIcon: Icon(Icons.list_alt), label: 'Buchungen'),
-    NavigationDestination(icon: Icon(Icons.upload_file_outlined), selectedIcon: Icon(Icons.upload_file), label: 'Import'),
-    NavigationDestination(icon: Icon(Icons.payments_outlined), selectedIcon: Icon(Icons.payments), label: 'Gehalt'),
-    NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Jahr'),
-    NavigationDestination(icon: Icon(Icons.category_outlined), selectedIcon: Icon(Icons.category), label: 'Kategorien'),
+    NavigationDestination(icon: Icon(CupertinoIcons.house), selectedIcon: Icon(CupertinoIcons.house_fill), label: 'Übersicht'),
+    NavigationDestination(icon: Icon(CupertinoIcons.list_bullet), selectedIcon: Icon(CupertinoIcons.list_bullet), label: 'Buchungen'),
+    NavigationDestination(icon: Icon(CupertinoIcons.arrow_up_doc), selectedIcon: Icon(CupertinoIcons.arrow_up_doc_fill), label: 'Import'),
+    NavigationDestination(icon: Icon(CupertinoIcons.money_euro_circle), selectedIcon: Icon(CupertinoIcons.money_euro_circle_fill), label: 'Gehalt'),
+    NavigationDestination(icon: Icon(CupertinoIcons.calendar), selectedIcon: Icon(CupertinoIcons.calendar), label: 'Jahr'),
+    NavigationDestination(icon: Icon(CupertinoIcons.square_grid_2x2), selectedIcon: Icon(CupertinoIcons.square_grid_2x2_fill), label: 'Kategorien'),
   ];
 
   static const _screens = [
@@ -67,20 +71,29 @@ class _RootShellState extends ConsumerState<RootShell> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= 700;
+    final separator = context.appleColors.separator;
 
     if (isWide) {
       return Scaffold(
         body: Row(
           children: [
-            NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              labelType: NavigationRailLabelType.all,
-              destinations: _destinations
-                  .map((d) => NavigationRailDestination(icon: d.icon, selectedIcon: d.selectedIcon, label: Text(d.label)))
-                  .toList(),
+            ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(border: Border(right: BorderSide(color: separator, width: 0.5))),
+                  child: NavigationRail(
+                    selectedIndex: _index,
+                    onDestinationSelected: (i) => setState(() => _index = i),
+                    labelType: NavigationRailLabelType.all,
+                    backgroundColor: context.appleColors.secondaryGroupedBackground.withValues(alpha: 0.75),
+                    destinations: _destinations
+                        .map((d) => NavigationRailDestination(icon: d.icon, selectedIcon: d.selectedIcon, label: Text(d.label)))
+                        .toList(),
+                  ),
+                ),
+              ),
             ),
-            const VerticalDivider(width: 1),
             Expanded(child: _screens[_index]),
           ],
         ),
@@ -89,10 +102,21 @@ class _RootShellState extends ConsumerState<RootShell> {
 
     return Scaffold(
       body: _screens[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: _destinations,
+      // iOS tab bars are a translucent, blurred material sitting on top of
+      // the content rather than an opaque bar - BackdropFilter + a
+      // semi-transparent NavigationBar (see AppTheme) reproduces that.
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: DecoratedBox(
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: separator, width: 0.5))),
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              destinations: _destinations,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import '../utils/formatters.dart';
@@ -14,7 +15,7 @@ class MonthSelector extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: const Icon(Icons.chevron_left),
+          icon: const Icon(CupertinoIcons.chevron_left),
           onPressed: () => onChanged(DateTime(month.year, month.month - 1)),
         ),
         SizedBox(
@@ -26,7 +27,7 @@ class MonthSelector extends StatelessWidget {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.chevron_right),
+          icon: const Icon(CupertinoIcons.chevron_right),
           onPressed: () => onChanged(DateTime(month.year, month.month + 1)),
         ),
       ],

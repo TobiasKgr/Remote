@@ -58,7 +58,10 @@ class CategoryBreakdownChart extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(width: 12, height: 12, color: Color(t.category.colorValue)),
+                  DecoratedBox(
+                    decoration: BoxDecoration(color: Color(t.category.colorValue), borderRadius: BorderRadius.circular(3)),
+                    child: const SizedBox(width: 12, height: 12),
+                  ),
                   const SizedBox(width: 6),
                   Text('${t.category.name}: ${currencyFormat.format(t.total)}'),
                 ],

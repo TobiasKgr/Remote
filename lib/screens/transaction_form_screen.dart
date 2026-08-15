@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -8,7 +9,9 @@ import '../providers/account_providers.dart';
 import '../providers/category_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/apple_widgets.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   const TransactionFormScreen({super.key, this.existing});
@@ -74,122 +77,137 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         actions: [
           if (widget.existing != null)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: Icon(CupertinoIcons.trash, color: context.appleColors.danger),
               onPressed: () async {
                 await ref.read(transactionNotifierProvider.notifier).remove(widget.existing!.id);
                 if (context.mounted) Navigator.of(context).pop();
               },
             ),
+          TextButton(onPressed: _save, child: const Text('Sichern')),
         ],
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Ausgabe'), icon: Icon(Icons.arrow_upward)),
-                ButtonSegment(value: true, label: Text('Einnahme'), icon: Icon(Icons.arrow_downward)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Ausgabe'), icon: Icon(CupertinoIcons.arrow_up)),
+                  ButtonSegment(value: true, label: Text('Einnahme'), icon: Icon(CupertinoIcons.arrow_down)),
+                ],
+                selected: {_isIncome},
+                onSelectionChanged: (s) => setState(() {
+                  _isIncome = s.first;
+                  _categoryId = null;
+                  _subcategoryId = null;
+                }),
+              ),
+            ),
+            const AppleSectionHeader('Details'),
+            AppleGroupedSection(
+              children: [
+                ListTile(
+                  title: const Text('Datum'),
+                  subtitle: Text(dateFormat.format(_date)),
+                  trailing: const Icon(CupertinoIcons.calendar_today),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _date,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) setState(() => _date = picked);
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(labelText: 'Beschreibung', filled: false, border: InputBorder.none),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Bitte angeben' : null,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextFormField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(labelText: 'Betrag (€)', prefixText: '€ ', filled: false, border: InputBorder.none),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Bitte angeben';
+                      final parsed = double.tryParse(v.replaceAll(',', '.'));
+                      if (parsed == null || parsed <= 0) return 'Ungültiger Betrag';
+                      return null;
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _categoryId,
+                    decoration: const InputDecoration(labelText: 'Kategorie', filled: false, border: InputBorder.none),
+                    items: relevantCategories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                    onChanged: (v) => setState(() {
+                      _categoryId = v;
+                      _subcategoryId = null;
+                    }),
+                    validator: (v) => v == null ? 'Bitte wählen' : null,
+                  ),
+                ),
+                if (subcategories.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _subcategoryId,
+                      decoration: const InputDecoration(labelText: 'Unterkategorie (optional)', filled: false, border: InputBorder.none),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('—')),
+                        ...subcategories.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
+                      ],
+                      onChanged: (v) => setState(() => _subcategoryId = v),
+                    ),
+                  ),
+                if (persons.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _personId,
+                      decoration: const InputDecoration(labelText: 'Person', filled: false, border: InputBorder.none),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Gemeinsam')),
+                        ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+                      ],
+                      onChanged: (v) => setState(() => _personId = v),
+                    ),
+                  ),
+                if (accounts.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _accountId,
+                      decoration: const InputDecoration(labelText: 'Konto (optional)', filled: false, border: InputBorder.none),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('—')),
+                        ...accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
+                      ],
+                      onChanged: (v) => setState(() => _accountId = v),
+                    ),
+                  ),
               ],
-              selected: {_isIncome},
-              onSelectionChanged: (s) => setState(() {
-                _isIncome = s.first;
-                _categoryId = null;
-                _subcategoryId = null;
-              }),
             ),
-            const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Datum'),
-              subtitle: Text(dateFormat.format(_date)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _date,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) setState(() => _date = picked);
-              },
-            ),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Beschreibung'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Bitte angeben' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _amountController,
-              decoration: const InputDecoration(labelText: 'Betrag (€)', prefixText: '€ '),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Bitte angeben';
-                final parsed = double.tryParse(v.replaceAll(',', '.'));
-                if (parsed == null || parsed <= 0) return 'Ungültiger Betrag';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _categoryId,
-              decoration: const InputDecoration(labelText: 'Kategorie'),
-              items: relevantCategories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-              onChanged: (v) => setState(() {
-                _categoryId = v;
-                _subcategoryId = null;
-              }),
-              validator: (v) => v == null ? 'Bitte wählen' : null,
-            ),
-            if (subcategories.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _subcategoryId,
-                decoration: const InputDecoration(labelText: 'Unterkategorie (optional)'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('—')),
-                  ...subcategories.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
-                ],
-                onChanged: (v) => setState(() => _subcategoryId = v),
-              ),
-            ],
-            if (persons.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _personId,
-                decoration: const InputDecoration(labelText: 'Person'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Gemeinsam')),
-                  ...persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
-                ],
-                onChanged: (v) => setState(() => _personId = v),
-              ),
-            ],
-            if (accounts.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _accountId,
-                decoration: const InputDecoration(labelText: 'Konto (optional)'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('—')),
-                  ...accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
-                ],
-                onChanged: (v) => setState(() => _accountId = v),
-              ),
-            ],
-            const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Wiederkehrend (z. B. Abo)'),
-              value: _isRecurring,
-              onChanged: (v) => setState(() => _isRecurring = v),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _save,
-              child: const Text('Speichern'),
+            const AppleSectionHeader('Wiederholung'),
+            AppleGroupedSection(
+              children: [
+                SwitchListTile(
+                  title: const Text('Wiederkehrend (z. B. Abo)'),
+                  value: _isRecurring,
+                  onChanged: (v) => setState(() => _isRecurring = v),
+                ),
+              ],
             ),
           ],
         ),

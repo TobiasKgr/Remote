@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -6,18 +7,9 @@ import '../models/asset.dart';
 import '../providers/account_providers.dart';
 import '../providers/asset_providers.dart';
 import '../providers/person_providers.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
-
-const _availableColors = [
-  Colors.indigo,
-  Colors.teal,
-  Colors.orange,
-  Colors.green,
-  Colors.purple,
-  Colors.brown,
-  Colors.blueGrey,
-  Colors.red,
-];
+import '../widgets/apple_widgets.dart';
 
 String assetCategoryLabel(AssetCategory category) => switch (category) {
       AssetCategory.investment => 'Investment/Depot',
@@ -39,60 +31,56 @@ class AssetsScreen extends ConsumerWidget {
     final ownedAssets = assets.where((a) => !a.isLiability).toList();
     final liabilities = assets.where((a) => a.isLiability).toList();
 
+    final colors = context.appleColors;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Vermögensübersicht')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.only(bottom: 96),
           children: [
-            Card(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Netto-Vermögen', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      currencyFormat.format(netWorth),
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Summe aller Kontostände plus Vermögenswerte, abzüglich Kredite/Schulden.',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
+            const AppleLargeTitle('Vermögensübersicht'),
+            AppleHeroCard(
+              label: 'Netto-Vermögen',
+              value: currencyFormat.format(netWorth),
+              subtitle: 'Summe aller Kontostände plus Vermögenswerte, abzüglich Kredite/Schulden.',
+              valueColor: netWorth >= 0 ? colors.success : colors.danger,
             ),
-            const SizedBox(height: 16),
             if (accounts.isNotEmpty) ...[
-              Text('Konten', style: Theme.of(context).textTheme.titleMedium),
-              for (final account in accounts)
-                Card(
-                  child: ListTile(
-                    leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: const Icon(Icons.account_balance, color: Colors.white, size: 18)),
-                    title: Text(account.name),
-                    trailing: Text(currencyFormat.format(accountBalances[account.id] ?? 0)),
-                  ),
-                ),
-              const SizedBox(height: 16),
+              const AppleSectionHeader('Konten'),
+              AppleGroupedSection(
+                children: [
+                  for (final account in accounts)
+                    ListTile(
+                      leading: CircleAvatar(backgroundColor: Color(account.colorValue), child: const Icon(CupertinoIcons.building_2_fill, color: Colors.white, size: 18)),
+                      title: Text(account.name),
+                      trailing: Text(currencyFormat.format(accountBalances[account.id] ?? 0)),
+                    ),
+                ],
+              ),
             ],
-            Text('Vermögenswerte', style: Theme.of(context).textTheme.titleMedium),
-            if (ownedAssets.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Noch keine Vermögenswerte erfasst.')),
-            for (final asset in ownedAssets) _AssetTile(asset: asset),
-            const SizedBox(height: 16),
-            Text('Kredite/Schulden', style: Theme.of(context).textTheme.titleMedium),
-            if (liabilities.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Keine Kredite/Schulden erfasst.')),
-            for (final asset in liabilities) _AssetTile(asset: asset),
+            const AppleSectionHeader('Vermögenswerte'),
+            if (ownedAssets.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text('Noch keine Vermögenswerte erfasst.', style: TextStyle(color: colors.secondaryLabel)),
+              )
+            else
+              AppleGroupedSection(children: [for (final asset in ownedAssets) _AssetTile(asset: asset)]),
+            const AppleSectionHeader('Kredite/Schulden'),
+            if (liabilities.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text('Keine Kredite/Schulden erfasst.', style: TextStyle(color: colors.secondaryLabel)),
+              )
+            else
+              AppleGroupedSection(children: [for (final asset in liabilities) _AssetTile(asset: asset)]),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAssetDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(CupertinoIcons.add),
         label: const Text('Eintrag'),
       ),
     );
@@ -106,7 +94,7 @@ Future<void> _showAssetDialog(BuildContext context, WidgetRef ref, {Asset? exist
   final persons = ref.read(personNotifierProvider);
   AssetCategory category = existing?.category ?? AssetCategory.investment;
   String? personId = existing?.personId;
-  Color color = existing != null ? Color(existing.colorValue) : _availableColors.first;
+  Color color = existing != null ? Color(existing.colorValue) : AppleColors.pickerPalette.first;
 
   final saved = await showDialog<bool>(
     context: context,
@@ -149,13 +137,13 @@ Future<void> _showAssetDialog(BuildContext context, WidgetRef ref, {Asset? exist
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
-                children: _availableColors
+                children: AppleColors.pickerPalette
                     .map((c) => GestureDetector(
                           onTap: () => setStateDialog(() => color = c),
                           child: CircleAvatar(
                             backgroundColor: c,
                             radius: 16,
-                            child: color.toARGB32() == c.toARGB32() ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                            child: color.toARGB32() == c.toARGB32() ? const Icon(CupertinoIcons.check_mark, color: Colors.white, size: 18) : null,
                           ),
                         ))
                     .toList(),
@@ -194,34 +182,33 @@ class _AssetTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final person = asset.personId != null ? ref.watch(personByIdProvider(asset.personId!)) : null;
     final subtitleParts = [assetCategoryLabel(asset.category), if (person != null) person.name, if (asset.notes != null) asset.notes!];
+    final colors = context.appleColors;
 
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(backgroundColor: Color(asset.colorValue), child: Icon(asset.isLiability ? Icons.trending_down : Icons.trending_up, color: Colors.white, size: 18)),
-        title: Text(asset.name),
-        subtitle: Text(subtitleParts.join(' · ')),
-        trailing: Text(
-          currencyFormat.format(asset.isLiability ? -asset.value : asset.value),
-          style: TextStyle(fontWeight: FontWeight.bold, color: asset.isLiability ? Colors.red : Colors.green),
-        ),
-        onTap: () => _showAssetDialog(context, ref, existing: asset),
-        onLongPress: () async {
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Eintrag löschen?'),
-              content: Text('"${asset.name}" wirklich löschen?'),
-              actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Abbrechen')),
-                FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Löschen')),
-              ],
-            ),
-          );
-          if (confirmed == true) {
-            await ref.read(assetNotifierProvider.notifier).remove(asset.id);
-          }
-        },
+    return ListTile(
+      leading: CircleAvatar(backgroundColor: Color(asset.colorValue), child: Icon(asset.isLiability ? CupertinoIcons.arrow_down_right : CupertinoIcons.arrow_up_right, color: Colors.white, size: 18)),
+      title: Text(asset.name),
+      subtitle: Text(subtitleParts.join(' · ')),
+      trailing: Text(
+        currencyFormat.format(asset.isLiability ? -asset.value : asset.value),
+        style: TextStyle(fontWeight: FontWeight.bold, color: asset.isLiability ? colors.danger : colors.success),
       ),
+      onTap: () => _showAssetDialog(context, ref, existing: asset),
+      onLongPress: () async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Eintrag löschen?'),
+            content: Text('"${asset.name}" wirklich löschen?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Abbrechen')),
+              FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Löschen')),
+            ],
+          ),
+        );
+        if (confirmed == true) {
+          await ref.read(assetNotifierProvider.notifier).remove(asset.id);
+        }
+      },
     );
   }
 }

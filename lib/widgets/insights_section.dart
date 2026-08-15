@@ -1,8 +1,11 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/insight_providers.dart';
 import '../services/optimization_service.dart';
+import '../theme/app_theme.dart';
+import 'apple_widgets.dart';
 
 /// Shows rule-based optimization hints for the currently selected month
 /// (e.g. duplicate subscriptions, spending spikes, long-running Abos).
@@ -18,8 +21,7 @@ class InsightsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Optimierungspotenzial', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        const AppleSectionHeader('Optimierungspotenzial'),
         for (final insight in insights) _InsightCard(insight: insight),
       ],
     );
@@ -34,12 +36,12 @@ class _InsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWarning = insight.severity == InsightSeverity.warning;
-    final color = isWarning ? Colors.amber.shade800 : Theme.of(context).colorScheme.primary;
+    final color = isWarning ? context.appleColors.warning : Theme.of(context).colorScheme.primary;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    return AppleCard(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: ListTile(
-        leading: Icon(isWarning ? Icons.lightbulb_outline : Icons.info_outline, color: color),
+        leading: Icon(isWarning ? CupertinoIcons.lightbulb : CupertinoIcons.info_circle, color: color),
         title: Text(insight.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(insight.description),
       ),
