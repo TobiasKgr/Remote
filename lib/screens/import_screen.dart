@@ -14,6 +14,7 @@ import '../models/person.dart';
 import '../models/transaction.dart';
 import '../providers/account_providers.dart';
 import '../providers/category_providers.dart';
+import '../providers/custom_import_profile_providers.dart';
 import '../providers/import_batch_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
@@ -25,6 +26,7 @@ import '../theme/app_theme.dart';
 import '../utils/description_normalizer.dart';
 import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
+import 'format_assistant_screen.dart';
 import 'recurring_payments_screen.dart';
 
 class _DraftRow {
@@ -138,6 +140,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final categories = ref.read(categoryNotifierProvider);
     final history = ref.read(transactionNotifierProvider);
     final categorizer = CategorizationService(categories, history: history);
+    final customProfiles = ref.read(customImportProfileNotifierProvider);
 
     // Checked against as each new draft is produced, so duplicates are
     // caught both against already-saved bookings and against earlier
@@ -155,7 +158,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       }
       PdfImportResult importResult;
       try {
-        importResult = await _pdfImportService.importFromBytesWithBalanceCheck(bytes);
+        importResult = await _pdfImportService.importFromBytesWithBalanceCheck(bytes, customProfiles: customProfiles);
       } catch (_) {
         failedFiles.add(name);
         continue;
@@ -423,6 +426,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 icon: const Icon(CupertinoIcons.arrow_up_doc_fill),
                 label: const Text('PDF auswählen'),
               ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FormatAssistantScreen())),
+                  icon: const Icon(CupertinoIcons.wand_stars),
+                  label: const Text('Format anlernen'),
+                ),
+              ],
             ],
           ),
         ),

@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import '../models/custom_import_profile.dart';
+import 'custom_format_parser.dart';
 import 'pdf_text_extractor.dart';
 import 'targobank_finanzstatus_parser.dart';
 
@@ -156,8 +158,11 @@ class PdfImportService {
   /// Like [importFromBytes], but also returns the opening/closing balance
   /// when the statement's layout carries one, so the caller can flag a
   /// mismatch between "Anfangssaldo + Buchungen" and "Endsaldo" instead of
-  /// silently trusting the parse.
-  Future<PdfImportResult> importFromBytesWithBalanceCheck(Uint8List bytes) async {
+  /// silently trusting the parse. [customProfiles] (from "Format anlernen",
+  /// see [FormatAssistantScreen]) are only tried as a last resort, when
+  /// neither the bank-specific nor the generic parser recognized anything -
+  /// among profiles that find something, the one with the most matches wins.
+  Future<PdfImportResult> importFromBytesWithBalanceCheck(Uint8List bytes, {List<CustomImportProfile> customProfiles = const []}) async {
     final text = await extractText(bytes);
 
     if (looksLikeTargobankFinanzstatus(text)) {
@@ -172,9 +177,19 @@ class PdfImportService {
       // Same fallback as parse(): an unrecognized row layout within an
       // otherwise-detected Finanzstatus falls back to the generic parser,
       // which has no balance markers to check against.
-      return PdfImportResult(transactions: _parseGenericStatement(text));
     }
-    return PdfImportResult(transactions: _parseGenericStatement(text));
+
+    final generic = _parseGenericStatement(text);
+    if (generic.isNotEmpty || customProfiles.isEmpty) {
+      return PdfImportResult(transactions: generic);
+    }
+
+    var best = <ParsedTransaction>[];
+    for (final profile in customProfiles) {
+      final result = parseWithCustomProfile(text, profile);
+      if (result.length > best.length) best = result;
+    }
+    return PdfImportResult(transactions: best);
   }
 
   String _cleanDescription(String raw) {

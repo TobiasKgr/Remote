@@ -7,6 +7,7 @@ import '../models/asset.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/company_car.dart';
+import '../models/custom_import_profile.dart';
 import '../models/import_batch.dart';
 import '../models/person.dart';
 import '../models/salary_slip.dart';
@@ -16,6 +17,7 @@ import '../repositories/asset_repository.dart';
 import '../repositories/budget_repository.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/company_car_repository.dart';
+import '../repositories/custom_import_profile_repository.dart';
 import '../repositories/import_batch_repository.dart';
 import '../repositories/person_repository.dart';
 import '../repositories/salary_slip_repository.dart';
@@ -40,6 +42,9 @@ final accountBoxProvider = Provider<Box<Account>>((ref) => Hive.box<Account>(acc
 final assetBoxProvider = Provider<Box<Asset>>((ref) => Hive.box<Asset>(assetBoxName));
 
 final importBatchBoxProvider = Provider<Box<ImportBatch>>((ref) => Hive.box<ImportBatch>(importBatchBoxName));
+
+final customImportProfileBoxProvider =
+    Provider<Box<CustomImportProfile>>((ref) => Hive.box<CustomImportProfile>(customImportProfileBoxName));
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository(ref.watch(categoryBoxProvider));
@@ -75,4 +80,8 @@ final assetRepositoryProvider = Provider<AssetRepository>((ref) {
 
 final importBatchRepositoryProvider = Provider<ImportBatchRepository>((ref) {
   return ImportBatchRepository(ref.watch(importBatchBoxProvider));
+});
+
+final customImportProfileRepositoryProvider = Provider<CustomImportProfileRepository>((ref) {
+  return CustomImportProfileRepository(ref.watch(customImportProfileBoxProvider));
 });

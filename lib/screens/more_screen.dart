@@ -6,6 +6,7 @@ import '../widgets/apple_widgets.dart';
 import 'accounts_screen.dart';
 import 'backup_screen.dart';
 import 'import_history_screen.dart';
+import 'format_assistant_screen.dart';
 import 'net_worth_history_screen.dart';
 import 'persons_screen.dart';
 import 'quick_entry_screen.dart';
@@ -81,6 +82,13 @@ class MoreScreen extends StatelessWidget {
                   iconColor: AppleColors.brown,
                   title: 'Import-Verlauf',
                   onTap: () => _push(context, const ImportHistoryScreen()),
+                ),
+                AppleSettingsRow(
+                  icon: CupertinoIcons.wand_stars,
+                  iconColor: AppleColors.purple,
+                  title: 'Format anlernen',
+                  subtitle: 'Für PDFs, die die App noch nicht erkennt',
+                  onTap: () => _push(context, const FormatAssistantScreen()),
                 ),
               ],
             ),
