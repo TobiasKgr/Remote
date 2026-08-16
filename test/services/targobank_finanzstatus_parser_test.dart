@@ -88,4 +88,57 @@ void main() {
     expect(result[1].amount, closeTo(2165.11, 0.001));
     expect(result[1].description, contains('LOHN'));
   });
+
+  test('parseTargobankFinanzstatusDetailed liefert Anfangs- und Endsaldo zusätzlich zu den Buchungen', () {
+    final result = parseTargobankFinanzstatusDetailed(sampleText);
+
+    expect(result.transactions, hasLength(2));
+    expect(result.openingBalanceSum, closeTo(1000.00, 0.001));
+    expect(result.closingBalanceSum, closeTo(2950.00, 0.001));
+
+    // Anfangssaldo + Buchungen ergibt den Endsaldo (-50 + 2000 = 1950 = 2950 - 1000).
+    final bookedTotal = result.transactions.fold<double>(0, (s, t) => s + t.amount);
+    expect(bookedTotal, closeTo(result.closingBalanceSum! - result.openingBalanceSum!, 0.001));
+  });
+
+  test('mehrere Kontenabschnitte: Anfangs-/Endsalden werden über alle Abschnitte aufsummiert', () {
+    const twoAccountsText = 'TARGOBANK AG\n'
+        'F I N A N Z S T A T U S vom 01.03.2026 - 31.03.2026\n'
+        'IBAN:DE02 3002 0900 5330 9009 16BIC CODE:CMCIDEDDTransaktionen\n'
+        'DatumTagBuchungstextAusgabenEinnahmenGuthaben/Kredit\n'
+        '28.02FR1.000,00ANFANGSSALDO\n'
+        '02.03MO50,00950,00SEPALASTSCHRIFTMusterVersicherungAGVertrag12345\n'
+        '31.03DI950,00ENDSALDO\n'
+        'IBAN:DE17 3002 0900 5281 2973 68BIC CODE:CMCIDEDDTransaktionen\n'
+        'DatumTagBuchungstextAusgabenEinnahmenGuthaben/Kredit\n'
+        '01.03SO3.000,00ANFANGSSALDO\n'
+        '31.03DI3.000,00ENDSALDO';
+
+    final result = parseTargobankFinanzstatusDetailed(twoAccountsText);
+
+    expect(result.openingBalanceSum, closeTo(1000.00 + 3000.00, 0.001));
+    expect(result.closingBalanceSum, closeTo(950.00 + 3000.00, 0.001));
+  });
+
+  test('fehlt eine Buchung im erkannten Layout, stimmt Anfangssaldo + Buchungen nicht mehr mit dem Endsaldo überein', () {
+    // Bewusst eine Buchungszeile in einem Format, das keine der beiden
+    // unterstützten Reihenfolgen (Betrag zuerst/zuletzt) trifft, damit sie
+    // unerkannt bleibt - simuliert einen Layout-Fall, den der Parser noch
+    // nicht abdeckt.
+    const textWithGap = 'TARGOBANK AG\n'
+        'F I N A N Z S T A T U S vom 01.03.2026 - 31.03.2026\n'
+        'IBAN:DE02 3002 0900 5330 9009 16BIC CODE:CMCIDEDDTransaktionen\n'
+        'DatumTagBuchungstextAusgabenEinnahmenGuthaben/Kredit\n'
+        '28.02FR1.000,00ANFANGSSALDO\n'
+        '02.03MO ??? nicht erkennbare Zeile ??? \n'
+        '31.03DI2.950,00ENDSALDO';
+
+    final result = parseTargobankFinanzstatusDetailed(textWithGap);
+
+    expect(result.transactions, isEmpty);
+    expect(result.openingBalanceSum, closeTo(1000.00, 0.001));
+    expect(result.closingBalanceSum, closeTo(2950.00, 0.001));
+    // 0 (nichts gebucht) != 2950 - 1000 = 1950 -> die Differenz muss auffallen.
+    expect(result.closingBalanceSum! - result.openingBalanceSum!, isNot(closeTo(0, 0.001)));
+  });
 }

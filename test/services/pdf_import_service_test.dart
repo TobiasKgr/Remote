@@ -52,4 +52,54 @@ void main() {
     final result = service.parse('Kontoauszug Nr. 3 Seite 1 von 2\nIBAN DE00 0000 0000 0000 00');
     expect(result, isEmpty);
   });
+
+  group('PdfImportResult (Saldo-Abgleich)', () {
+    test('stimmt Anfangssaldo + Buchungen mit Endsaldo überein, gibt es keinen Mismatch', () {
+      final result = PdfImportResult(
+        transactions: [
+          ParsedTransaction(date: DateTime(2026, 3, 2), description: 'Miete', amount: -750),
+          ParsedTransaction(date: DateTime(2026, 3, 5), description: 'Gehalt', amount: 3000),
+        ],
+        openingBalance: 1000,
+        closingBalance: 3250, // 1000 - 750 + 3000
+      );
+
+      expect(result.bookedTotal, closeTo(2250, 0.001));
+      expect(result.expectedTotal, closeTo(2250, 0.001));
+      expect(result.balanceDifference, closeTo(0, 0.001));
+      expect(result.hasBalanceMismatch, isFalse);
+    });
+
+    test('fehlt eine Buchung, weicht der Endsaldo ab und wird als Mismatch markiert', () {
+      final result = PdfImportResult(
+        transactions: [
+          ParsedTransaction(date: DateTime(2026, 3, 2), description: 'Miete', amount: -750),
+          // Das Gehalt fehlt hier - simuliert eine vom Parser übersehene Buchung.
+        ],
+        openingBalance: 1000,
+        closingBalance: 3250,
+      );
+
+      expect(result.balanceDifference, closeTo(-3000, 0.001));
+      expect(result.hasBalanceMismatch, isTrue);
+    });
+
+    test('Rundungsdifferenzen bis 0,01 € gelten nicht als Mismatch', () {
+      final result = PdfImportResult(
+        transactions: [ParsedTransaction(date: DateTime(2026, 3, 2), description: 'Miete', amount: -750.004)],
+        openingBalance: 1000,
+        closingBalance: 250,
+      );
+      expect(result.hasBalanceMismatch, isFalse);
+    });
+
+    test('ohne Saldo-Angaben (z.B. generisches Kontoauszug-Layout) ist kein Abgleich möglich, aber auch kein Fehler', () {
+      final result = PdfImportResult(
+        transactions: [ParsedTransaction(date: DateTime(2026, 3, 2), description: 'Miete', amount: -750)],
+      );
+      expect(result.expectedTotal, isNull);
+      expect(result.balanceDifference, isNull);
+      expect(result.hasBalanceMismatch, isFalse);
+    });
+  });
 }

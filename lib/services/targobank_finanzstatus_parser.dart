@@ -35,6 +35,27 @@ final _txnAmountLast = RegExp(r'^(.+?)(' + _amount + r')(' + _amount + r')(\s?-)
 
 double _parseAmount(String raw) => double.parse(raw.replaceAll('.', '').replaceAll(',', '.'));
 
+/// Result of [parseTargobankFinanzstatusDetailed]: the parsed bookings plus
+/// the running-balance markers found along the way, so a caller can check
+/// "Anfangssaldo + Summe der Buchungen = Endsaldo" as a sanity check on the
+/// parse itself. A document can contain more than one account section
+/// (e.g. Girokonto and Tagesgeldkonto), each with its own ANFANGSSALDO/
+/// ENDSALDO pair; both are simply summed across every section found, since
+/// the identity `Σ transactions == closingBalanceSum - openingBalanceSum`
+/// holds regardless of how many sections contributed to it - if it doesn't
+/// hold, some row wasn't recognized by the row-layout regexes.
+class TargobankParseResult {
+  const TargobankParseResult({required this.transactions, this.openingBalanceSum, this.closingBalanceSum});
+
+  final List<ParsedTransaction> transactions;
+
+  /// Null when no "ANFANGSSALDO" marker was found at all.
+  final double? openingBalanceSum;
+
+  /// Null when no "ENDSALDO" marker was found at all.
+  final double? closingBalanceSum;
+}
+
 /// Parses the "Monatsübersicht" transaction tables of a TARGOBANK
 /// "Finanzstatus" PDF.
 ///
@@ -49,7 +70,13 @@ double _parseAmount(String raw) => double.parse(raw.replaceAll('.', '').replaceA
 /// since those only ever carry a single stray amount (the hold amount,
 /// buried inside descriptive text) rather than two amounts immediately
 /// adjacent to each other.
-List<ParsedTransaction> parseTargobankFinanzstatus(String text) {
+List<ParsedTransaction> parseTargobankFinanzstatus(String text) => parseTargobankFinanzstatusDetailed(text).transactions;
+
+/// Same parsing as [parseTargobankFinanzstatus], additionally returning the
+/// ANFANGSSALDO/ENDSALDO markers found along the way (see
+/// [TargobankParseResult]) instead of only using them internally to derive
+/// each row's sign and discarding them afterwards.
+TargobankParseResult parseTargobankFinanzstatusDetailed(String text) {
   final periodMatch = RegExp(r'vom\s+(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2})\.(\d{2})\.(\d{4})').firstMatch(text);
   final endMonth = periodMatch != null ? int.parse(periodMatch.group(4)!) : DateTime.now().month;
   final endYear = periodMatch != null ? int.parse(periodMatch.group(6)!) : DateTime.now().year;
@@ -63,6 +90,8 @@ List<ParsedTransaction> parseTargobankFinanzstatus(String text) {
   final rowStarts = _rowStart.allMatches(text).toList();
   final results = <ParsedTransaction>[];
   double? previousBalance;
+  double? openingBalanceSum;
+  double? closingBalanceSum;
 
   for (var i = 0; i < rowStarts.length; i++) {
     final start = rowStarts[i];
@@ -74,13 +103,25 @@ List<ParsedTransaction> parseTargobankFinanzstatus(String text) {
     final saldoAmountFirst = _saldoAmountFirst.firstMatch(body);
     if (saldoAmountFirst != null) {
       final magnitude = _parseAmount(saldoAmountFirst.group(1)!);
-      previousBalance = saldoAmountFirst.group(2) != null ? -magnitude : magnitude;
+      final signed = saldoAmountFirst.group(2) != null ? -magnitude : magnitude;
+      previousBalance = signed;
+      if (saldoAmountFirst.group(3) == 'ANFANGSSALDO') {
+        openingBalanceSum = (openingBalanceSum ?? 0) + signed;
+      } else {
+        closingBalanceSum = (closingBalanceSum ?? 0) + signed;
+      }
       continue;
     }
     final saldoLabelFirst = _saldoLabelFirst.firstMatch(body);
     if (saldoLabelFirst != null) {
       final magnitude = _parseAmount(saldoLabelFirst.group(2)!);
-      previousBalance = saldoLabelFirst.group(3) != null ? -magnitude : magnitude;
+      final signed = saldoLabelFirst.group(3) != null ? -magnitude : magnitude;
+      previousBalance = signed;
+      if (saldoLabelFirst.group(1) == 'ANFANGSSALDO') {
+        openingBalanceSum = (openingBalanceSum ?? 0) + signed;
+      } else {
+        closingBalanceSum = (closingBalanceSum ?? 0) + signed;
+      }
       continue;
     }
     if (previousBalance == null) continue;
@@ -113,5 +154,5 @@ List<ParsedTransaction> parseTargobankFinanzstatus(String text) {
     ));
   }
 
-  return results;
+  return TargobankParseResult(transactions: results, openingBalanceSum: openingBalanceSum, closingBalanceSum: closingBalanceSum);
 }

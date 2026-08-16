@@ -16,7 +16,7 @@ import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
 import '../services/duplicate_detection_service.dart';
-import '../services/pdf_import_service.dart' show PdfImportService, ParsedTransaction;
+import '../services/pdf_import_service.dart' show PdfImportService, PdfImportResult;
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
@@ -59,6 +59,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   bool _loading = false;
   String? _error;
 
+  /// One entry per file whose "Anfangssaldo + Buchungen" didn't add up to
+  /// its own "Endsaldo" - shown as a non-blocking warning, since it means
+  /// a booking was likely missed rather than the import being unusable.
+  List<String> _balanceWarnings = [];
+
   @override
   void dispose() {
     for (final d in _drafts) {
@@ -72,6 +77,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _balanceWarnings = [];
     });
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -97,22 +103,31 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
       final drafts = <_DraftRow>[];
       final failedFiles = <String>[];
+      final balanceWarnings = <String>[];
       for (final file in result.files) {
         final bytes = file.bytes;
         if (bytes == null) {
           failedFiles.add(file.name);
           continue;
         }
-        List<ParsedTransaction> parsed;
+        PdfImportResult importResult;
         try {
-          parsed = await _pdfImportService.importFromBytes(bytes);
+          importResult = await _pdfImportService.importFromBytesWithBalanceCheck(bytes);
         } catch (_) {
           failedFiles.add(file.name);
           continue;
         }
+        final parsed = importResult.transactions;
         if (parsed.isEmpty) {
           failedFiles.add(file.name);
           continue;
+        }
+        if (importResult.hasBalanceMismatch) {
+          final diff = importResult.balanceDifference!;
+          balanceWarnings.add(
+            '${file.name}: Differenz von ${currencyFormat.format(diff.abs())} zwischen erkannten Buchungen und '
+            'Endsaldo - bitte Import prüfen.',
+          );
         }
         for (final p in parsed) {
           final isDuplicate = isDuplicateBooking(date: p.date, amount: p.amount, description: p.description, existing: seenSoFar);
@@ -128,6 +143,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       setState(() {
         _drafts = drafts;
         _loading = false;
+        _balanceWarnings = balanceWarnings;
         if (failedFiles.isEmpty) {
           _error = null;
         } else if (drafts.isEmpty) {
@@ -185,7 +201,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       d.descriptionController.dispose();
       d.amountController.dispose();
     }
-    setState(() => _drafts = []);
+    setState(() {
+      _drafts = [];
+      _balanceWarnings = [];
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${transactions.length} Buchungen importiert.')),
     );
@@ -216,12 +235,50 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 ? _buildEmptyState(context)
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 12),
-                    itemCount: _drafts.length + 1,
+                    itemCount: _drafts.length + 1 + (_balanceWarnings.isEmpty ? 0 : 1),
                     itemBuilder: (context, index) {
                       if (index == 0) return const AppleLargeTitle('PDF-Import');
+                      if (_balanceWarnings.isNotEmpty) {
+                        if (index == 1) return _buildBalanceWarningBanner(context);
+                        return _buildDraftCard(context, _drafts[index - 2], categories, persons, accounts);
+                      }
                       return _buildDraftCard(context, _drafts[index - 1], categories, persons, accounts);
                     },
                   ),
+      ),
+    );
+  }
+
+  Widget _buildBalanceWarningBanner(BuildContext context) {
+    final colors = context.appleColors;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      color: colors.warning.withValues(alpha: 0.15),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(CupertinoIcons.exclamationmark_triangle_fill, color: colors.warning, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Achtung: Saldo-Abgleich zeigt eine Abweichung - Import als unsicher markiert',
+                    style: TextStyle(color: colors.warning, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            for (final warning in _balanceWarnings)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(warning, style: TextStyle(color: colors.warning)),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -22,6 +22,41 @@ class ParsedTransaction {
   final bool amountAmbiguous;
 }
 
+/// Result of parsing one statement PDF, plus its opening/closing balance
+/// when the layout carries one (currently only the TARGOBANK Finanzstatus
+/// parser does) - lets a caller sanity-check that "Anfangssaldo + Summe der
+/// Buchungen = Endsaldo" instead of silently trusting whatever the
+/// heuristic parser happened to recognize.
+class PdfImportResult {
+  const PdfImportResult({required this.transactions, this.openingBalance, this.closingBalance});
+
+  final List<ParsedTransaction> transactions;
+  final double? openingBalance;
+  final double? closingBalance;
+
+  double get bookedTotal => transactions.fold<double>(0, (sum, t) => sum + t.amount);
+
+  /// Null when the statement's layout doesn't carry balance markers at all
+  /// (nothing to check against, not an error).
+  double? get expectedTotal => (openingBalance != null && closingBalance != null) ? closingBalance! - openingBalance! : null;
+
+  /// Signed difference between what was actually booked and what the
+  /// statement's own balances imply should have been booked; null when
+  /// [expectedTotal] can't be computed.
+  double? get balanceDifference {
+    final expected = expectedTotal;
+    return expected == null ? null : bookedTotal - expected;
+  }
+
+  /// True when the difference exceeds a small rounding tolerance - a sign
+  /// that some booking was missed or misparsed. Doesn't necessarily mean
+  /// the import is wrong; it means it should be double-checked.
+  bool get hasBalanceMismatch {
+    final diff = balanceDifference;
+    return diff != null && diff.abs() > 0.01;
+  }
+}
+
 /// Extracts raw text from PDF bank statements and parses it into
 /// transaction candidates.
 ///
@@ -116,6 +151,30 @@ class PdfImportService {
   Future<List<ParsedTransaction>> importFromBytes(Uint8List bytes) async {
     final text = await extractText(bytes);
     return parse(text);
+  }
+
+  /// Like [importFromBytes], but also returns the opening/closing balance
+  /// when the statement's layout carries one, so the caller can flag a
+  /// mismatch between "Anfangssaldo + Buchungen" and "Endsaldo" instead of
+  /// silently trusting the parse.
+  Future<PdfImportResult> importFromBytesWithBalanceCheck(Uint8List bytes) async {
+    final text = await extractText(bytes);
+
+    if (looksLikeTargobankFinanzstatus(text)) {
+      final detailed = parseTargobankFinanzstatusDetailed(text);
+      if (detailed.transactions.isNotEmpty) {
+        return PdfImportResult(
+          transactions: detailed.transactions,
+          openingBalance: detailed.openingBalanceSum,
+          closingBalance: detailed.closingBalanceSum,
+        );
+      }
+      // Same fallback as parse(): an unrecognized row layout within an
+      // otherwise-detected Finanzstatus falls back to the generic parser,
+      // which has no balance markers to check against.
+      return PdfImportResult(transactions: _parseGenericStatement(text));
+    }
+    return PdfImportResult(transactions: _parseGenericStatement(text));
   }
 
   String _cleanDescription(String raw) {
