@@ -12,6 +12,7 @@ import '../providers/person_providers.dart';
 import '../providers/salary_slip_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
+import '../services/salary_duplicate_detection_service.dart';
 import '../services/salary_slip_parser_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -245,8 +246,21 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
     );
 
     final txNotifier = ref.read(transactionNotifierProvider.notifier);
+    var createTransaction = _createTransaction;
 
-    if (_createTransaction) {
+    // Only relevant when a transaction would be newly created - if one is
+    // already linked, this save is just updating it in place, not adding a
+    // second booking.
+    if (createTransaction && slip.linkedTransactionId == null) {
+      final match = findLikelyMatchingIncome(date: slip.period, amount: slip.net, existing: ref.read(transactionNotifierProvider));
+      if (match != null) {
+        final takeOver = await _confirmDuplicateIncome(match);
+        if (!mounted) return;
+        createTransaction = takeOver;
+      }
+    }
+
+    if (createTransaction) {
       final categories = ref.read(categoryNotifierProvider);
       final match = CategorizationService(categories).suggest('gehalt');
       final categoryId = match?.categoryId ?? CategorizationService(categories).fallbackCategoryId(true);
@@ -287,5 +301,28 @@ class _SalarySlipFormScreenState extends ConsumerState<SalarySlipFormScreen> {
     }
 
     if (mounted) Navigator.of(context).pop();
+  }
+
+  /// Asks whether to still create the Gehalt-linked transaction even though
+  /// [match] - an existing income transaction in the same month with a
+  /// similar amount, most likely picked up via a Kontoauszug-Import - looks
+  /// like it could be the same payment.
+  Future<bool> _confirmDuplicateIncome(Transaction match) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mögliches Duplikat'),
+        content: Text(
+          'Im selben Monat existiert bereits eine ähnliche Einnahme-Buchung (vermutlich aus einem '
+          'Kontoauszug-Import): "${match.description}" über ${currencyFormat.format(match.amount)} am '
+          '${dateFormat.format(match.date)}.\n\nTrotzdem eine zusätzliche Gehalt-Buchung anlegen?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Nicht übernehmen')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Übernehmen')),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 }

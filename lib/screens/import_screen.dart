@@ -18,10 +18,12 @@ import '../providers/custom_import_profile_providers.dart';
 import '../providers/import_batch_providers.dart';
 import '../providers/person_providers.dart';
 import '../providers/transaction_providers.dart';
+import '../providers/salary_slip_providers.dart';
 import '../services/categorization_service.dart';
 import '../services/duplicate_detection_service.dart';
 import '../services/pdf_import_service.dart' show PdfImportService, PdfImportResult;
 import '../services/recurring_payment_detector.dart';
+import '../services/salary_duplicate_detection_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/description_normalizer.dart';
 import '../utils/formatters.dart';
@@ -30,11 +32,17 @@ import 'format_assistant_screen.dart';
 import 'recurring_payments_screen.dart';
 
 class _DraftRow {
-  _DraftRow({required this.date, required String description, required double amount, this.ambiguous = false, this.isDuplicate = false})
-      : descriptionController = TextEditingController(text: description),
+  _DraftRow({
+    required this.date,
+    required String description,
+    required double amount,
+    this.ambiguous = false,
+    this.isDuplicate = false,
+    this.matchedSalaryTransaction,
+  })  : descriptionController = TextEditingController(text: description),
         amountController = TextEditingController(text: amount.abs().toStringAsFixed(2)),
         isIncome = amount >= 0,
-        selected = !isDuplicate;
+        selected = !isDuplicate && matchedSalaryTransaction == null;
 
   bool selected;
   final DateTime date;
@@ -48,6 +56,13 @@ class _DraftRow {
   /// picked batch) - pre-unchecked so it isn't booked twice by accident,
   /// but still shown and editable in case it's a legitimate repeat charge.
   bool isDuplicate;
+
+  /// Set when this booking looks like it could be the same payment as an
+  /// existing Gehaltsabrechnung-linked transaction (same month, similar
+  /// amount) - the user is asked to confirm whether to take it over anyway
+  /// right after parsing; pre-unchecked until answered.
+  Transaction? matchedSalaryTransaction;
+
   String? categoryId;
   String? subcategoryId;
   String? personId;
@@ -142,6 +157,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final categorizer = CategorizationService(categories, history: history);
     final customProfiles = ref.read(customImportProfileNotifierProvider);
 
+    // Existing bookings that came from a Gehaltsabrechnung-Import - checked
+    // against so a salary payment that also shows up on the Kontoauszug
+    // isn't silently counted twice.
+    final salaryLinkedIds = ref.read(salarySlipNotifierProvider).map((s) => s.linkedTransactionId).whereType<String>().toSet();
+    final salaryLinkedTransactions = history.where((t) => salaryLinkedIds.contains(t.id)).toList();
+
     // Checked against as each new draft is produced, so duplicates are
     // caught both against already-saved bookings and against earlier
     // rows within this same picked batch (e.g. two files whose date
@@ -177,7 +198,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       }
       for (final p in parsed) {
         final isDuplicate = isDuplicateBooking(date: p.date, amount: p.amount, description: p.description, existing: seenSoFar);
-        final draft = _DraftRow(date: p.date, description: p.description, amount: p.amount, ambiguous: p.amountAmbiguous, isDuplicate: isDuplicate);
+        final salaryMatch =
+            isDuplicate ? null : findLikelyMatchingIncome(date: p.date, amount: p.amount, existing: salaryLinkedTransactions);
+        final draft = _DraftRow(
+          date: p.date,
+          description: p.description,
+          amount: p.amount,
+          ambiguous: p.amountAmbiguous,
+          isDuplicate: isDuplicate,
+          matchedSalaryTransaction: salaryMatch,
+        );
         final match = categorizer.suggest(p.description);
         draft.categoryId = match?.categoryId ?? categorizer.fallbackCategoryId(p.amount >= 0);
         draft.subcategoryId = match?.subcategoryId;
@@ -200,6 +230,41 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             '${failedFiles.join(", ")}.';
       }
     });
+
+    // Asked one at a time, right after parsing, so the decision is made
+    // with the Gehaltsabrechnung still in mind rather than buried in a
+    // passive banner among dozens of other rows.
+    for (final draft in drafts) {
+      final match = draft.matchedSalaryTransaction;
+      if (match == null) continue;
+      if (!mounted) return;
+      final takeOver = await _confirmSalaryDuplicate(draft, match);
+      if (!mounted) return;
+      setState(() => draft.selected = takeOver);
+    }
+  }
+
+  /// Asks whether to still take over [draft] even though [match] - an
+  /// existing Gehaltsabrechnung-linked booking in the same month with a
+  /// similar amount - looks like it could be the same payment.
+  Future<bool> _confirmSalaryDuplicate(_DraftRow draft, Transaction match) async {
+    final amount = double.tryParse(draft.amountController.text.replaceAll(',', '.')) ?? 0;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mögliches Gehalts-Duplikat'),
+        content: Text(
+          'Die Buchung "${draft.descriptionController.text}" über ${currencyFormat.format(amount)} am '
+          '${dateFormat.format(draft.date)} ähnelt einer bereits erfassten Gehaltsabrechnung: "${match.description}" über '
+          '${currencyFormat.format(match.amount)} am ${dateFormat.format(match.date)}.\n\nTrotzdem übernehmen?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Nicht übernehmen')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Übernehmen')),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _saveSelected() async {
@@ -458,9 +523,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
 
     final colors = context.appleColors;
+    final flagged = draft.isDuplicate || draft.matchedSalaryTransaction != null;
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      color: draft.isDuplicate ? colors.warning.withValues(alpha: 0.15) : (draft.ambiguous ? colors.warning.withValues(alpha: 0.1) : null),
+      color: flagged ? colors.warning.withValues(alpha: 0.15) : (draft.ambiguous ? colors.warning.withValues(alpha: 0.1) : null),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -475,6 +541,23 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                     Icon(CupertinoIcons.exclamationmark_triangle_fill, color: colors.warning, size: 16),
                     const SizedBox(width: 6),
                     Text('Bereits vorhanden - vermutlich Duplikat', style: TextStyle(color: colors.warning, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            if (draft.matchedSalaryTransaction != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(CupertinoIcons.exclamationmark_triangle_fill, color: colors.warning, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Ähnelt Gehaltsabrechnung "${draft.matchedSalaryTransaction!.description}" - Antwort auf die Rückfrage bestimmt die Auswahl.',
+                        style: TextStyle(color: colors.warning, fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   ],
                 ),
               ),
