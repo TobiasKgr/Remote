@@ -235,7 +235,7 @@ class _RecurringPaymentTile extends StatelessWidget {
                   Icon(CupertinoIcons.arrow_up_arrow_down, size: 12, color: colors.warning),
                   const SizedBox(width: 4),
                   Text(
-                    'Preis geändert: ${currencyFormat.format(group.previous!.amount.abs())} → ${currencyFormat.format(group.latestAmount.abs())}',
+                    'Preis geändert: ${currencyFormat.format(group.previous!.amount.abs())} -> ${currencyFormat.format(group.latestAmount.abs())}',
                     style: TextStyle(color: colors.warning, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],

@@ -56,7 +56,7 @@ class CompanyCarScreen extends ConsumerWidget {
                     Text('Tatsächliche Firmenwagen-Kosten', style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 4),
                     Text(
-                      'Summe aller Buchungen in Kategorie "Mobilität → Firmenwagen" '
+                      'Summe aller Buchungen in Kategorie "Mobilität -> Firmenwagen" '
                       '(z. B. Eigenanteil, Kraftstoff, Versicherung).',
                       style: TextStyle(color: colors.secondaryLabel, fontSize: 12),
                     ),
@@ -267,7 +267,7 @@ class _CompanyCarTile extends ConsumerWidget {
                 )
               else
                 Text(
-                  'Kategorie "Mobilität → Firmenwagen" wurde gelöscht/umbenannt - bitte in den '
+                  'Kategorie "Mobilität -> Firmenwagen" wurde gelöscht/umbenannt - bitte in den '
                   'Kategorien wiederherstellen, um den Eigenanteil hier direkt erfassen zu können.',
                   style: TextStyle(color: colors.warning, fontSize: 12),
                 ),
