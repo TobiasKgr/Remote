@@ -17,9 +17,12 @@ import '../providers/transaction_providers.dart';
 import '../services/categorization_service.dart';
 import '../services/duplicate_detection_service.dart';
 import '../services/pdf_import_service.dart' show PdfImportService, PdfImportResult;
+import '../services/recurring_payment_detector.dart';
 import '../theme/app_theme.dart';
+import '../utils/description_normalizer.dart';
 import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
+import 'recurring_payments_screen.dart';
 
 class _DraftRow {
   _DraftRow({required this.date, required String description, required double amount, this.ambiguous = false, this.isDuplicate = false})
@@ -163,6 +166,15 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 
   Future<void> _saveSelected() async {
+    // Snapshot which recurring-payment series already existed *before* this
+    // import, so a series that only now crosses the detector's occurrence
+    // threshold can be pointed out afterwards instead of silently sitting
+    // in "Abos & Verträge" until the user happens to check.
+    final beforeRecurringKeys = const RecurringPaymentDetector()
+        .detect(ref.read(transactionNotifierProvider))
+        .map((g) => normalizeDescription(g.description))
+        .toSet();
+
     final categories = ref.read(categoryNotifierProvider);
     final validCategoryIds = categories.map((c) => c.id).toSet();
 
@@ -205,9 +217,29 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       _drafts = [];
       _balanceWarnings = [];
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${transactions.length} Buchungen importiert.')),
-    );
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(content: Text('${transactions.length} Buchungen importiert.')));
+
+    final newRecurringGroups = const RecurringPaymentDetector()
+        .detect(ref.read(transactionNotifierProvider))
+        .where((g) => !beforeRecurringKeys.contains(normalizeDescription(g.description)))
+        .toList();
+    if (newRecurringGroups.isNotEmpty) {
+      final names = newRecurringGroups.map((g) => g.description).join(', ');
+      messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(
+          '${newRecurringGroups.length} neue${newRecurringGroups.length == 1 ? "s" : ""} '
+          'potenzielle${newRecurringGroups.length == 1 ? "s" : ""} '
+          '${newRecurringGroups.length == 1 ? "Abo" : "Abos"} erkannt: $names',
+        ),
+        action: SnackBarAction(
+          label: 'Anzeigen',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RecurringPaymentsScreen())),
+        ),
+      ));
+    }
   }
 
   @override
