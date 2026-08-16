@@ -2,6 +2,7 @@ import 'package:finance_analyzer/models/category.dart';
 import 'package:finance_analyzer/services/optimization_service.dart';
 import 'package:finance_analyzer/models/transaction.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 Transaction _tx({
   required String id,
@@ -24,6 +25,8 @@ Transaction _tx({
 }
 
 void main() {
+  setUpAll(() => initializeDateFormatting('de_DE'));
+
   final categories = [
     Category(
       id: 'fixkosten',
@@ -108,6 +111,40 @@ void main() {
     ];
     final insights = service.analyze(transactions, categories, month);
     expect(insights.where((i) => i.title.contains('Läuft seit')), isEmpty);
+  });
+
+  test('erkennt eine ungewöhnliche Buchung bei einem sonst regelmäßigen Empfänger', () {
+    final transactions = [
+      _tx(id: 'h1', date: DateTime(2026, 4), amount: -40, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+      _tx(id: 'h2', date: DateTime(2026, 5), amount: -45, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+      _tx(id: 'h3', date: DateTime(2026, 6), amount: -38, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+      _tx(id: 'h4', date: month, amount: -220, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+    ];
+    final insights = service.analyze(transactions, categories, month);
+    final match = insights.where((i) => i.title.contains('Ungewöhnliche Buchung'));
+    expect(match, isNotEmpty);
+    expect(match.first.description, contains('220'));
+    expect(match.first.severity, InsightSeverity.warning);
+  });
+
+  test('keine Anomalie-Meldung ohne ausreichende Historie bei diesem Empfänger', () {
+    final transactions = [
+      _tx(id: 'h1', date: DateTime(2026, 6), amount: -40, description: 'Neuer Laden', categoryId: 'lebensmittel'),
+      _tx(id: 'h2', date: month, amount: -220, description: 'Neuer Laden', categoryId: 'lebensmittel'),
+    ];
+    final insights = service.analyze(transactions, categories, month);
+    expect(insights.where((i) => i.title.contains('Ungewöhnliche Buchung')), isEmpty);
+  });
+
+  test('keine Anomalie-Meldung bei üblichen Schwankungen', () {
+    final transactions = [
+      _tx(id: 'h1', date: DateTime(2026, 4), amount: -40, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+      _tx(id: 'h2', date: DateTime(2026, 5), amount: -45, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+      _tx(id: 'h3', date: DateTime(2026, 6), amount: -38, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+      _tx(id: 'h4', date: month, amount: -50, description: 'REWE SAGT DANKE', categoryId: 'lebensmittel'),
+    ];
+    final insights = service.analyze(transactions, categories, month);
+    expect(insights.where((i) => i.title.contains('Ungewöhnliche Buchung')), isEmpty);
   });
 
   test('keine Hinweise bei leeren Buchungen', () {

@@ -1,5 +1,6 @@
 import '../models/category.dart';
 import '../models/transaction.dart';
+import '../utils/description_normalizer.dart';
 import '../utils/formatters.dart';
 
 enum InsightSeverity { info, warning }
@@ -21,6 +22,9 @@ class OptimizationService {
   static const _spikeThresholdRatio = 1.3; // flag at +30% vs. trailing average
   static const _spikeMinAbsoluteDifference = 20.0; // ignore noise on tiny categories
   static const _dormantMinStreakMonths = 3;
+  static const _anomalyMinHistory = 3; // need at least this many earlier bookings at the same merchant
+  static const _anomalyRatioThreshold = 1.6; // flag at +60% vs. that merchant's own historical median
+  static const _anomalyMinAbsoluteDifference = 15.0;
 
   List<Insight> analyze(List<Transaction> transactions, List<Category> categories, DateTime referenceMonth) {
     final categoryById = {for (final c in categories) c.id: c};
@@ -30,6 +34,7 @@ class OptimizationService {
       ..._recurringCostSummary(expenses, referenceMonth),
       ..._duplicateSubscriptions(expenses, categoryById, referenceMonth),
       ..._spendingSpikes(expenses, categoryById, referenceMonth),
+      ..._merchantAnomalies(expenses, referenceMonth),
       ..._longRunningSubscriptions(expenses, referenceMonth),
     ];
 
@@ -114,6 +119,45 @@ class OptimizationService {
           title: 'Ausgabenspitze: $categoryName',
           description: '${currencyFormat.format(current)} diesen Monat, ${percent.round()}% mehr als im '
               'Schnitt der letzten Monate (${currencyFormat.format(average)}).',
+          severity: InsightSeverity.warning,
+        ));
+      }
+    }
+    return insights;
+  }
+
+  /// Flags individual bookings in [month] that are unusually high compared
+  /// to that specific merchant's *own* history - independent of category
+  /// totals, so e.g. one oversized REWE run stands out even if groceries as
+  /// a whole category look unremarkable that month.
+  Iterable<Insight> _merchantAnomalies(List<Transaction> expenses, DateTime month) {
+    final byMerchant = <String, List<Transaction>>{};
+    for (final t in expenses) {
+      final key = normalizeDescription(t.description);
+      if (key.isEmpty) continue;
+      byMerchant.putIfAbsent(key, () => []).add(t);
+    }
+
+    final insights = <Insight>[];
+    for (final group in byMerchant.values) {
+      final thisMonth = group.where((t) => t.date.year == month.year && t.date.month == month.month);
+      final history = group.where((t) => !(t.date.year == month.year && t.date.month == month.month)).toList();
+      if (history.length < _anomalyMinHistory) continue;
+
+      final sortedAmounts = history.map((t) => t.amount.abs()).toList()..sort();
+      final median = sortedAmounts[sortedAmounts.length ~/ 2];
+      if (median <= 0) continue;
+
+      for (final t in thisMonth) {
+        final amount = t.amount.abs();
+        final difference = amount - median;
+        if (amount < median * _anomalyRatioThreshold || difference < _anomalyMinAbsoluteDifference) continue;
+
+        final percent = ((amount / median) - 1) * 100;
+        insights.add(Insight(
+          title: 'Ungewöhnliche Buchung: ${t.description.trim()}',
+          description: '${currencyFormat.format(amount)} am ${dateFormat.format(t.date)} - sonst meist rund '
+              '${currencyFormat.format(median)} bei diesem Empfänger (+${percent.round()}%).',
           severity: InsightSeverity.warning,
         ));
       }
