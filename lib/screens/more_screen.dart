@@ -8,6 +8,7 @@ import 'backup_screen.dart';
 import 'import_history_screen.dart';
 import 'net_worth_history_screen.dart';
 import 'persons_screen.dart';
+import 'quick_entry_screen.dart';
 import 'recurring_payments_screen.dart';
 import 'settings_screen.dart';
 
@@ -46,6 +47,12 @@ class MoreScreen extends StatelessWidget {
             const AppleSectionHeader('Finanzen'),
             AppleGroupedSection(
               children: [
+                AppleSettingsRow(
+                  icon: CupertinoIcons.bolt_fill,
+                  iconColor: AppleColors.orange,
+                  title: 'Schnelleingabe',
+                  onTap: () => _push(context, const QuickEntryScreen()),
+                ),
                 AppleSettingsRow(
                   icon: CupertinoIcons.repeat,
                   iconColor: AppleColors.pink,

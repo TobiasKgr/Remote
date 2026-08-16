@@ -14,9 +14,28 @@ import '../utils/formatters.dart';
 import '../widgets/apple_widgets.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
-  const TransactionFormScreen({super.key, this.existing});
+  const TransactionFormScreen({
+    super.key,
+    this.existing,
+    this.initialDate,
+    this.initialDescription,
+    this.initialAmount,
+    this.initialIsIncome,
+    this.initialCategoryId,
+    this.initialSubcategoryId,
+  });
 
   final Transaction? existing;
+
+  /// Pre-fills a blank form (e.g. from the "Schnelleingabe" quick-entry
+  /// parser) without switching into edit-mode - only used when [existing]
+  /// is null.
+  final DateTime? initialDate;
+  final String? initialDescription;
+  final double? initialAmount;
+  final bool? initialIsIncome;
+  final String? initialCategoryId;
+  final String? initialSubcategoryId;
 
   @override
   ConsumerState<TransactionFormScreen> createState() => _TransactionFormScreenState();
@@ -38,13 +57,17 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   void initState() {
     super.initState();
     final existing = widget.existing;
-    _date = existing?.date ?? DateTime.now();
-    _descriptionController = TextEditingController(text: existing?.description ?? '');
-    _amountController = TextEditingController(text: existing != null ? existing.amount.abs().toStringAsFixed(2) : '');
-    _isIncome = existing?.isIncome ?? false;
+    _date = existing?.date ?? widget.initialDate ?? DateTime.now();
+    _descriptionController = TextEditingController(text: existing?.description ?? widget.initialDescription ?? '');
+    _amountController = TextEditingController(
+      text: existing != null
+          ? existing.amount.abs().toStringAsFixed(2)
+          : (widget.initialAmount != null ? widget.initialAmount!.toStringAsFixed(2) : ''),
+    );
+    _isIncome = existing?.isIncome ?? widget.initialIsIncome ?? false;
     _isRecurring = existing?.isRecurring ?? false;
-    _categoryId = existing?.categoryId;
-    _subcategoryId = existing?.subcategoryId;
+    _categoryId = existing?.categoryId ?? widget.initialCategoryId;
+    _subcategoryId = existing?.subcategoryId ?? widget.initialSubcategoryId;
     _personId = existing?.personId;
     _accountId = existing?.accountId;
   }
