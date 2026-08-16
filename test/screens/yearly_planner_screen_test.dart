@@ -60,4 +60,29 @@ void main() {
     expect(find.text('Jahresplaner'), findsOneWidget);
     expect(find.text('Miete'), findsOneWidget);
   });
+
+  testWidgets('zeigt bei einer erkannten wiederkehrenden Zahlung eine Prognose-Legende', (tester) async {
+    final categories = buildDefaultCategories();
+    final now = DateTime.now();
+    DateTime monthsAgo(int n) => DateTime(now.year, now.month - n, 1);
+    final transactions = [
+      for (var i = 3; i >= 1; i--)
+        Transaction(id: 'miete_$i', date: monthsAgo(i), amount: -750, description: 'Miete', categoryId: 'wohnen', subcategoryId: 'wohnen_miete'),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionNotifierProvider.overrideWith(() => _FixedTransactionNotifier(transactions)),
+          categoryNotifierProvider.overrideWith(() => _FixedCategoryNotifier(categories)),
+          personNotifierProvider.overrideWith(_EmptyPersonNotifier.new),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const YearlyPlannerScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('Kursiv = Prognose'), findsOneWidget);
+  });
 }

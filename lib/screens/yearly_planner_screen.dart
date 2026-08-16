@@ -47,6 +47,15 @@ class YearlyPlannerScreen extends ConsumerWidget {
           children: [
             const AppleLargeTitle('Jahresplaner'),
             const PersonFilterBar(),
+            if (data.incomeGroups.isNotEmpty || data.expenseGroups.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Kursiv = Prognose aus erkannten wiederkehrenden Zahlungen, kein tatsächlicher Kontoauszug. '
+                  'Sobald ein Monat importiert wird, ersetzt die echte Buchung automatisch die Prognose.',
+                  style: TextStyle(color: colors.secondaryLabel, fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+              ),
             const SizedBox(height: 8),
             Expanded(
               child: (data.incomeGroups.isEmpty && data.expenseGroups.isEmpty)
@@ -164,12 +173,20 @@ class YearlyPlannerScreen extends ConsumerWidget {
       ));
 
       for (final row in group.rows) {
+        final combined = row.combinedAmounts;
         rows.add(TableRow(
           children: [
             Padding(padding: const EdgeInsets.only(left: 24), child: _cell(row.label, rowStyle)),
             _cell('${row.dueDay}.', percentStyle, align: TextAlign.center),
             _cell('${(row.percentOfTotal * 100).toStringAsFixed(2)}%', percentStyle, align: TextAlign.center),
-            for (final v in row.monthlyAmounts) _cell(v == 0 ? '—' : currencyFormat.format(v), rowStyle, align: TextAlign.right),
+            for (var i = 0; i < 12; i++)
+              _cell(
+                combined[i] == 0 ? '—' : currencyFormat.format(combined[i]),
+                row.monthlyAmounts[i] == 0 && row.forecastAmounts[i] != 0
+                    ? rowStyle?.copyWith(fontStyle: FontStyle.italic, color: colors.secondaryLabel)
+                    : rowStyle,
+                align: TextAlign.right,
+              ),
             _cell(currencyFormat.format(row.yearTotal), rowStyle?.copyWith(fontWeight: FontWeight.w600), align: TextAlign.right),
           ],
         ));
