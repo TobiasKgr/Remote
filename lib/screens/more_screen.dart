@@ -6,6 +6,7 @@ import '../widgets/apple_widgets.dart';
 import 'accounts_screen.dart';
 import 'backup_screen.dart';
 import 'import_history_screen.dart';
+import 'net_worth_history_screen.dart';
 import 'persons_screen.dart';
 import 'recurring_payments_screen.dart';
 import 'settings_screen.dart';
@@ -50,6 +51,12 @@ class MoreScreen extends StatelessWidget {
                   iconColor: AppleColors.pink,
                   title: 'Abos & Verträge',
                   onTap: () => _push(context, const RecurringPaymentsScreen()),
+                ),
+                AppleSettingsRow(
+                  icon: CupertinoIcons.chart_bar_alt_fill,
+                  iconColor: AppleColors.green,
+                  title: 'Vermögensentwicklung',
+                  onTap: () => _push(context, const NetWorthHistoryScreen()),
                 ),
               ],
             ),

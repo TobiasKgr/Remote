@@ -84,7 +84,8 @@ lib/
                   (Kategorisierung/Wiederkehrend/Jahresplaner teilen sich dieselbe Logik)
   screens/        Dashboard, Buchungen, Import, Gehalt, Firmenwagen, Kategorien, Mehr
                   (Einstiegs-Hub), Personen, Konten, Vermögensübersicht, Budgets, Backup,
-                  Einstellungen, Jahresübersicht, Jahresplaner
+                  Einstellungen, Jahresübersicht, Jahresplaner, Import-Verlauf,
+                  Abos & Verträge, Vermögensentwicklung
   widgets/        Wiederverwendbare UI-Bausteine (Charts, Summary-Cards, Personen-Filterleiste,
                   Optimierungspotenzial-Karten, Budget-Fortschrittsbalken, iOS-Grouped-List-
                   Bausteine, ...)
