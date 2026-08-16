@@ -24,11 +24,16 @@ class _EmptyPersonNotifier extends PersonNotifier {
 void main() {
   setUpAll(() => initializeDateFormatting('de_DE'));
 
-  testWidgets('Abos & Verträge rendert eine erkannte Serie ohne Exception', (tester) async {
+  testWidgets('Abos & Verträge rendert eine erkannte Serie inkl. Fixkosten-Radar ohne Exception', (tester) async {
+    final now = DateTime.now();
+    DateTime monthsAgo(int n) => DateTime(now.year, now.month - n, 15);
+
     final transactions = [
-      Transaction(id: 't1', date: DateTime(2026, 1, 15), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
-      Transaction(id: 't2', date: DateTime(2026, 2, 15), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
-      Transaction(id: 't3', date: DateTime(2026, 3, 15), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
+      Transaction(id: 't1', date: monthsAgo(2), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
+      Transaction(id: 't2', date: monthsAgo(1), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
+      Transaction(id: 't3', date: now, amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
+      Transaction(id: 't4', date: monthsAgo(1), amount: 3000, description: 'Gehalt', categoryId: 'income'),
+      Transaction(id: 't5', date: now, amount: 3000, description: 'Gehalt', categoryId: 'income'),
     ];
 
     await tester.pumpWidget(
@@ -46,6 +51,7 @@ void main() {
     expect(find.text('Abos & Verträge'), findsOneWidget);
     expect(find.textContaining('Netflix'), findsOneWidget);
     expect(find.textContaining('Monatlich ·'), findsOneWidget);
+    expect(find.text('Fixkosten-Anteil am Einkommen'), findsOneWidget);
   });
 
   testWidgets('leerer Zustand rendert ohne Exception', (tester) async {

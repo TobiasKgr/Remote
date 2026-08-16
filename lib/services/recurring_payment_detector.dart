@@ -27,6 +27,25 @@ class RecurringPaymentGroup {
   DateTime get lastDate => latest.date;
   double get latestAmount => latest.amount;
   int get occurrenceCount => transactions.length;
+
+  /// The booking right before [latest], if there is one.
+  Transaction? get previous => transactions.length < 2 ? null : transactions[transactions.length - 2];
+
+  /// True when the two most recent bookings' amounts differ by a cent or
+  /// more. The amount-clustering that groups a series together tolerates
+  /// gradual drift (±5%) so a slightly higher renewal price doesn't split
+  /// one Abo into two separate "series" - but that same tolerance means a
+  /// real price change could otherwise go unnoticed, so it's surfaced
+  /// explicitly here instead.
+  bool get hasPriceChange {
+    final prev = previous;
+    if (prev == null) return false;
+    return (prev.amount.abs() - latestAmount.abs()).abs() >= 0.01;
+  }
+
+  /// Positive = got more expensive, negative = got cheaper. Null when
+  /// there's no earlier booking to compare against.
+  double? get priceChangeAmount => previous == null ? null : latestAmount.abs() - previous!.amount.abs();
 }
 
 /// Detects recurring payments (subscriptions/contracts) purely from booking

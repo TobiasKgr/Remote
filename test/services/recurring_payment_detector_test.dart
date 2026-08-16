@@ -67,6 +67,19 @@ void main() {
     final result = detector.detect(transactions);
     expect(result, hasLength(1));
     expect(result.single.occurrenceCount, 3);
+    expect(result.single.hasPriceChange, isTrue);
+    expect(result.single.priceChangeAmount, closeTo(0.40, 0.001));
+  });
+
+  test('gleichbleibender Betrag wird nicht als Preisänderung markiert', () {
+    final transactions = [
+      tx(DateTime(2026, 1, 15), -12.99, 'Netflix.com'),
+      tx(DateTime(2026, 2, 15), -12.99, 'Netflix.com'),
+      tx(DateTime(2026, 3, 15), -12.99, 'Netflix.com'),
+    ];
+    final result = detector.detect(transactions);
+    expect(result.single.hasPriceChange, isFalse);
+    expect(result.single.priceChangeAmount, closeTo(0, 0.001));
   });
 
   test('unterschiedliche Beträge trennen die Serie (z.B. wöchentlicher Einkauf ist kein Abo)', () {
