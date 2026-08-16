@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
@@ -61,6 +64,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   List<_DraftRow> _drafts = [];
   bool _loading = false;
   String? _error;
+  bool _dragHighlighted = false;
 
   /// One entry per file whose "Anfangssaldo + Buchungen" didn't add up to
   /// its own "Endsaldo" - shown as a non-blocking warning, since it means
@@ -94,75 +98,105 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         return;
       }
 
-      final categories = ref.read(categoryNotifierProvider);
-      final history = ref.read(transactionNotifierProvider);
-      final categorizer = CategorizationService(categories, history: history);
-
-      // Checked against as each new draft is produced, so duplicates are
-      // caught both against already-saved bookings and against earlier
-      // rows within this same picked batch (e.g. two files whose date
-      // ranges overlap).
-      final seenSoFar = <Transaction>[...history];
-
-      final drafts = <_DraftRow>[];
-      final failedFiles = <String>[];
-      final balanceWarnings = <String>[];
-      for (final file in result.files) {
-        final bytes = file.bytes;
-        if (bytes == null) {
-          failedFiles.add(file.name);
-          continue;
-        }
-        PdfImportResult importResult;
-        try {
-          importResult = await _pdfImportService.importFromBytesWithBalanceCheck(bytes);
-        } catch (_) {
-          failedFiles.add(file.name);
-          continue;
-        }
-        final parsed = importResult.transactions;
-        if (parsed.isEmpty) {
-          failedFiles.add(file.name);
-          continue;
-        }
-        if (importResult.hasBalanceMismatch) {
-          final diff = importResult.balanceDifference!;
-          balanceWarnings.add(
-            '${file.name}: Differenz von ${currencyFormat.format(diff.abs())} zwischen erkannten Buchungen und '
-            'Endsaldo - bitte Import prüfen.',
-          );
-        }
-        for (final p in parsed) {
-          final isDuplicate = isDuplicateBooking(date: p.date, amount: p.amount, description: p.description, existing: seenSoFar);
-          final draft = _DraftRow(date: p.date, description: p.description, amount: p.amount, ambiguous: p.amountAmbiguous, isDuplicate: isDuplicate);
-          final match = categorizer.suggest(p.description);
-          draft.categoryId = match?.categoryId ?? categorizer.fallbackCategoryId(p.amount >= 0);
-          draft.subcategoryId = match?.subcategoryId;
-          drafts.add(draft);
-          seenSoFar.add(Transaction(id: 'seen', date: p.date, amount: p.amount, description: p.description, categoryId: 'sonstiges'));
-        }
-      }
-
-      setState(() {
-        _drafts = drafts;
-        _loading = false;
-        _balanceWarnings = balanceWarnings;
-        if (failedFiles.isEmpty) {
-          _error = null;
-        } else if (drafts.isEmpty) {
-          _error = 'Es konnten keine Buchungen aus ${failedFiles.length == 1 ? "der PDF-Datei" : "den PDF-Dateien"} erkannt werden '
-              '(${failedFiles.join(", ")}). Das PDF-Format dieser Bank wird evtl. noch nicht unterstützt.';
-        } else {
-          _error = 'Bei ${failedFiles.length} von ${result.files.length} Dateien konnten keine Buchungen erkannt werden: '
-              '${failedFiles.join(", ")}.';
-        }
-      });
+      final files = <(String, Uint8List?)>[for (final f in result.files) (f.name, f.bytes)];
+      await _parseFiles(files, totalPicked: result.files.length);
     } catch (e) {
       setState(() {
         _loading = false;
         _error = 'Fehler beim Einlesen der PDF-Datei(en): $e';
       });
     }
+  }
+
+  /// Handles PDFs dropped onto the screen (desktop/web drag & drop) - reads
+  /// each dropped file's bytes and feeds them through the same parsing path
+  /// as the file picker.
+  Future<void> _handleDroppedFiles(DropDoneDetails details) async {
+    final pdfFiles = details.files.where((f) => f.name.toLowerCase().endsWith('.pdf')).toList();
+    if (pdfFiles.isEmpty) {
+      setState(() => _error = 'Nur PDF-Dateien werden unterstützt.');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+      _balanceWarnings = [];
+    });
+    try {
+      final files = <(String, Uint8List?)>[for (final f in pdfFiles) (f.name, await f.readAsBytes())];
+      await _parseFiles(files, totalPicked: pdfFiles.length);
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = 'Fehler beim Einlesen der PDF-Datei(en): $e';
+      });
+    }
+  }
+
+  Future<void> _parseFiles(List<(String name, Uint8List? bytes)> files, {required int totalPicked}) async {
+    final categories = ref.read(categoryNotifierProvider);
+    final history = ref.read(transactionNotifierProvider);
+    final categorizer = CategorizationService(categories, history: history);
+
+    // Checked against as each new draft is produced, so duplicates are
+    // caught both against already-saved bookings and against earlier
+    // rows within this same picked batch (e.g. two files whose date
+    // ranges overlap).
+    final seenSoFar = <Transaction>[...history];
+
+    final drafts = <_DraftRow>[];
+    final failedFiles = <String>[];
+    final balanceWarnings = <String>[];
+    for (final (name, bytes) in files) {
+      if (bytes == null) {
+        failedFiles.add(name);
+        continue;
+      }
+      PdfImportResult importResult;
+      try {
+        importResult = await _pdfImportService.importFromBytesWithBalanceCheck(bytes);
+      } catch (_) {
+        failedFiles.add(name);
+        continue;
+      }
+      final parsed = importResult.transactions;
+      if (parsed.isEmpty) {
+        failedFiles.add(name);
+        continue;
+      }
+      if (importResult.hasBalanceMismatch) {
+        final diff = importResult.balanceDifference!;
+        balanceWarnings.add(
+          '$name: Differenz von ${currencyFormat.format(diff.abs())} zwischen erkannten Buchungen und '
+          'Endsaldo - bitte Import prüfen.',
+        );
+      }
+      for (final p in parsed) {
+        final isDuplicate = isDuplicateBooking(date: p.date, amount: p.amount, description: p.description, existing: seenSoFar);
+        final draft = _DraftRow(date: p.date, description: p.description, amount: p.amount, ambiguous: p.amountAmbiguous, isDuplicate: isDuplicate);
+        final match = categorizer.suggest(p.description);
+        draft.categoryId = match?.categoryId ?? categorizer.fallbackCategoryId(p.amount >= 0);
+        draft.subcategoryId = match?.subcategoryId;
+        drafts.add(draft);
+        seenSoFar.add(Transaction(id: 'seen', date: p.date, amount: p.amount, description: p.description, categoryId: 'sonstiges'));
+      }
+    }
+
+    setState(() {
+      _drafts = drafts;
+      _loading = false;
+      _balanceWarnings = balanceWarnings;
+      if (failedFiles.isEmpty) {
+        _error = null;
+      } else if (drafts.isEmpty) {
+        _error = 'Es konnten keine Buchungen aus ${failedFiles.length == 1 ? "der PDF-Datei" : "den PDF-Dateien"} erkannt werden '
+            '(${failedFiles.join(", ")}). Das PDF-Format dieser Bank wird evtl. noch nicht unterstützt.';
+      } else {
+        _error = 'Bei ${failedFiles.length} von $totalPicked Dateien konnten keine Buchungen erkannt werden: '
+            '${failedFiles.join(", ")}.';
+      }
+    });
   }
 
   Future<void> _saveSelected() async {
@@ -261,22 +295,60 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ],
       ),
       body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _drafts.isEmpty
-                ? _buildEmptyState(context)
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    itemCount: _drafts.length + 1 + (_balanceWarnings.isEmpty ? 0 : 1),
-                    itemBuilder: (context, index) {
-                      if (index == 0) return const AppleLargeTitle('PDF-Import');
-                      if (_balanceWarnings.isNotEmpty) {
-                        if (index == 1) return _buildBalanceWarningBanner(context);
-                        return _buildDraftCard(context, _drafts[index - 2], categories, persons, accounts);
-                      }
-                      return _buildDraftCard(context, _drafts[index - 1], categories, persons, accounts);
-                    },
-                  ),
+        child: DropTarget(
+          onDragEntered: (_) => setState(() => _dragHighlighted = true),
+          onDragExited: (_) => setState(() => _dragHighlighted = false),
+          onDragDone: (details) {
+            setState(() => _dragHighlighted = false);
+            _handleDroppedFiles(details);
+          },
+          child: Stack(
+            children: [
+              _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _drafts.isEmpty
+                      ? _buildEmptyState(context)
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          itemCount: _drafts.length + 1 + (_balanceWarnings.isEmpty ? 0 : 1),
+                          itemBuilder: (context, index) {
+                            if (index == 0) return const AppleLargeTitle('PDF-Import');
+                            if (_balanceWarnings.isNotEmpty) {
+                              if (index == 1) return _buildBalanceWarningBanner(context);
+                              return _buildDraftCard(context, _drafts[index - 2], categories, persons, accounts);
+                            }
+                            return _buildDraftCard(context, _drafts[index - 1], categories, persons, accounts);
+                          },
+                        ),
+              if (_dragHighlighted) _buildDragOverlay(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDragOverlay(BuildContext context) {
+    final colors = context.appleColors;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          color: AppleColors.blue.withValues(alpha: 0.12),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(color: colors.secondaryGroupedBackground, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.arrow_down_doc_fill, size: 40, color: AppleColors.blue),
+                  const SizedBox(height: 8),
+                  const Text('PDF(s) hier ablegen', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -335,7 +407,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Es können mehrere PDF-Dateien auf einmal ausgewählt werden. '
+                'Es können mehrere PDF-Dateien auf einmal ausgewählt oder per Drag & Drop hierher gezogen werden. '
                 'Die Erkennung ist eine Heuristik für gängige deutsche Kontoauszug-Layouts. '
                 'Bitte alle erkannten Buchungen vor dem Speichern prüfen.',
                 textAlign: TextAlign.center,
