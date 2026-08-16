@@ -7,6 +7,7 @@ import 'accounts_screen.dart';
 import 'backup_screen.dart';
 import 'import_history_screen.dart';
 import 'persons_screen.dart';
+import 'recurring_payments_screen.dart';
 import 'settings_screen.dart';
 
 /// Central hub for everything that isn't one of the main tabs - styled like
@@ -38,6 +39,17 @@ class MoreScreen extends StatelessWidget {
                   iconColor: AppleColors.indigo,
                   title: 'Konten verwalten',
                   onTap: () => _push(context, const AccountsScreen()),
+                ),
+              ],
+            ),
+            const AppleSectionHeader('Finanzen'),
+            AppleGroupedSection(
+              children: [
+                AppleSettingsRow(
+                  icon: CupertinoIcons.repeat,
+                  iconColor: AppleColors.pink,
+                  title: 'Abos & Verträge',
+                  onTap: () => _push(context, const RecurringPaymentsScreen()),
                 ),
               ],
             ),
