@@ -63,6 +63,32 @@ void main() {
     expect(find.text('Vermögensentwicklung'), findsOneWidget);
   });
 
+  testWidgets('mit erkanntem Abo wird die Cashflow-Prognose (gestrichelte Linie) mitgerendert', (tester) async {
+    final account = Account(id: 'a1', name: 'Giro', startingBalance: 1000);
+    final now = DateTime.now();
+    DateTime monthsAgo(int n) => DateTime(now.year, now.month - n, 5);
+    final transactions = [
+      for (var i = 2; i >= 0; i--)
+        Transaction(id: 'sub$i', date: monthsAgo(i), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', accountId: 'a1'),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountNotifierProvider.overrideWith(() => _FixedAccountNotifier([account])),
+          transactionNotifierProvider.overrideWith(() => _FixedTransactionNotifier(transactions)),
+          assetNotifierProvider.overrideWith(() => _FixedAssetNotifier(const [])),
+          personNotifierProvider.overrideWith(_EmptyPersonNotifier.new),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const NetWorthHistoryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('Prognose der nächsten 8 Wochen'), findsOneWidget);
+  });
+
   testWidgets('leerer Zustand (keine Konten) rendert ohne Exception', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
