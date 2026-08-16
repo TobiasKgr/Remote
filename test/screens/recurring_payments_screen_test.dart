@@ -54,6 +54,41 @@ void main() {
     expect(find.text('Fixkosten-Anteil am Einkommen'), findsOneWidget);
   });
 
+  testWidgets('Was-wäre-wenn-Simulator zeigt die Ersparnis nach Auswahl eines Abos', (tester) async {
+    final now = DateTime.now();
+    DateTime monthsAgo(int n) => DateTime(now.year, now.month - n, 15);
+
+    final transactions = [
+      Transaction(id: 't1', date: monthsAgo(2), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
+      Transaction(id: 't2', date: monthsAgo(1), amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
+      Transaction(id: 't3', date: now, amount: -12.99, description: 'Netflix.com', categoryId: 'fixkosten', subcategoryId: 'fixkosten_streaming'),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionNotifierProvider.overrideWith(() => _FixedTransactionNotifier(transactions)),
+          personNotifierProvider.overrideWith(_EmptyPersonNotifier.new),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const RecurringPaymentsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Was wäre wenn?'), findsNothing);
+
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Was wäre wenn?'), findsOneWidget);
+    expect(find.textContaining('12,99'), findsWidgets);
+
+    await tester.tap(find.text('1 Monat'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('leerer Zustand rendert ohne Exception', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

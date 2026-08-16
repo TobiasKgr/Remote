@@ -21,7 +21,10 @@ class FixedCostRadarResult {
   double? get ratio => averageMonthlyIncome <= 0 ? null : monthlyFixedCosts / averageMonthlyIncome;
 }
 
-double _monthlyEquivalent(RecurringPaymentGroup group) {
+/// Converts a recurring payment's own-rhythm amount to a monthly-equivalent
+/// figure (weekly *52/12, yearly /12) so payments on different rhythms can
+/// be summed/compared meaningfully.
+double monthlyEquivalent(RecurringPaymentGroup group) {
   final amount = group.latestAmount.abs();
   return switch (group.rhythm) {
     RecurrenceRhythm.weekly => amount * 52 / 12,
@@ -52,7 +55,7 @@ FixedCostRadarResult computeFixedCostRadar({
   int lookbackMonths = 6,
 }) {
   final monthlyFixedCosts =
-      recurringGroups.where((g) => g.latestAmount < 0).fold<double>(0, (s, g) => s + _monthlyEquivalent(g));
+      recurringGroups.where((g) => g.latestAmount < 0).fold<double>(0, (s, g) => s + monthlyEquivalent(g));
   final averageIncome = computeAverageMonthlyIncome(allTransactions, referenceDate: referenceDate, lookbackMonths: lookbackMonths);
   return FixedCostRadarResult(monthlyFixedCosts: monthlyFixedCosts, averageMonthlyIncome: averageIncome);
 }
