@@ -4,24 +4,17 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/nav_tab.dart';
 import '../providers/budget_providers.dart';
 import '../providers/insight_providers.dart';
+import '../providers/nav_settings_providers.dart';
 import '../providers/settings_providers.dart';
 import '../providers/transaction_providers.dart';
 import '../services/notification_service.dart';
 import '../services/optimization_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
-import 'assets_screen.dart';
-import 'budgets_screen.dart';
-import 'categories_screen.dart';
-import 'dashboard_screen.dart';
-import 'import_screen.dart';
 import 'more_screen.dart';
-import 'salary_screen.dart';
-import 'transactions_screen.dart';
-import 'yearly_overview_screen.dart';
-import 'yearly_planner_screen.dart';
 
 class RootShell extends ConsumerStatefulWidget {
   const RootShell({super.key});
@@ -31,40 +24,14 @@ class RootShell extends ConsumerStatefulWidget {
 }
 
 class _RootShellState extends ConsumerState<RootShell> {
-  // Starts on "Übersicht" (Dashboard), not tab index 0 - the Vermögen/
-  // Budgets/Jahresplaner tabs sit to its left in the bar by request, but
-  // the app should still land on the dashboard on launch.
-  int _index = 3;
+  // "Übersicht" is always present (see kConfigurableNavTabs) and is the
+  // default landing tab regardless of where the user has moved it to in
+  // the (customizable) bar order.
+  String _selectedKey = 'uebersicht';
 
   /// Keys of budget-overrun/insight notifications already shown this app
   /// session, so the same condition doesn't re-notify on every rebuild.
   final Set<String> _notifiedKeys = {};
-
-  static const _destinations = [
-    NavigationDestination(icon: Icon(CupertinoIcons.chart_pie), selectedIcon: Icon(CupertinoIcons.chart_pie_fill), label: 'Vermögen'),
-    NavigationDestination(icon: Icon(CupertinoIcons.graph_circle), selectedIcon: Icon(CupertinoIcons.graph_circle_fill), label: 'Budgets'),
-    NavigationDestination(icon: Icon(CupertinoIcons.square_grid_3x2), selectedIcon: Icon(CupertinoIcons.square_grid_3x2_fill), label: 'Jahresplaner'),
-    NavigationDestination(icon: Icon(CupertinoIcons.house), selectedIcon: Icon(CupertinoIcons.house_fill), label: 'Übersicht'),
-    NavigationDestination(icon: Icon(CupertinoIcons.list_bullet), selectedIcon: Icon(CupertinoIcons.list_bullet), label: 'Buchungen'),
-    NavigationDestination(icon: Icon(CupertinoIcons.arrow_up_doc), selectedIcon: Icon(CupertinoIcons.arrow_up_doc_fill), label: 'Kontoauszug-Import'),
-    NavigationDestination(icon: Icon(CupertinoIcons.money_euro_circle), selectedIcon: Icon(CupertinoIcons.money_euro_circle_fill), label: 'Gehalt-Import'),
-    NavigationDestination(icon: Icon(CupertinoIcons.calendar), selectedIcon: Icon(CupertinoIcons.calendar), label: 'Jahr'),
-    NavigationDestination(icon: Icon(CupertinoIcons.square_grid_2x2), selectedIcon: Icon(CupertinoIcons.square_grid_2x2_fill), label: 'Kategorien'),
-    NavigationDestination(icon: Icon(CupertinoIcons.ellipsis_circle), selectedIcon: Icon(CupertinoIcons.ellipsis_circle_fill), label: 'Mehr'),
-  ];
-
-  static const _screens = [
-    AssetsScreen(),
-    BudgetsScreen(),
-    YearlyPlannerScreen(),
-    DashboardScreen(),
-    TransactionsScreen(),
-    ImportScreen(),
-    SalaryScreen(),
-    YearlyOverviewScreen(),
-    CategoriesScreen(),
-    MoreScreen(),
-  ];
 
   @override
   void initState() {
@@ -88,6 +55,25 @@ class _RootShellState extends ConsumerState<RootShell> {
     final isWide = MediaQuery.sizeOf(context).width >= 700;
     final separator = context.appleColors.separator;
 
+    final order = ref.watch(navOrderProvider);
+    final hidden = ref.watch(navHiddenProvider);
+    final visibleTabs = [for (final key in order) if (!hidden.contains(key)) kNavTabRegistry[key]!];
+    final keys = [for (final tab in visibleTabs) tab.key, 'mehr'];
+
+    var index = keys.indexOf(_selectedKey);
+    // The currently selected tab may have just been hidden (e.g. the user
+    // navigated away to Einstellungen and hid it there) - fall back to the
+    // first tab rather than crashing on an out-of-range index.
+    if (index == -1) index = 0;
+
+    final destinations = [
+      for (final tab in visibleTabs) NavigationDestination(icon: Icon(tab.icon), selectedIcon: Icon(tab.selectedIcon), label: tab.label),
+      const NavigationDestination(icon: Icon(CupertinoIcons.ellipsis_circle), selectedIcon: Icon(CupertinoIcons.ellipsis_circle_fill), label: 'Mehr'),
+    ];
+    final screens = [for (final tab in visibleTabs) tab.screenBuilder(), const MoreScreen()];
+
+    void select(int i) => setState(() => _selectedKey = keys[i]);
+
     if (isWide) {
       return Scaffold(
         body: Row(
@@ -98,25 +84,25 @@ class _RootShellState extends ConsumerState<RootShell> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(border: Border(right: BorderSide(color: separator, width: 0.5))),
                   child: NavigationRail(
-                    selectedIndex: _index,
-                    onDestinationSelected: (i) => setState(() => _index = i),
+                    selectedIndex: index,
+                    onDestinationSelected: select,
                     labelType: NavigationRailLabelType.all,
                     backgroundColor: context.appleColors.secondaryGroupedBackground.withValues(alpha: 0.75),
-                    destinations: _destinations
+                    destinations: destinations
                         .map((d) => NavigationRailDestination(icon: d.icon, selectedIcon: d.selectedIcon, label: Text(d.label)))
                         .toList(),
                   ),
                 ),
               ),
             ),
-            Expanded(child: _screens[_index]),
+            Expanded(child: screens[index]),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: _screens[_index],
+      body: screens[index],
       // iOS tab bars are a translucent, blurred material sitting on top of
       // the content rather than an opaque bar - BackdropFilter + a
       // semi-transparent NavigationBar (see AppTheme) reproduces that.
@@ -125,11 +111,7 @@ class _RootShellState extends ConsumerState<RootShell> {
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: DecoratedBox(
             decoration: BoxDecoration(border: Border(top: BorderSide(color: separator, width: 0.5))),
-            child: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              destinations: _destinations,
-            ),
+            child: NavigationBar(selectedIndex: index, onDestinationSelected: select, destinations: destinations),
           ),
         ),
       ),

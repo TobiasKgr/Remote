@@ -14,6 +14,7 @@ import '../services/demo_data_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/apple_widgets.dart';
+import 'nav_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -131,6 +132,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 padding: const EdgeInsets.only(bottom: 24),
                 children: [
                   const AppleLargeTitle('Einstellungen'),
+                  const AppleSectionHeader('Navigation'),
+                  AppleGroupedSection(
+                    children: [
+                      ListTile(
+                        leading: const Icon(CupertinoIcons.rectangle_stack),
+                        title: const Text('Navigation anpassen'),
+                        subtitle: const Text('Reihenfolge der Reiter ändern, einzelne unter "Mehr" verstecken'),
+                        trailing: Icon(CupertinoIcons.chevron_right, size: 15, color: colors.secondaryLabel),
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NavSettingsScreen())),
+                      ),
+                    ],
+                  ),
                   const AppleSectionHeader('Erinnerungen'),
                   AppleGroupedSection(
                     children: [

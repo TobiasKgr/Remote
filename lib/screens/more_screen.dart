@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/nav_tab.dart';
+import '../providers/nav_settings_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/apple_widgets.dart';
 import 'accounts_screen.dart';
@@ -15,12 +18,18 @@ import 'settings_screen.dart';
 
 /// Central hub for everything that isn't one of the main tabs - styled like
 /// the iOS Settings app (grouped sections, colored icon squares, chevrons)
-/// so all of this stays one tap away instead of hidden behind a menu.
-class MoreScreen extends StatelessWidget {
+/// so all of this stays one tap away instead of hidden behind a menu. Also
+/// picks up any tab the user chose to hide from the main bar (see
+/// [NavSettingsScreen]) in its own section, so nothing becomes unreachable.
+class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hiddenOrder = ref.watch(navOrderProvider);
+    final hidden = ref.watch(navHiddenProvider);
+    final hiddenTabs = [for (final key in hiddenOrder) if (hidden.contains(key)) kNavTabRegistry[key]!];
+
     return Scaffold(
       appBar: AppBar(title: const SizedBox.shrink()),
       body: SafeArea(
@@ -28,6 +37,20 @@ class MoreScreen extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 24),
           children: [
             const AppleLargeTitle('Mehr'),
+            if (hiddenTabs.isNotEmpty) ...[
+              const AppleSectionHeader('Ausgeblendete Reiter'),
+              AppleGroupedSection(
+                children: [
+                  for (final tab in hiddenTabs)
+                    AppleSettingsRow(
+                      icon: tab.icon,
+                      iconColor: AppleColors.gray,
+                      title: tab.label,
+                      onTap: () => _push(context, tab.screenBuilder()),
+                    ),
+                ],
+              ),
+            ],
             const AppleSectionHeader('Konten & Personen'),
             AppleGroupedSection(
               children: [
