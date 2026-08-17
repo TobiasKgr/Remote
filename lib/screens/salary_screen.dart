@@ -27,14 +27,43 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
 
   Future<void> _importPdf() async {
     setState(() => _importing = true);
-    try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: true);
-      if (result == null || result.files.isEmpty || result.files.single.bytes == null) {
-        setState(() => _importing = false);
-        return;
-      }
-      final parsed = await SalarySlipParserService().parseFromBytes(result.files.single.bytes!);
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: true, allowMultiple: true);
+    if (result == null || result.files.isEmpty) {
       setState(() => _importing = false);
+      return;
+    }
+
+    // Parse every selected PDF up front so a broken file doesn't interrupt
+    // the review flow for the others; failures are reported once at the end.
+    final parsedResults = <SalarySlipParseResult>[];
+    final failedNames = <String>[];
+    for (final file in result.files) {
+      final bytes = file.bytes;
+      if (bytes == null) {
+        failedNames.add(file.name);
+        continue;
+      }
+      try {
+        parsedResults.add(await SalarySlipParserService().parseFromBytes(bytes));
+      } catch (_) {
+        failedNames.add(file.name);
+      }
+    }
+
+    setState(() => _importing = false);
+    if (!mounted) return;
+
+    if (failedNames.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Konnte ${failedNames.length} Datei(en) nicht einlesen: ${failedNames.join(', ')}')),
+      );
+    }
+
+    // Review-and-save each parsed slip in its own form, one after another,
+    // so every import still gets the same "check values before saving" step
+    // as a single-file import - the multi-select only saves repeated trips
+    // through the file picker, not the review itself.
+    for (final parsed in parsedResults) {
       if (!mounted) return;
 
       // If a slip for the same Abrechnungsmonat already exists (re-importing
@@ -45,14 +74,8 @@ class _SalaryScreenState extends ConsumerState<SalaryScreen> {
           ? null
           : ref.read(salarySlipNotifierProvider).where((s) => s.period.year == period.year && s.period.month == period.month).firstOrNull;
 
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => SalarySlipFormScreen(existing: existing, prefill: parsed)),
-      );
-    } catch (e) {
-      setState(() => _importing = false);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Einlesen der PDF-Datei: $e')),
       );
     }
   }
