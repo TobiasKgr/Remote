@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/apple_widgets.dart';
 import 'accounts_screen.dart';
 import 'backup_screen.dart';
+import 'cost_trends_screen.dart';
 import 'import_history_screen.dart';
 import 'format_assistant_screen.dart';
 import 'net_worth_history_screen.dart';
@@ -82,6 +83,13 @@ class MoreScreen extends ConsumerWidget {
                   iconColor: AppleColors.pink,
                   title: 'Abos & Verträge',
                   onTap: () => _push(context, const RecurringPaymentsScreen()),
+                ),
+                AppleSettingsRow(
+                  icon: CupertinoIcons.chart_bar_square_fill,
+                  iconColor: AppleColors.red,
+                  title: 'Kostentrends',
+                  subtitle: 'Jahresübersicht wiederkehrender & ähnlicher Kosten mit Prognose',
+                  onTap: () => _push(context, const CostTrendsScreen()),
                 ),
                 AppleSettingsRow(
                   icon: CupertinoIcons.chart_bar_alt_fill,
